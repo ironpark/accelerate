@@ -170,8 +170,8 @@ pub fn Biquadm(comptime T: type) type {
         /// The two objects must have been created with the same number of channels and sections.
         pub fn copyState(self: Self, src: Self) void {
             switch (T) {
-                f32 => c.vDSP_biquadm_CopyState(self.setup, src.setup),
-                f64 => c.vDSP_biquadm_CopyStateD(self.setup, src.setup),
+                f32 => c.vDSP_biquadm_CopyState(src.setup, self.setup),
+                f64 => c.vDSP_biquadm_CopyStateD(src.setup, self.setup),
                 else => @compileError("Biquadm requires f32 or f64"),
             }
         }

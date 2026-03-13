@@ -1,11 +1,18 @@
 pub const types = @import("types.zig");
 pub const Stride = types.Stride;
 pub const Length = types.Length;
+pub const SC = types.SC;
 pub const SplitComplex = types.SplitComplex;
 pub const DoubleSplitComplex = types.DoubleSplitComplex;
 pub const SortOrder = types.SortOrder;
 pub const DbFlag = types.DbFlag;
 pub const WindowFlag = types.WindowFlag;
+
+const c_mod = @import("c.zig");
+pub const Int24 = c_mod.Int24;
+pub const UInt24 = c_mod.UInt24;
+pub const ComplexF32 = c_mod.ComplexF32;
+pub const ComplexF64 = c_mod.ComplexF64;
 
 // -- dotp --
 const dotp_mod = @import("dotp.zig");

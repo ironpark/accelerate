@@ -70,7 +70,7 @@ pub fn mtrans(comptime T: type, a: []const T, out: []T, m: Length, n: Length) vo
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         D[m][n] = sum(A[m][p] * B[p][n], 0 <= p < P) + C[m][n];
-pub fn zmma(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *const SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmma(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *SC(T), m: Length, n: Length, p: Length) void {
     switch (T) {
         f32 => c.vDSP_zmma(a, 1, b, 1, cc, 1, d, 1, m, n, p),
         f64 => c.vDSP_zmmaD(a, 1, b, 1, cc, 1, d, 1, m, n, p),
@@ -93,7 +93,7 @@ pub fn zmma(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T)
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         D[m][n] = sum(A[m][p] * B[p][n], 0 <= p < P) - C[m][n];
-pub fn zmms(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *const SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmms(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *SC(T), m: Length, n: Length, p: Length) void {
     switch (T) {
         f32 => c.vDSP_zmms(a, 1, b, 1, cc, 1, d, 1, m, n, p),
         f64 => c.vDSP_zmmsD(a, 1, b, 1, cc, 1, d, 1, m, n, p),
@@ -116,7 +116,7 @@ pub fn zmms(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T)
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         D[m][n] = C[m][n] - sum(A[m][p] * B[p][n], 0 <= p < P);
-pub fn zmsm(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *const SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmsm(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *SC(T), m: Length, n: Length, p: Length) void {
     switch (T) {
         f32 => c.vDSP_zmsm(a, 1, b, 1, cc, 1, d, 1, m, n, p),
         f64 => c.vDSP_zmsmD(a, 1, b, 1, cc, 1, d, 1, m, n, p),
@@ -138,7 +138,7 @@ pub fn zmsm(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T)
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         C[m][n] = sum(A[m][p] * B[p][n], 0 <= p < P);
-pub fn zmmul(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmmul(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *SC(T), m: Length, n: Length, p: Length) void {
     switch (T) {
         f32 => c.vDSP_zmmul(a, 1, b, 1, cc, 1, m, n, p),
         f64 => c.vDSP_zmmulD(a, 1, b, 1, cc, 1, m, n, p),
@@ -154,7 +154,7 @@ pub fn zmmul(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T
 ///
 ///     for (n = 0; n < N; ++n)
 ///         F[n] = A[n] * B[n] + C[n] * D[n] + E[n];
-pub fn zvmmaa(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *const SC(T), e: *const SC(T), f: *const SC(T), n: Length) void {
+pub fn zvmmaa(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *const SC(T), e: *const SC(T), f: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvmmaa(a, 1, b, 1, cc, 1, d, 1, e, 1, f, 1, n),
         f64 => c.vDSP_zvmmaaD(a, 1, b, 1, cc, 1, d, 1, e, 1, f, 1, n),

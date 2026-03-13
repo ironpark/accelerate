@@ -108,7 +108,7 @@ pub fn deq22(comptime T: type, a: []const T, coeffs: *const [5]T, out: []T) void
 ///
 /// Commonly, this is called correlation if IF is positive and convolution
 /// if IF is negative.
-pub fn zconv(comptime T: type, signal: *const SC(T), filter: *const SC(T), out: *const SC(T), n: Length, p: Length) void {
+pub fn zconv(comptime T: type, signal: *const SC(T), filter: *const SC(T), out: *SC(T), n: Length, p: Length) void {
     switch (T) {
         f32 => c.vDSP_zconv(signal, 1, filter, 1, out, 1, n, p),
         f64 => c.vDSP_zconvD(signal, 1, filter, 1, out, 1, n, p),

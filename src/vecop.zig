@@ -2,8 +2,6 @@ const std = @import("std");
 const types = @import("types.zig");
 const Stride = types.Stride;
 const Length = types.Length;
-const SplitComplex = types.SplitComplex;
-const DoubleSplitComplex = types.DoubleSplitComplex;
 const c = @import("c.zig");
 
 const SC = types.SC;
@@ -421,7 +419,7 @@ pub fn distancesq(comptime T: type, a: []const T, b: []const T) T {
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] + B[n];
-pub fn zvadd(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvadd(comptime T: type, a: *const SC(T), b: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvadd(a, 1, b, 1, out, 1, n),
         f64 => c.vDSP_zvaddD(a, 1, b, 1, out, 1, n),
@@ -433,7 +431,7 @@ pub fn zvadd(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] + B[n];
-pub fn zrvadd(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+pub fn zrvadd(comptime T: type, a: *const SC(T), b: []const T, out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zrvadd(a, 1, b.ptr, 1, out, 1, n),
         f64 => c.vDSP_zrvaddD(a, 1, b.ptr, 1, out, 1, n),
@@ -445,7 +443,7 @@ pub fn zrvadd(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T)
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] - B[n];
-pub fn zvsub(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvsub(comptime T: type, a: *const SC(T), b: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvsub(a, 1, b, 1, out, 1, n),
         f64 => c.vDSP_zvsubD(a, 1, b, 1, out, 1, n),
@@ -457,7 +455,7 @@ pub fn zvsub(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] - B[n];
-pub fn zrvsub(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+pub fn zrvsub(comptime T: type, a: *const SC(T), b: []const T, out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zrvsub(a, 1, b.ptr, 1, out, 1, n),
         f64 => c.vDSP_zrvsubD(a, 1, b.ptr, 1, out, 1, n),
@@ -469,7 +467,7 @@ pub fn zrvsub(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T)
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] * B[n];
-pub fn zrvmul(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+pub fn zrvmul(comptime T: type, a: *const SC(T), b: []const T, out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zrvmul(a, 1, b.ptr, 1, out, 1, n),
         f64 => c.vDSP_zrvmulD(a, 1, b.ptr, 1, out, 1, n),
@@ -481,7 +479,7 @@ pub fn zrvmul(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T)
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] / B[n];
-pub fn zvdiv(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvdiv(comptime T: type, a: *const SC(T), b: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvdiv(b, 1, a, 1, out, 1, n),
         f64 => c.vDSP_zvdivD(b, 1, a, 1, out, 1, n),
@@ -493,7 +491,7 @@ pub fn zvdiv(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] / B[n];
-pub fn zrvdiv(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+pub fn zrvdiv(comptime T: type, a: *const SC(T), b: []const T, out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zrvdiv(a, 1, b.ptr, 1, out, 1, n),
         f64 => c.vDSP_zrvdivD(a, 1, b.ptr, 1, out, 1, n),
@@ -517,7 +515,7 @@ pub fn zvabs(comptime T: type, a: *const SC(T), out: []T, n: Length) void {
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[0];
-pub fn zvfill(comptime T: type, val: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvfill(comptime T: type, val: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvfill(val, out, 1, n),
         f64 => c.vDSP_zvfillD(val, out, 1, n),
@@ -533,7 +531,7 @@ pub fn zvfill(comptime T: type, val: *const SC(T), out: *const SC(T), n: Length)
 ///     If Conjugate is -1:
 ///         for (n = 0; n < N; ++n)
 ///             C[n] = conj(A[n]) * B[n];
-pub fn zvmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length, conjugate: bool) void {
+pub fn zvmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *SC(T), n: Length, conjugate: bool) void {
     switch (T) {
         f32 => c.vDSP_zvmul(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1)),
         f64 => c.vDSP_zvmulD(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1)),
@@ -545,7 +543,7 @@ pub fn zvmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = conj(A[n]) * B[n] + C[n];
-pub fn zvcma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvcma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvcma(a, 1, b, 1, addend, 1, out, 1, n),
         f64 => c.vDSP_zvcmaD(a, 1, b, 1, addend, 1, out, 1, n),
@@ -557,7 +555,7 @@ pub fn zvcma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const 
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = A[n] * B[n] + C[n];
-pub fn zvma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvma(a, 1, b, 1, addend, 1, out, 1, n),
         f64 => c.vDSP_zvmaD(a, 1, b, 1, addend, 1, out, 1, n),
@@ -569,7 +567,7 @@ pub fn zvma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const S
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = conj(A[n]) * B[n];
-pub fn zvcmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvcmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvcmul(a, 1, b, 1, out, 1, n),
         f64 => c.vDSP_zvcmulD(a, 1, b, 1, out, 1, n),
@@ -581,7 +579,7 @@ pub fn zvcmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = conj(A[n]);
-pub fn zvconj(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvconj(comptime T: type, a: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvconj(a, 1, out, 1, n),
         f64 => c.vDSP_zvconjD(a, 1, out, 1, n),
@@ -593,7 +591,7 @@ pub fn zvconj(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) v
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] * B[0];
-pub fn zvzsml(comptime T: type, a: *const SC(T), scalar: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvzsml(comptime T: type, a: *const SC(T), scalar: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvzsml(a, 1, scalar, out, 1, n),
         f64 => c.vDSP_zvzsmlD(a, 1, scalar, out, 1, n),
@@ -629,7 +627,7 @@ pub fn zvmgsa(comptime T: type, a: *const SC(T), b: []const T, out: []T, n: Leng
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n];
-pub fn zvmov(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvmov(comptime T: type, a: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvmov(a, 1, out, 1, n),
         f64 => c.vDSP_zvmovD(a, 1, out, 1, n),
@@ -641,7 +639,7 @@ pub fn zvmov(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) vo
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = -A[n];
-pub fn zvneg(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvneg(comptime T: type, a: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvneg(a, 1, out, 1, n),
         f64 => c.vDSP_zvnegD(a, 1, out, 1, n),
@@ -665,7 +663,7 @@ pub fn zvphas(comptime T: type, a: *const SC(T), out: []T, n: Length) void {
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = A[n] * B[0] + C[n];
-pub fn zvsma(comptime T: type, a: *const SC(T), scalar: *const SC(T), addend: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zvsma(comptime T: type, a: *const SC(T), scalar: *const SC(T), addend: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zvsma(a, 1, scalar, addend, 1, out, 1, n),
         f64 => c.vDSP_zvsmaD(a, 1, scalar, addend, 1, out, 1, n),
@@ -705,7 +703,7 @@ pub fn zcoher(comptime T: type, a: []const T, b: []const T, cross: *const SC(T),
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = B[n] / A[n];
-pub fn ztrans(comptime T: type, a: []const T, b: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn ztrans(comptime T: type, a: []const T, b: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_ztrans(a.ptr, b, out, n),
         f64 => c.vDSP_ztransD(a.ptr, b, out, n),
@@ -717,7 +715,7 @@ pub fn ztrans(comptime T: type, a: []const T, b: *const SC(T), out: *const SC(T)
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] += conj(A[n]) * B[n];
-pub fn zcspec(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+pub fn zcspec(comptime T: type, a: *const SC(T), b: *const SC(T), out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zcspec(a, b, out, n),
         f64 => c.vDSP_zcspecD(a, b, out, n),
@@ -741,7 +739,7 @@ pub fn desamp(comptime T: type, a: [*]const T, decimation_factor: Stride, filter
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
-pub fn zrdesamp(comptime T: type, a: *const SC(T), decimation_factor: Stride, filter: []const T, out: *const SC(T), n: Length) void {
+pub fn zrdesamp(comptime T: type, a: *const SC(T), decimation_factor: Stride, filter: []const T, out: *SC(T), n: Length) void {
     switch (T) {
         f32 => c.vDSP_zrdesamp(a, decimation_factor, filter.ptr, out, n, filter.len),
         f64 => c.vDSP_zrdesampD(a, decimation_factor, filter.ptr, out, n, filter.len),

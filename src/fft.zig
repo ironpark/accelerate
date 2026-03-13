@@ -77,7 +77,11 @@ const SC = types.SC;
 /// Manages the lifetime of the underlying vDSP FFT setup object.
 pub fn FFT(comptime T: type) type {
     const SCT = SC(T);
-    const Setup = if (T == f32) FFTSetup else if (T == f64) FFTSetupD else @compileError("FFT requires f32 or f64");
+    const Setup = switch (T) {
+        f32 => FFTSetup,
+        f64 => FFTSetupD,
+        else => @compileError("FFT requires f32 or f64"),
+    };
 
     return struct {
         const Self = @This();
