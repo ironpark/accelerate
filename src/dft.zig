@@ -25,7 +25,7 @@ pub const RealToComplex = enum(c_int) {
     real_to_complex = 1,
 };
 
-pub const Complex = fft.Complex;
+pub const Complex = types.Complex;
 
 // ============================================================================
 // High-level DFT wrappers (manage setup lifetime)

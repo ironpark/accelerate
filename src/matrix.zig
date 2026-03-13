@@ -1,6 +1,6 @@
 const types = @import("types.zig");
 const Length = types.Length;
-const SC = types.SC;
+const SC = types.SplitComplex;
 const c = @import("c.zig");
 
 /// Matrix multiply.

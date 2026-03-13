@@ -3,8 +3,8 @@ const Length = types.Length;
 const DbFlag = types.DbFlag;
 const c = @import("c.zig");
 
-const Int24 = c.Int24;
-const UInt24 = c.UInt24;
+const Int24 = types.Int24;
+const UInt24 = types.UInt24;
 
 // -- Float precision conversion --
 

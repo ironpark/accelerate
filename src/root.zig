@@ -1,18 +1,14 @@
 pub const types = @import("types.zig");
 pub const Stride = types.Stride;
 pub const Length = types.Length;
-pub const SC = types.SC;
 pub const SplitComplex = types.SplitComplex;
-pub const DoubleSplitComplex = types.DoubleSplitComplex;
 pub const SortOrder = types.SortOrder;
 pub const DbFlag = types.DbFlag;
 pub const WindowFlag = types.WindowFlag;
 
-const c_mod = @import("c.zig");
-pub const Int24 = c_mod.Int24;
-pub const UInt24 = c_mod.UInt24;
-pub const ComplexF32 = c_mod.ComplexF32;
-pub const ComplexF64 = c_mod.ComplexF64;
+pub const Complex = types.Complex;
+pub const Int24 = types.Int24;
+pub const UInt24 = types.UInt24;
 
 // -- dotp --
 const dotp_mod = @import("dotp.zig");
@@ -224,7 +220,6 @@ pub const FFTSetup = fft_mod.FFTSetup;
 pub const FFTSetupD = fft_mod.FFTSetupD;
 pub const Direction = fft_mod.Direction;
 pub const Radix = fft_mod.Radix;
-pub const Complex = fft_mod.Complex;
 pub const FFT = fft_mod.FFT;
 pub const ctoz = fft_mod.ctoz;
 pub const ztoc = fft_mod.ztoc;
@@ -248,7 +243,6 @@ pub const DFT = dft_mod.DFT;
 pub const RealDFT = dft_mod.RealDFT;
 pub const DCT = dft_mod.DCT;
 pub const InterleavedDFT = dft_mod.InterleavedDFT;
-pub const DFTComplex = dft_mod.Complex;
 
 // -- biquad --
 const biquad_mod = @import("biquad.zig");

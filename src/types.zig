@@ -1,23 +1,67 @@
+const std = @import("std");
+
 pub const Stride = isize;
 pub const Length = usize;
 
-pub const SplitComplex = extern struct {
-    realp: [*]f32,
-    imagp: [*]f32,
-};
-
-pub const DoubleSplitComplex = extern struct {
-    realp: [*]f64,
-    imagp: [*]f64,
-};
-
-pub fn SC(comptime T: type) type {
-    return switch (T) {
-        f32 => SplitComplex,
-        f64 => DoubleSplitComplex,
-        else => @compileError("SC requires f32 or f64"),
+pub fn SplitComplex(comptime T: type) type {
+    return extern struct {
+        realp: [*]T,
+        imagp: [*]T,
     };
 }
+
+pub fn Complex(comptime T: type) type {
+    return extern struct {
+        const Self = @This();
+
+        real: T,
+        imag: T,
+
+        pub fn init(re: T, im: T) Self {
+            return .{ .real = re, .imag = im };
+        }
+
+        pub fn fromStd(z: std.math.Complex(T)) Self {
+            return .{ .real = z.re, .imag = z.im };
+        }
+
+        pub fn toStd(self: Self) std.math.Complex(T) {
+            return .{ .re = self.real, .im = self.imag };
+        }
+    };
+}
+
+pub const Int24 = extern struct {
+    bytes: [3]u8,
+
+    pub fn from(val: i24) Int24 {
+        return .{ .bytes = @bitCast(val) };
+    }
+
+    pub fn to(self: Int24) i24 {
+        return @bitCast(self.bytes);
+    }
+
+    pub fn toI32(self: Int24) i32 {
+        return self.to();
+    }
+};
+
+pub const UInt24 = extern struct {
+    bytes: [3]u8,
+
+    pub fn from(val: u24) UInt24 {
+        return .{ .bytes = @bitCast(val) };
+    }
+
+    pub fn to(self: UInt24) u24 {
+        return @bitCast(self.bytes);
+    }
+
+    pub fn toU32(self: UInt24) u32 {
+        return self.to();
+    }
+};
 
 pub const SortOrder = enum(c_int) { ascending = 1, descending = -1 };
 

@@ -25,15 +25,7 @@ pub const Radix = enum(c_int) {
 // Interleaved <-> Split conversion
 // ============================================================================
 
-/// An interleaved complex number with real and imaginary parts of type T.
-/// T must be f32 or f64.
-pub fn Complex(comptime T: type) type {
-    return switch (T) {
-        f32 => c.ComplexF32,
-        f64 => c.ComplexF64,
-        else => @compileError("Complex requires f32 or f64"),
-    };
-}
+pub const Complex = types.Complex;
 
 /// Convert a complex array to a complex-split array.
 ///
@@ -67,7 +59,7 @@ pub fn ztoc(comptime T: type, input: *const SC(T), output: [*]Complex(T), n: Len
     }
 }
 
-const SC = types.SC;
+const SC = types.SplitComplex;
 
 // ============================================================================
 // High-level FFT wrapper (manages setup lifetime)

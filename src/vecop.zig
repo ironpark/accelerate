@@ -4,7 +4,7 @@ const Stride = types.Stride;
 const Length = types.Length;
 const c = @import("c.zig");
 
-const SC = types.SC;
+const SC = types.SplitComplex;
 
 // ============================================================================
 // Fill

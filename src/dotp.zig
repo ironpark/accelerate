@@ -3,7 +3,7 @@ const types = @import("types.zig");
 const Length = types.Length;
 const c = @import("c.zig");
 
-const SC = types.SC;
+const SC = types.SplitComplex;
 
 pub fn dotpr(comptime T: type, a: []const T, b: []const T) T {
     var result: T = undefined;
