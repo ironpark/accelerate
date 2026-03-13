@@ -3,6 +3,10 @@ const Stride = types.Stride;
 const Length = types.Length;
 
 const c = struct {
+    extern fn vDSP_vclr(C: [*]f32, IC: Stride, N: Length) void;
+    extern fn vDSP_vclrD(C: [*]f64, IC: Stride, N: Length) void;
+    extern fn vDSP_vcmprs(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length) void;
+    extern fn vDSP_vcmprsD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length) void;
     extern fn vDSP_vclip(A: [*]const f32, IA: Stride, lo: *const f32, hi: *const f32, D: [*]f32, ID: Stride, N: Length) void;
     extern fn vDSP_vclipD(A: [*]const f64, IA: Stride, lo: *const f64, hi: *const f64, D: [*]f64, ID: Stride, N: Length) void;
     extern fn vDSP_vclipc(A: [*]const f32, IA: Stride, lo: *const f32, hi: *const f32, D: [*]f32, ID: Stride, N: Length, NLow: *Length, NHigh: *Length) void;
@@ -24,6 +28,26 @@ const c = struct {
     extern fn vDSP_vminmg(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length) void;
     extern fn vDSP_vminmgD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length) void;
 };
+
+// -- Clear --
+
+pub fn vclr(out: []f32) void {
+    c.vDSP_vclr(out.ptr, 1, out.len);
+}
+pub fn vclrD(out: []f64) void {
+    c.vDSP_vclrD(out.ptr, 1, out.len);
+}
+
+// -- Compress --
+
+pub fn vcmprs(a: []const f32, gate: []const f32, out: []f32) void {
+    c.vDSP_vcmprs(a.ptr, 1, gate.ptr, 1, out.ptr, 1, a.len);
+}
+pub fn vcmprsD(a: []const f64, gate: []const f64, out: []f64) void {
+    c.vDSP_vcmprsD(a.ptr, 1, gate.ptr, 1, out.ptr, 1, a.len);
+}
+
+// -- Clip --
 
 pub fn vclip(a: []const f32, lo: f32, hi: f32, out: []f32) void {
     c.vDSP_vclip(a.ptr, 1, &lo, &hi, out.ptr, 1, a.len);

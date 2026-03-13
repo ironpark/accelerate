@@ -60,6 +60,30 @@ pub fn zdotprD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, n: Le
     return result;
 }
 
+pub fn zidotpr(a: *const SplitComplex, b: *const SplitComplex, n: Length) SplitComplex {
+    var result: SplitComplex = undefined;
+    c.vDSP_zidotpr(a, 1, b, 1, &result, n);
+    return result;
+}
+
+pub fn zidotprD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, n: Length) DoubleSplitComplex {
+    var result: DoubleSplitComplex = undefined;
+    c.vDSP_zidotprD(a, 1, b, 1, &result, n);
+    return result;
+}
+
+pub fn zrdotpr(a: *const SplitComplex, b: []const f32, n: Length) SplitComplex {
+    var result: SplitComplex = undefined;
+    c.vDSP_zrdotpr(a, 1, b.ptr, 1, &result, n);
+    return result;
+}
+
+pub fn zrdotprD(a: *const DoubleSplitComplex, b: []const f64, n: Length) DoubleSplitComplex {
+    var result: DoubleSplitComplex = undefined;
+    c.vDSP_zrdotprD(a, 1, b.ptr, 1, &result, n);
+    return result;
+}
+
 pub fn dotpr_s1_15(a: []const i16, b: []const i16) i16 {
     var result: i16 = undefined;
     c.vDSP_dotpr_s1_15(a.ptr, 1, b.ptr, 1, &result, a.len);

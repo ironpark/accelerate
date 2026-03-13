@@ -1,10 +1,14 @@
 const types = @import("types.zig");
 const Stride = types.Stride;
 const Length = types.Length;
+const SplitComplex = types.SplitComplex;
+const DoubleSplitComplex = types.DoubleSplitComplex;
 
 const c = struct {
     extern fn vDSP_conv(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length, M: Length) void;
     extern fn vDSP_convD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length, M: Length) void;
+    extern fn vDSP_zconv(A: *const SplitComplex, IA: Stride, F: *const SplitComplex, IF: Stride, C: *const SplitComplex, IC: Stride, N: Length, P: Length) void;
+    extern fn vDSP_zconvD(A: *const DoubleSplitComplex, IA: Stride, F: *const DoubleSplitComplex, IF: Stride, C: *const DoubleSplitComplex, IC: Stride, N: Length, P: Length) void;
     extern fn vDSP_imgfir(A: [*]const f32, NR: Length, NC: Length, B: [*]const f32, C: [*]f32, M: Length, N: Length) void;
     extern fn vDSP_imgfirD(A: [*]const f64, NR: Length, NC: Length, B: [*]const f64, C: [*]f64, M: Length, N: Length) void;
     extern fn vDSP_f3x3(A: [*]const f32, NR: Length, NC: Length, B: [*]const f32, C: [*]f32) void;
@@ -48,4 +52,13 @@ pub fn deq22(a: []const f32, coeffs: *const [5]f32, out: []f32) void {
 }
 pub fn deq22D(a: []const f64, coeffs: *const [5]f64, out: []f64) void {
     c.vDSP_deq22D(a.ptr, 1, coeffs, out.ptr, 1, out.len);
+}
+
+// -- Complex convolution --
+
+pub fn zconv(signal: *const SplitComplex, filter: *const SplitComplex, out: *const SplitComplex, n: Length, p: Length) void {
+    c.vDSP_zconv(signal, 1, filter, 1, out, 1, n, p);
+}
+pub fn zconvD(signal: *const DoubleSplitComplex, filter: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length, p: Length) void {
+    c.vDSP_zconvD(signal, 1, filter, 1, out, 1, n, p);
 }
