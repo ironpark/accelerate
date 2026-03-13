@@ -180,12 +180,24 @@ const c = struct {
 // Fill
 // ============================================================================
 
+/// Vector fill.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0];
 pub fn vfill(val: f32, out: []f32) void {
     c.vDSP_vfill(&val, out.ptr, 1, out.len);
 }
+/// Vector fill.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0];
 pub fn vfillD(val: f64, out: []f64) void {
     c.vDSP_vfillD(&val, out.ptr, 1, out.len);
 }
+/// Vector fill.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0];
 pub fn vfilli(val: c_int, out: []c_int) void {
     c.vDSP_vfilli(&val, out.ptr, 1, out.len);
 }
@@ -194,42 +206,84 @@ pub fn vfilli(val: c_int, out: []c_int) void {
 // Binary vector ops
 // ============================================================================
 
+/// Vector add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[n];
 pub fn vadd(a: []const f32, b: []const f32, out: []f32) void {
     c.vDSP_vadd(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[n];
 pub fn vaddD(a: []const f64, b: []const f64, out: []f64) void {
     c.vDSP_vaddD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[n];
 pub fn vaddi(a: []const i32, b: []const i32, out: []i32) void {
     c.vDSP_vaddi(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
 
+/// Vector subtract.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] - B[n];
 pub fn vsub(a: []const f32, b: []const f32, out: []f32) void {
     c.vDSP_vsub(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector subtract.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] - B[n];
 pub fn vsubD(a: []const f64, b: []const f64, out: []f64) void {
     c.vDSP_vsubD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
 
+/// Vector multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[n];
 pub fn vmul(a: []const f32, b: []const f32, out: []f32) void {
     c.vDSP_vmul(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[n];
 pub fn vmulD(a: []const f64, b: []const f64, out: []f64) void {
     c.vDSP_vmulD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
 
+/// Vector divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[n];
 pub fn vdiv(a: []const f32, b: []const f32, out: []f32) void {
     c.vDSP_vdiv(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[n];
 pub fn vdivD(a: []const f64, b: []const f64, out: []f64) void {
     c.vDSP_vdivD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[n];
 pub fn vdivi(a: []const i32, b: []const i32, out: []i32) void {
     c.vDSP_vdivi(b.ptr, 1, a.ptr, 1, out.ptr, 1, a.len);
 }
 
-// -- Integer bit equivalence: C[n] = ~(A[n] ^ B[n]) --
-
+/// Vector bit-wise equivalence, NOT (A XOR B).
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = ~(A[n] ^ B[n]);
 pub fn veqvi(a: []const i32, b: []const i32, out: []i32) void {
     c.vDSP_veqvi(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
@@ -238,29 +292,61 @@ pub fn veqvi(a: []const i32, b: []const i32, out: []i32) void {
 // Scalar-vector ops
 // ============================================================================
 
+/// Vector-scalar multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[0];
 pub fn vsmul(a: []const f32, scalar: f32, out: []f32) void {
     c.vDSP_vsmul(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
+/// Vector-scalar multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[0];
 pub fn vsmulD(a: []const f64, scalar: f64, out: []f64) void {
     c.vDSP_vsmulD(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
 
+/// Vector-scalar add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[0];
 pub fn vsadd(a: []const f32, scalar: f32, out: []f32) void {
     c.vDSP_vsadd(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
+/// Vector-scalar add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[0];
 pub fn vsaddD(a: []const f64, scalar: f64, out: []f64) void {
     c.vDSP_vsaddD(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
+/// Vector-scalar add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[0];
 pub fn vsaddi(a: []const i32, scalar: i32, out: []i32) void {
     c.vDSP_vsaddi(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
 
+/// Vector-scalar divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[0];
 pub fn vsdiv(a: []const f32, scalar: f32, out: []f32) void {
     c.vDSP_vsdiv(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
+/// Vector-scalar divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[0];
 pub fn vsdivD(a: []const f64, scalar: f64, out: []f64) void {
     c.vDSP_vsdivD(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
+/// Vector-scalar divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[0];
 pub fn vsdivi(a: []const i32, scalar: i32, out: []i32) void {
     c.vDSP_vsdivi(a.ptr, 1, &scalar, out.ptr, 1, a.len);
 }
@@ -277,10 +363,17 @@ pub fn svdivD(scalar: f64, b: []const f64, out: []f64) void {
 // Multiply-add variants
 // ============================================================================
 
-/// D[n] = A[n] * B[n] + C[n]
+/// Vector multiply and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] * B[n] + C[n];
 pub fn vma(a: []const f32, b: []const f32, addend: []const f32, out: []f32) void {
     c.vDSP_vma(a.ptr, 1, b.ptr, 1, addend.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector multiply and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] * B[n] + C[n];
 pub fn vmaD(a: []const f64, b: []const f64, addend: []const f64, out: []f64) void {
     c.vDSP_vmaD(a.ptr, 1, b.ptr, 1, addend.ptr, 1, out.ptr, 1, a.len);
 }
@@ -301,10 +394,17 @@ pub fn vsmaD(a: []const f64, scalar: f64, addend: []const f64, out: []f64) void 
     c.vDSP_vsmaD(a.ptr, 1, &scalar, addend.ptr, 1, out.ptr, 1, a.len);
 }
 
-/// D[n] = (A[n] + B[n]) * C[n]
+/// Vector add and multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = (A[n] + B[n]) * C[n];
 pub fn vam(a: []const f32, b: []const f32, multiplier: []const f32, out: []f32) void {
     c.vDSP_vam(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector add and multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = (A[n] + B[n]) * C[n];
 pub fn vamD(a: []const f64, b: []const f64, multiplier: []const f64, out: []f64) void {
     c.vDSP_vamD(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len);
 }
@@ -441,26 +541,54 @@ pub fn vpythgD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f6
 // Unary ops
 // ============================================================================
 
+/// Vector square.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n]**2;
 pub fn vsq(a: []const f32, out: []f32) void {
     c.vDSP_vsq(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector square.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n]**2;
 pub fn vsqD(a: []const f64, out: []f64) void {
     c.vDSP_vsqD(a.ptr, 1, out.ptr, 1, a.len);
 }
 
+/// Vector signed square.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * |A[n]|;
 pub fn vssq(a: []const f32, out: []f32) void {
     c.vDSP_vssq(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector signed square.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * |A[n]|;
 pub fn vssqD(a: []const f64, out: []f64) void {
     c.vDSP_vssqD(a.ptr, 1, out.ptr, 1, a.len);
 }
 
+/// Vector absolute value.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]|;
 pub fn vabs(a: []const f32, out: []f32) void {
     c.vDSP_vabs(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector absolute value.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]|;
 pub fn vabsD(a: []const f64, out: []f64) void {
     c.vDSP_vabsD(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector absolute value.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]|;
 pub fn vabsi(a: []const i32, out: []i32) void {
     c.vDSP_vabsi(a.ptr, 1, out.ptr, 1, a.len);
 }
@@ -494,12 +622,17 @@ pub fn vdistD(a: []const f64, b: []const f64, out: []f64) void {
     c.vDSP_vdistD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
 
-/// Euclidean distance squared (scalar output): C = sum((A[n]-B[n])^2)
+/// Euclidean distance, squared.
+/// Computes:
+///     C[0] = sum((A[n] - B[n]) ** 2, 0 <= n < N);
 pub fn distancesq(a: []const f32, b: []const f32) f32 {
     var result: f32 = undefined;
     c.vDSP_distancesq(a.ptr, 1, b.ptr, 1, &result, a.len);
     return result;
 }
+/// Euclidean distance, squared.
+/// Computes:
+///     C[0] = sum((A[n] - B[n]) ** 2, 0 <= n < N);
 pub fn distancesqD(a: []const f64, b: []const f64) f64 {
     var result: f64 = undefined;
     c.vDSP_distancesqD(a.ptr, 1, b.ptr, 1, &result, a.len);
@@ -510,12 +643,18 @@ pub fn distancesqD(a: []const f64, b: []const f64) f64 {
 // Precision conversion
 // ============================================================================
 
-/// Double to single precision
+/// Vector convert between double precision and single precision.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vdpsp(a: []const f64, out: []f32) void {
     c.vDSP_vdpsp(a.ptr, 1, out.ptr, 1, a.len);
 }
 
-/// Single to double precision
+/// Vector convert between double precision and single precision.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vspdp(a: []const f32, out: []f64) void {
     c.vDSP_vspdp(a.ptr, 1, out.ptr, 1, a.len);
 }
@@ -524,196 +663,325 @@ pub fn vspdp(a: []const f32, out: []f64) void {
 // Complex vector arithmetic
 // ============================================================================
 
-// -- Complex add --
-
+/// Vector add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[n];
 pub fn zvadd(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvadd(a, 1, b, 1, out, 1, n);
 }
+/// Vector add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[n];
 pub fn zvaddD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvaddD(a, 1, b, 1, out, 1, n);
 }
 
+/// Vector add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[n];
 pub fn zrvadd(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
     c.vDSP_zrvadd(a, 1, b.ptr, 1, out, 1, n);
 }
+/// Vector add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + B[n];
 pub fn zrvaddD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zrvaddD(a, 1, b.ptr, 1, out, 1, n);
 }
 
-// -- Complex subtract --
-
+/// Vector subtract.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] - B[n];
 pub fn zvsub(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvsub(a, 1, b, 1, out, 1, n);
 }
+/// Vector subtract.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] - B[n];
 pub fn zvsubD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvsubD(a, 1, b, 1, out, 1, n);
 }
 
-/// Subtract real from complex: C[n] = A[n] - B[n]
+/// Subtract real from complex-split.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] - B[n];
 pub fn zrvsub(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
     c.vDSP_zrvsub(a, 1, b.ptr, 1, out, 1, n);
 }
+/// Subtract real from complex-split.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] - B[n];
 pub fn zrvsubD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zrvsubD(a, 1, b.ptr, 1, out, 1, n);
 }
 
-// -- Complex-real multiply --
-
+/// Vector multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[n];
 pub fn zrvmul(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
     c.vDSP_zrvmul(a, 1, b.ptr, 1, out, 1, n);
 }
+/// Vector multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[n];
 pub fn zrvmulD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zrvmulD(a, 1, b.ptr, 1, out, 1, n);
 }
 
-// -- Complex divide --
-
+/// Vector divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[n];
 pub fn zvdiv(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvdiv(b, 1, a, 1, out, 1, n);
 }
+/// Vector divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[n];
 pub fn zvdivD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvdivD(b, 1, a, 1, out, 1, n);
 }
 
-/// Complex / real: C[n] = A[n] / B[n]
+/// Vector divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[n];
 pub fn zrvdiv(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
     c.vDSP_zrvdiv(a, 1, b.ptr, 1, out, 1, n);
 }
+/// Vector divide.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] / B[n];
 pub fn zrvdivD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zrvdivD(a, 1, b.ptr, 1, out, 1, n);
 }
 
-// -- Complex absolute value (magnitude) --
-
+/// Vector absolute value.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]|;
 pub fn zvabs(a: *const SplitComplex, out: []f32, n: Length) void {
     c.vDSP_zvabs(a, 1, out.ptr, 1, n);
 }
+/// Vector absolute value.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]|;
 pub fn zvabsD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
     c.vDSP_zvabsD(a, 1, out.ptr, 1, n);
 }
 
-// -- Complex fill --
-
+/// Vector fill.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0];
 pub fn zvfill(val: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvfill(val, out, 1, n);
 }
+/// Vector fill.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0];
 pub fn zvfillD(val: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvfillD(val, out, 1, n);
 }
 
-// -- Complex multiply with optional conjugation --
-
-/// C[n] = A[n] * B[n] (conjugate=false) or conj(A[n]) * B[n] (conjugate=true)
+/// Complex multiplication with optional conjugation.
+/// Computes:
+///     If Conjugate is +1:
+///         for (n = 0; n < N; ++n)
+///             C[n] = A[n] * B[n];
+///     If Conjugate is -1:
+///         for (n = 0; n < N; ++n)
+///             C[n] = conj(A[n]) * B[n];
 pub fn zvmul(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length, conjugate: bool) void {
     c.vDSP_zvmul(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1));
 }
+/// Complex multiplication with optional conjugation.
+/// Computes:
+///     If Conjugate is +1:
+///         for (n = 0; n < N; ++n)
+///             C[n] = A[n] * B[n];
+///     If Conjugate is -1:
+///         for (n = 0; n < N; ++n)
+///             C[n] = conj(A[n]) * B[n];
 pub fn zvmulD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length, conjugate: bool) void {
     c.vDSP_zvmulD(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1));
 }
 
-// -- Complex conjugate multiply and add --
-
-/// D[n] = conj(A[n]) * B[n] + C[n]
+/// Complex-split conjugate multiply and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = conj(A[n]) * B[n] + C[n];
 pub fn zvcma(a: *const SplitComplex, b: *const SplitComplex, addend: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvcma(a, 1, b, 1, addend, 1, out, 1, n);
 }
+/// Complex-split conjugate multiply and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = conj(A[n]) * B[n] + C[n];
 pub fn zvcmaD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, addend: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvcmaD(a, 1, b, 1, addend, 1, out, 1, n);
 }
 
-// -- Complex multiply and add --
-
-/// D[n] = A[n] * B[n] + C[n]
+/// Vector multiply and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] * B[n] + C[n];
 pub fn zvma(a: *const SplitComplex, b: *const SplitComplex, addend: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvma(a, 1, b, 1, addend, 1, out, 1, n);
 }
+/// Vector multiply and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] * B[n] + C[n];
 pub fn zvmaD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, addend: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvmaD(a, 1, b, 1, addend, 1, out, 1, n);
 }
 
-// -- Complex conjugate multiply --
-
-/// C[n] = conj(A[n]) * B[n]
+/// Vector conjugate and multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = conj(A[n]) * B[n];
 pub fn zvcmul(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvcmul(a, 1, b, 1, out, 1, n);
 }
+/// Vector conjugate and multiply.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = conj(A[n]) * B[n];
 pub fn zvcmulD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvcmulD(a, 1, b, 1, out, 1, n);
 }
 
-// -- Complex conjugate --
-
+/// Vector conjugate.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = conj(A[n]);
 pub fn zvconj(a: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvconj(a, 1, out, 1, n);
 }
+/// Vector conjugate.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = conj(A[n]);
 pub fn zvconjD(a: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvconjD(a, 1, out, 1, n);
 }
 
-// -- Complex vector multiply by complex scalar --
-
-/// C[n] = A[n] * B[0]
+/// Vector multiply with scalar.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[0];
 pub fn zvzsml(a: *const SplitComplex, scalar: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvzsml(a, 1, scalar, out, 1, n);
 }
+/// Vector multiply with scalar.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] * B[0];
 pub fn zvzsmlD(a: *const DoubleSplitComplex, scalar: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvzsmlD(a, 1, scalar, out, 1, n);
 }
 
-// -- Complex magnitudes squared --
-
-/// C[n] = |A[n]|^2
+/// Vector magnitudes squared.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]| ** 2;
 pub fn zvmags(a: *const SplitComplex, out: []f32, n: Length) void {
     c.vDSP_zvmags(a, 1, out.ptr, 1, n);
 }
+/// Vector magnitudes squared.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]| ** 2;
 pub fn zvmagsD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
     c.vDSP_zvmagsD(a, 1, out.ptr, 1, n);
 }
 
-// -- Complex magnitudes squared and add --
-
-/// C[n] = |A[n]|^2 + B[n]
+/// Vector magnitudes square and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]| ** 2 + B[n];
 pub fn zvmgsa(a: *const SplitComplex, b: []const f32, out: []f32, n: Length) void {
     c.vDSP_zvmgsa(a, 1, b.ptr, 1, out.ptr, 1, n);
 }
+/// Vector magnitudes square and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = |A[n]| ** 2 + B[n];
 pub fn zvmgsaD(a: *const DoubleSplitComplex, b: []const f64, out: []f64, n: Length) void {
     c.vDSP_zvmgsaD(a, 1, b.ptr, 1, out.ptr, 1, n);
 }
 
-// -- Complex move --
-
+/// Complex-split vector move.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn zvmov(a: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvmov(a, 1, out, 1, n);
 }
+/// Complex-split vector move.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn zvmovD(a: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvmovD(a, 1, out, 1, n);
 }
 
-// -- Complex negate --
-
+/// Vector negate.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = -A[n];
 pub fn zvneg(a: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvneg(a, 1, out, 1, n);
 }
+/// Vector negate.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = -A[n];
 pub fn zvnegD(a: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvnegD(a, 1, out, 1, n);
 }
 
-// -- Complex phase (angle) --
-
-/// C[n] = atan2(Im(A[n]), Re(A[n]))
+/// Vector phase.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = atan2(Im(A[n]), Re(A[n]));
 pub fn zvphas(a: *const SplitComplex, out: []f32, n: Length) void {
     c.vDSP_zvphas(a, 1, out.ptr, 1, n);
 }
+/// Vector phase.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = atan2(Im(A[n]), Re(A[n]));
 pub fn zvphasD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
     c.vDSP_zvphasD(a, 1, out.ptr, 1, n);
 }
 
-// -- Complex scalar multiply and add --
-
-/// D[n] = A[n] * B[0] + C[n]
+/// Vector multiply by scalar and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] * B[0] + C[n];
 pub fn zvsma(a: *const SplitComplex, scalar: *const SplitComplex, addend: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zvsma(a, 1, scalar, addend, 1, out, 1, n);
 }
+/// Vector multiply by scalar and add.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] * B[0] + C[n];
 pub fn zvsmaD(a: *const DoubleSplitComplex, scalar: *const DoubleSplitComplex, addend: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zvsmaD(a, 1, scalar, addend, 1, out, 1, n);
 }
@@ -722,50 +990,92 @@ pub fn zvsmaD(a: *const DoubleSplitComplex, scalar: *const DoubleSplitComplex, a
 // Spectral / signal ops
 // ============================================================================
 
-/// Accumulating autospectrum: C[n] += |A[n]|^2
+/// Complex-split accumulating autospectrum.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] += |A[n]| ** 2;
 pub fn zaspec(a: *const SplitComplex, out: []f32, n: Length) void {
     c.vDSP_zaspec(a, out.ptr, n);
 }
+/// Complex-split accumulating autospectrum.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] += |A[n]| ** 2;
 pub fn zaspecD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
     c.vDSP_zaspecD(a, out.ptr, n);
 }
 
-/// Coherence: D[n] = |C[n]|^2 / (A[n] * B[n])
+/// Coherence function.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = |C[n]| ** 2 / (A[n] * B[n]);
 pub fn zcoher(a: []const f32, b: []const f32, cross: *const SplitComplex, out: []f32, n: Length) void {
     c.vDSP_zcoher(a.ptr, b.ptr, cross, out.ptr, n);
 }
+/// Coherence function.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         D[n] = |C[n]| ** 2 / (A[n] * B[n]);
 pub fn zcoherD(a: []const f64, b: []const f64, cross: *const DoubleSplitComplex, out: []f64, n: Length) void {
     c.vDSP_zcoherD(a.ptr, b.ptr, cross, out.ptr, n);
 }
 
-/// Transfer function: C[n] = B[n] / A[n]
+/// Transfer function, B/A.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = B[n] / A[n];
 pub fn ztrans(a: []const f32, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_ztrans(a.ptr, b, out, n);
 }
+/// Transfer function, B/A.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = B[n] / A[n];
 pub fn ztransD(a: []const f64, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_ztransD(a.ptr, b, out, n);
 }
 
-/// Accumulating cross-spectrum: C[n] += conj(A[n]) * B[n]
+/// Accumulating cross-spectrum.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] += conj(A[n]) * B[n];
 pub fn zcspec(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
     c.vDSP_zcspec(a, b, out, n);
 }
+/// Accumulating cross-spectrum.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] += conj(A[n]) * B[n];
 pub fn zcspecD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zcspecD(a, b, out, n);
 }
 
-/// Anti-aliasing downsample: C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P)
+/// Anti-aliasing down-sample with real filter.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
 pub fn desamp(a: [*]const f32, decimation_factor: Stride, filter: []const f32, out: []f32) void {
     c.vDSP_desamp(a, decimation_factor, filter.ptr, out.ptr, out.len, filter.len);
 }
+/// Anti-aliasing down-sample with real filter.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
 pub fn desampD(a: [*]const f64, decimation_factor: Stride, filter: []const f64, out: []f64) void {
     c.vDSP_desampD(a, decimation_factor, filter.ptr, out.ptr, out.len, filter.len);
 }
 
-/// Complex-real downsample
+/// Anti-aliasing down-sample with real filter.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
 pub fn zrdesamp(a: *const SplitComplex, decimation_factor: Stride, filter: []const f32, out: *const SplitComplex, n: Length) void {
     c.vDSP_zrdesamp(a, decimation_factor, filter.ptr, out, n, filter.len);
 }
+/// Anti-aliasing down-sample with real filter.
+/// Computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
 pub fn zrdesampD(a: *const DoubleSplitComplex, decimation_factor: Stride, filter: []const f64, out: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_zrdesampD(a, decimation_factor, filter.ptr, out, n, filter.len);
 }

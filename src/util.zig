@@ -73,30 +73,80 @@ const c = struct {
 // Reverse / swap / sort
 // ============================================================================
 
+/// Vector reverse order, in-place.
+///
+/// These compute:
+///
+///     Let A contain a copy of C.
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[N-1-n];
 pub fn vrvrs(buf: []f32) void {
     c.vDSP_vrvrs(buf.ptr, 1, buf.len);
 }
+/// Vector reverse order, in-place.
+///
+/// These compute:
+///
+///     Let A contain a copy of C.
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[N-1-n];
 pub fn vrvrsD(buf: []f64) void {
     c.vDSP_vrvrsD(buf.ptr, 1, buf.len);
 }
 
+/// Vector swap.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         A[n] is swapped with B[n].
 pub fn vswap(a: []f32, b: []f32) void {
     c.vDSP_vswap(a.ptr, 1, b.ptr, 1, a.len);
 }
+/// Vector swap.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         A[n] is swapped with B[n].
 pub fn vswapD(a: []f64, b: []f64) void {
     c.vDSP_vswapD(a.ptr, 1, b.ptr, 1, a.len);
 }
 
+/// Vector sort, in-place.
+///
+/// If Order is +1, C is sorted in ascending order.
+/// If Order is -1, C is sorted in descending order.
 pub fn vsort(buf: []f32, order: SortOrder) void {
     c.vDSP_vsort(buf.ptr, buf.len, @intFromEnum(order));
 }
+/// Vector sort, in-place.
+///
+/// If Order is +1, C is sorted in ascending order.
+/// If Order is -1, C is sorted in descending order.
 pub fn vsortD(buf: []f64, order: SortOrder) void {
     c.vDSP_vsortD(buf.ptr, buf.len, @intFromEnum(order));
 }
 
+/// Vector sort indices, in-place.
+///
+/// I contains indices into C.
+///
+/// If Order is +1, I is sorted so that C[I[n]] increases, for 0 <= n < N.
+/// If Order is -1, I is sorted so that C[I[n]] decreases, for 0 <= n < N.
+///
+/// Temporary is not used. NULL should be passed for it.
 pub fn vsorti(data: []const f32, indices: []Length, order: SortOrder) void {
     c.vDSP_vsorti(data.ptr, indices.ptr, null, data.len, @intFromEnum(order));
 }
+/// Vector sort indices, in-place.
+///
+/// I contains indices into C.
+///
+/// If Order is +1, I is sorted so that C[I[n]] increases, for 0 <= n < N.
+/// If Order is -1, I is sorted so that C[I[n]] decreases, for 0 <= n < N.
+///
+/// Temporary is not used. NULL should be passed for it.
 pub fn vsortiD(data: []const f64, indices: []Length, order: SortOrder) void {
     c.vDSP_vsortiD(data.ptr, indices.ptr, null, data.len, @intFromEnum(order));
 }
@@ -105,16 +155,40 @@ pub fn vsortiD(data: []const f64, indices: []Length, order: SortOrder) void {
 // Ramp / generate
 // ============================================================================
 
+/// Vector build ramp.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0] + n*B[0];
 pub fn vramp(start: f32, step: f32, out: []f32) void {
     c.vDSP_vramp(&start, &step, out.ptr, 1, out.len);
 }
+/// Vector build ramp.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0] + n*B[0];
 pub fn vrampD(start: f64, step: f64, out: []f64) void {
     c.vDSP_vrampD(&start, &step, out.ptr, 1, out.len);
 }
 
+/// Vector generate tapered ramp.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0] + (B[0] - A[0]) * n/(N-1);
 pub fn vgen(start: f32, end: f32, out: []f32) void {
     c.vDSP_vgen(&start, &end, out.ptr, 1, out.len);
 }
+/// Vector generate tapered ramp.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[0] + (B[0] - A[0]) * n/(N-1);
 pub fn vgenD(start: f64, end: f64, out: []f64) void {
     c.vDSP_vgenD(&start, &end, out.ptr, 1, out.len);
 }
@@ -123,23 +197,59 @@ pub fn vgenD(start: f64, end: f64, out: []f64) void {
 // Gather / index
 // ============================================================================
 
+/// Vector gather.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[B[n] - 1];
 pub fn vgathr(table: []const f32, indices: []const Length, out: []f32) void {
     c.vDSP_vgathr(table.ptr, indices.ptr, 1, out.ptr, 1, indices.len);
 }
+/// Vector gather.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[B[n] - 1];
 pub fn vgathrD(table: []const f64, indices: []const Length, out: []f64) void {
     c.vDSP_vgathrD(table.ptr, indices.ptr, 1, out.ptr, 1, indices.len);
 }
 
+/// Vector index, C[i] = A[truncate[B[i]].
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[trunc(B[n])];
 pub fn vindex(table: []const f32, indices: []const f32, out: []f32) void {
     c.vDSP_vindex(table.ptr, indices.ptr, 1, out.ptr, 1, indices.len);
 }
+/// Vector index, C[i] = A[truncate[B[i]].
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[trunc(B[n])];
 pub fn vindexD(table: []const f64, indices: []const f64, out: []f64) void {
     c.vDSP_vindexD(table.ptr, indices.ptr, 1, out.ptr, 1, indices.len);
 }
 
+/// Vector gather, absolute pointers.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = *A[n];
 pub fn vgathra(ptrs: [*]const [*]const f32, out: []f32) void {
     c.vDSP_vgathra(ptrs, 1, out.ptr, 1, out.len);
 }
+/// Vector gather, absolute pointers.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = *A[n];
 pub fn vgathraD(ptrs: [*]const [*]const f64, out: []f64) void {
     c.vDSP_vgathraD(ptrs, 1, out.ptr, 1, out.len);
 }
@@ -148,9 +258,27 @@ pub fn vgathraD(ptrs: [*]const [*]const f64, out: []f64) void {
 // Threshold with signed constant
 // ============================================================================
 
+/// Vector threshold with signed constant.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         if (B[0] <= A[n])
+///             D[n] = +C[0];
+///         else
+///             D[n] = -C[0];
 pub fn vthrsc(a: []const f32, threshold: f32, val: f32, out: []f32) void {
     c.vDSP_vthrsc(a.ptr, 1, &threshold, &val, out.ptr, 1, a.len);
 }
+/// Vector threshold with signed constant.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         if (B[0] <= A[n])
+///             D[n] = +C[0];
+///         else
+///             D[n] = -C[0];
 pub fn vthrscD(a: []const f64, threshold: f64, val: f64, out: []f64) void {
     c.vDSP_vthrscD(a.ptr, 1, &threshold, &val, out.ptr, 1, a.len);
 }
@@ -159,9 +287,45 @@ pub fn vthrscD(a: []const f64, threshold: f64, val: f64, out: []f64) void {
 // Table lookup and interpolation
 // ============================================================================
 
+/// Vector table lookup and interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         p = S1[0] * A[n] + S2[0];
+///         if (p < 0)
+///             D[n] = C[0];
+///         else if (p < M-1)
+///         {
+///             q = trunc(p);
+///             r = p-q;
+///             D[n] = (1-r)*C[q] + r*C[q+1];
+///         }
+///         else
+///             D[n] = C[M-1];
+///     }
 pub fn vtabi(a: []const f32, s1: f32, s2: f32, table: []const f32, out: []f32) void {
     c.vDSP_vtabi(a.ptr, 1, &s1, &s2, table.ptr, table.len, out.ptr, 1, a.len);
 }
+/// Vector table lookup and interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         p = S1[0] * A[n] + S2[0];
+///         if (p < 0)
+///             D[n] = C[0];
+///         else if (p < M-1)
+///         {
+///             q = trunc(p);
+///             r = p-q;
+///             D[n] = (1-r)*C[q] + r*C[q+1];
+///         }
+///         else
+///             D[n] = C[M-1];
+///     }
 pub fn vtabiD(a: []const f64, s1: f64, s2: f64, table: []const f64, out: []f64) void {
     c.vDSP_vtabiD(a.ptr, 1, &s1, &s2, table.ptr, table.len, out.ptr, 1, a.len);
 }
@@ -170,9 +334,21 @@ pub fn vtabiD(a: []const f64, s1: f64, s2: f64, table: []const f64, out: []f64) 
 // Tapered merge
 // ============================================================================
 
+/// Vector tapered merge.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + (B[n] - A[n]) * n/(N-1);
 pub fn vtmerg(a: []const f32, b: []const f32, out: []f32) void {
     c.vDSP_vtmerg(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector tapered merge.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n] + (B[n] - A[n]) * n/(N-1);
 pub fn vtmergD(a: []const f64, b: []const f64, out: []f64) void {
     c.vDSP_vtmergD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
 }
@@ -181,11 +357,13 @@ pub fn vtmergD(a: []const f64, b: []const f64, out: []f64) void {
 // Wiener Levinson
 // ============================================================================
 
+/// Wiener Levinson.
 pub fn wiener(l: Length, a: [*]const f32, corr: [*]const f32, filter: [*]f32, power: [*]f32, flag: c_int) c_int {
     var err: c_int = undefined;
     c.vDSP_wiener(l, a, corr, filter, power, flag, &err);
     return err;
 }
+/// Wiener Levinson.
 pub fn wienerD(l: Length, a: [*]const f64, corr: [*]const f64, filter: [*]f64, power: [*]f64, flag: c_int) c_int {
     var err: c_int = undefined;
     c.vDSP_wienerD(l, a, corr, filter, power, flag, &err);
@@ -196,42 +374,131 @@ pub fn wienerD(l: Length, a: [*]const f64, corr: [*]const f64, filter: [*]f64, p
 // Interpolation
 // ============================================================================
 
-/// Linear interpolation from table using fractional indices
+/// Vector linear interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         b = trunc(B[n]);
+///         a = B[n] - b;
+///         C[n] = A[b] + a * (A[b+1] - A[b]);
+///     }
 pub fn vlint(table: []const f32, indices: []const f32, out: []f32) void {
     c.vDSP_vlint(table.ptr, indices.ptr, 1, out.ptr, 1, out.len, table.len);
 }
+/// Vector linear interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         b = trunc(B[n]);
+///         a = B[n] - b;
+///         C[n] = A[b] + a * (A[b+1] - A[b]);
+///     }
 pub fn vlintD(table: []const f64, indices: []const f64, out: []f64) void {
     c.vDSP_vlintD(table.ptr, indices.ptr, 1, out.ptr, 1, out.len, table.len);
 }
 
-/// Quadratic interpolation from table using fractional indices
+/// Vector quadratic interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         b = max(trunc(B[n]), 1);
+///         a = B[n] - b;
+///         C[n] = (A[b-1]*(a**2-a) + A[b]*(2-2*a**2) + A[b+1]*(a**2+a))
+///             / 2;
+///     }
 pub fn vqint(table: []const f32, indices: []const f32, out: []f32) void {
     c.vDSP_vqint(table.ptr, indices.ptr, 1, out.ptr, 1, out.len, table.len);
 }
+/// Vector quadratic interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         b = max(trunc(B[n]), 1);
+///         a = B[n] - b;
+///         C[n] = (A[b-1]*(a**2-a) + A[b]*(2-2*a**2) + A[b+1]*(a**2+a))
+///             / 2;
+///     }
 pub fn vqintD(table: []const f64, indices: []const f64, out: []f64) void {
     c.vDSP_vqintD(table.ptr, indices.ptr, 1, out.ptr, 1, out.len, table.len);
 }
 
-/// Interpolation between two vectors: D = A + t*(B-A)
+/// Vector interpolation between vectors.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] + C[0] * (B[n] - A[n]);
 pub fn vintb(a: []const f32, b: []const f32, t: f32, out: []f32) void {
     c.vDSP_vintb(a.ptr, 1, b.ptr, 1, &t, out.ptr, 1, a.len);
 }
+/// Vector interpolation between vectors.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         D[n] = A[n] + C[0] * (B[n] - A[n]);
 pub fn vintbD(a: []const f64, b: []const f64, t: f64, out: []f64) void {
     c.vDSP_vintbD(a.ptr, 1, b.ptr, 1, &t, out.ptr, 1, a.len);
 }
 
-/// Generate by extrapolation and interpolation
+/// Vector generate by extrapolation and interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         If n <= B[0],  then C[n] = A[0].
+///         If B[M-1] < n, then C[n] = A[M-1].
+///         Otherwise:
+///             Let m be such that B[m] < n <= B[m+1].
+///             C[n] = A[m] + (A[m+1]-A[m]) * (n-B[m]) / (B[m+1]-B[m]).
+///
+/// The elements of B are expected to be in increasing order.
 pub fn vgenp(values: []const f32, positions: []const f32, out: []f32) void {
     c.vDSP_vgenp(values.ptr, 1, positions.ptr, 1, out.ptr, 1, out.len, values.len);
 }
+/// Vector generate by extrapolation and interpolation.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         If n <= B[0],  then C[n] = A[0].
+///         If B[M-1] < n, then C[n] = A[M-1].
+///         Otherwise:
+///             Let m be such that B[m] < n <= B[m+1].
+///             C[n] = A[m] + (A[m+1]-A[m]) * (n-B[m]) / (B[m+1]-B[m]).
+///
+/// The elements of B are expected to be in increasing order.
 pub fn vgenpD(values: []const f64, positions: []const f64, out: []f64) void {
     c.vDSP_vgenpD(values.ptr, 1, positions.ptr, 1, out.ptr, 1, out.len, values.len);
 }
 
-/// Evaluate polynomial: coefficients A, evaluation points B, results C
+/// Vector polynomial.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[P-p] * B[n]**p, 0 <= p <= P);
+///
+/// P is the polynomial degree.
 pub fn vpoly(coeffs: []const f32, points: []const f32, out: []f32) void {
     c.vDSP_vpoly(coeffs.ptr, 1, points.ptr, 1, out.ptr, 1, points.len, coeffs.len - 1);
 }
+/// Vector polynomial.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[P-p] * B[n]**p, 0 <= p <= P);
+///
+/// P is the polynomial degree.
 pub fn vpolyD(coeffs: []const f64, points: []const f64, out: []f64) void {
     c.vDSP_vpolyD(coeffs.ptr, 1, points.ptr, 1, out.ptr, 1, points.len, coeffs.len - 1);
 }
@@ -240,37 +507,129 @@ pub fn vpolyD(coeffs: []const f64, points: []const f64, out: []f64) void {
 // Integration
 // ============================================================================
 
+/// Vector running sum integration.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = S[0] * sum(A[j], 0 < j <= n);
+///
+/// Observe that C[0] is set to 0, and A[0] is not used.
 pub fn vrsum(a: []const f32, scale: f32, out: []f32) void {
     c.vDSP_vrsum(a.ptr, 1, &scale, out.ptr, 1, a.len);
 }
+/// Vector running sum integration.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = S[0] * sum(A[j], 0 < j <= n);
+///
+/// Observe that C[0] is set to 0, and A[0] is not used.
 pub fn vrsumD(a: []const f64, scale: f64, out: []f64) void {
     c.vDSP_vrsumD(a.ptr, 1, &scale, out.ptr, 1, a.len);
 }
 
+/// Vector Simpson integration.
+///
+/// These compute:
+///
+///     C[0] = 0;
+///     C[1] = B[0] * (A[0] + A[1])/2;
+///     for (n = 2; n < N; ++n)
+///         C[n] = C[n-2] + B[0] * (A[n-2] + 4*A[n-1] + A[n])/3;
 pub fn vsimps(a: []const f32, step: f32, out: []f32) void {
     c.vDSP_vsimps(a.ptr, 1, &step, out.ptr, 1, a.len);
 }
+/// Vector Simpson integration.
+///
+/// These compute:
+///
+///     C[0] = 0;
+///     C[1] = B[0] * (A[0] + A[1])/2;
+///     for (n = 2; n < N; ++n)
+///         C[n] = C[n-2] + B[0] * (A[n-2] + 4*A[n-1] + A[n])/3;
 pub fn vsimpsD(a: []const f64, step: f64, out: []f64) void {
     c.vDSP_vsimpsD(a.ptr, 1, &step, out.ptr, 1, a.len);
 }
 
+/// Vector trapezoidal integration.
+///
+/// These compute:
+///
+///     C[0] = 0;
+///     for (n = 1; n < N; ++n)
+///         C[n] = C[n-1] + B[0] * (A[n-1] + A[n])/2;
 pub fn vtrapz(a: []const f32, step: f32, out: []f32) void {
     c.vDSP_vtrapz(a.ptr, 1, &step, out.ptr, 1, a.len);
 }
+/// Vector trapezoidal integration.
+///
+/// These compute:
+///
+///     C[0] = 0;
+///     for (n = 1; n < N; ++n)
+///         C[n] = C[n-1] + B[0] * (A[n-1] + A[n])/2;
 pub fn vtrapzD(a: []const f64, step: f64, out: []f64) void {
     c.vDSP_vtrapzD(a.ptr, 1, &step, out.ptr, 1, a.len);
 }
 
+/// Vector sliding window sum.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[n+p], 0 <= p < P);
+///
+/// Note that A must contain N+P-1 elements.
 pub fn vswsum(a: []const f32, out: []f32, window_len: Length) void {
     c.vDSP_vswsum(a.ptr, 1, out.ptr, 1, out.len, window_len);
 }
+/// Vector sliding window sum.
+///
+/// These compute:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = sum(A[n+p], 0 <= p < P);
+///
+/// Note that A must contain N+P-1 elements.
 pub fn vswsumD(a: []const f64, out: []f64, window_len: Length) void {
     c.vDSP_vswsumD(a.ptr, 1, out.ptr, 1, out.len, window_len);
 }
 
+/// Vector sliding window maxima.
+///
+/// These compute the maximum value within a window to the input vector.
+/// A maximum is calculated for each window position:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = the greatest value of A[w] for n <= w < n+WindowLength.
+///
+/// A must contain N+WindowLength-1 elements, and C must contain space for
+/// N+WindowLength-1 elements. Although only N outputs are provided in C,
+/// the additional elements may be used for intermediate computation.
+///
+/// A and C may not overlap.
+///
+/// WindowLength must be positive (zero is not supported).
 pub fn vswmax(a: []const f32, out: []f32, window_len: Length) void {
     c.vDSP_vswmax(a.ptr, 1, out.ptr, 1, out.len, window_len);
 }
+/// Vector sliding window maxima.
+///
+/// These compute the maximum value within a window to the input vector.
+/// A maximum is calculated for each window position:
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = the greatest value of A[w] for n <= w < n+WindowLength.
+///
+/// A must contain N+WindowLength-1 elements, and C must contain space for
+/// N+WindowLength-1 elements. Although only N outputs are provided in C,
+/// the additional elements may be used for intermediate computation.
+///
+/// A and C may not overlap.
+///
+/// WindowLength must be positive (zero is not supported).
 pub fn vswmaxD(a: []const f64, out: []f64, window_len: Length) void {
     c.vDSP_vswmaxD(a.ptr, 1, out.ptr, 1, out.len, window_len);
 }

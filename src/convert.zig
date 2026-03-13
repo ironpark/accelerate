@@ -63,177 +63,423 @@ const c = struct {
 
 // -- Float precision conversion --
 
+/// Vector double-precision to single-precision conversion.
 pub fn vdpsp(a: []const f64, out: []f32) void {
     c.vDSP_vdpsp(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector single-precision to double-precision conversion.
 pub fn vspdp(a: []const f32, out: []f64) void {
     c.vDSP_vspdp(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- Int to float --
 
+/// Vector convert to floating-point from integer.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vflt8(a: []const i8, out: []f32) void {
     c.vDSP_vflt8(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from integer (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vflt8D(a: []const i8, out: []f64) void {
     c.vDSP_vflt8D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from integer.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vflt16(a: []const i16, out: []f32) void {
     c.vDSP_vflt16(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from integer (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vflt16D(a: []const i16, out: []f64) void {
     c.vDSP_vflt16D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from integer.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vflt32(a: []const i32, out: []f32) void {
     c.vDSP_vflt32(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from integer (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vflt32D(a: []const i32, out: []f64) void {
     c.vDSP_vflt32D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from unsigned integer.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vfltu8(a: []const u8, out: []f32) void {
     c.vDSP_vfltu8(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from unsigned integer (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vfltu8D(a: []const u8, out: []f64) void {
     c.vDSP_vfltu8D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from unsigned integer.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vfltu16(a: []const u16, out: []f32) void {
     c.vDSP_vfltu16(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from unsigned integer (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vfltu16D(a: []const u16, out: []f64) void {
     c.vDSP_vfltu16D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from unsigned integer.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vfltu32(a: []const u32, out: []f32) void {
     c.vDSP_vfltu32(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to floating-point from unsigned integer (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vfltu32D(a: []const u32, out: []f64) void {
     c.vDSP_vfltu32D(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- 24-bit int to float --
 
+/// Vector convert 24-bit integer to single-precision float.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vflt24(a: [*]const Int24, out: [*]f32, n: Length) void {
     c.vDSP_vflt24(a, 1, out, 1, n);
 }
+/// Vector convert 24-bit unsigned integer to single-precision float.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = A[n];
 pub fn vfltu24(a: [*]const UInt24, out: [*]f32, n: Length) void {
     c.vDSP_vfltu24(a, 1, out, 1, n);
 }
 
 // -- 24-bit int to float with scale --
 
+/// Vector convert 24-bit integer to single-precision float and scale.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = B[0] * (float)A[n];
 pub fn vfltsm24(a: [*]const Int24, scale: f32, out: [*]f32, n: Length) void {
     c.vDSP_vfltsm24(a, 1, &scale, out, 1, n);
 }
+/// Vector convert 24-bit unsigned integer to single-precision float and scale.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = B[0] * (float)A[n];
 pub fn vfltsmu24(a: [*]const UInt24, scale: f32, out: [*]f32, n: Length) void {
     c.vDSP_vfltsmu24(a, 1, &scale, out, 1, n);
 }
 
 // -- Float to 24-bit int with scale --
 
+/// Vector convert single precision to 24-bit unsigned integer with pre-scaling.
+/// The scaled value is rounded toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n] * B[0]);
+///
+/// Note: Values outside the representable range are clamped to the largest
+/// or smallest representable values of the destination type.
 pub fn vsmfix24(a: [*]const f32, scale: f32, out: [*]Int24, n: Length) void {
     c.vDSP_vsmfix24(a, 1, &scale, out, 1, n);
 }
+/// Vector convert single precision to 24-bit integer with pre-scaling.
+/// The scaled value is rounded toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n] * B[0]);
+///
+/// Note: Values outside the representable range are clamped to the largest
+/// or smallest representable values of the destination type.
 pub fn vsmfixu24(a: [*]const f32, scale: f32, out: [*]UInt24, n: Length) void {
     c.vDSP_vsmfixu24(a, 1, &scale, out, 1, n);
 }
 
 // -- Float to int (truncate toward zero) --
 
+/// Vector convert to integer, round toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfix8(a: []const f32, out: []i8) void {
     c.vDSP_vfix8(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round toward zero (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfix8D(a: []const f64, out: []i8) void {
     c.vDSP_vfix8D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfix16(a: []const f32, out: []i16) void {
     c.vDSP_vfix16(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round toward zero (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfix16D(a: []const f64, out: []i16) void {
     c.vDSP_vfix16D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfix32(a: []const f32, out: []i32) void {
     c.vDSP_vfix32(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round toward zero (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfix32D(a: []const f64, out: []i32) void {
     c.vDSP_vfix32D(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- Float to unsigned int (truncate toward zero) --
 
+/// Vector convert to unsigned integer, round toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfixu8(a: []const f32, out: []u8) void {
     c.vDSP_vfixu8(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round toward zero (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfixu8D(a: []const f64, out: []u8) void {
     c.vDSP_vfixu8D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfixu16(a: []const f32, out: []u16) void {
     c.vDSP_vfixu16(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round toward zero (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfixu16D(a: []const f64, out: []u16) void {
     c.vDSP_vfixu16D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round toward zero.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfixu32(a: []const f32, out: []u32) void {
     c.vDSP_vfixu32(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round toward zero (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = trunc(A[n]);
 pub fn vfixu32D(a: []const f64, out: []u32) void {
     c.vDSP_vfixu32D(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- Float to int (round to nearest) --
 
+/// Vector convert to integer, round to nearest.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixr8(a: []const f32, out: []i8) void {
     c.vDSP_vfixr8(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round to nearest (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixr8D(a: []const f64, out: []i8) void {
     c.vDSP_vfixr8D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round to nearest.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixr16(a: []const f32, out: []i16) void {
     c.vDSP_vfixr16(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round to nearest (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixr16D(a: []const f64, out: []i16) void {
     c.vDSP_vfixr16D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round to nearest.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixr32(a: []const f32, out: []i32) void {
     c.vDSP_vfixr32(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to integer, round to nearest (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixr32D(a: []const f64, out: []i32) void {
     c.vDSP_vfixr32D(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- Float to unsigned int (round to nearest) --
 
+/// Vector convert to unsigned integer, round to nearest.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixru8(a: []const f32, out: []u8) void {
     c.vDSP_vfixru8(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round to nearest (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixru8D(a: []const f64, out: []u8) void {
     c.vDSP_vfixru8D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round to nearest.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixru16(a: []const f32, out: []u16) void {
     c.vDSP_vfixru16(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round to nearest (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixru16D(a: []const f64, out: []u16) void {
     c.vDSP_vfixru16D(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round to nearest.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixru32(a: []const f32, out: []u32) void {
     c.vDSP_vfixru32(a.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector convert to unsigned integer, round to nearest (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = rint(A[n]);
+///
+/// Note: It is expected that the global rounding mode be the default,
+/// round-to-nearest. It is unspecified whether ties round up or down.
 pub fn vfixru32D(a: []const f64, out: []u32) void {
     c.vDSP_vfixru32D(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- Vector envelope --
 
+/// Vector envelope.
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         if (C[n] < B[n] || A[n] < C[n]) D[n] = C[n];
+///         else D[n] = 0;
+///     }
 pub fn venvlp(a: []const f32, b: []const f32, cv: []const f32, out: []f32) void {
     c.vDSP_venvlp(a.ptr, 1, b.ptr, 1, cv.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector envelope (double-precision).
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         if (C[n] < B[n] || A[n] < C[n]) D[n] = C[n];
+///         else D[n] = 0;
+///     }
 pub fn venvlpD(a: []const f64, b: []const f64, cv: []const f64, out: []f64) void {
     c.vDSP_venvlpD(a.ptr, 1, b.ptr, 1, cv.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- Decibel conversion --
 
+/// Vector convert to decibels, power, or amplitude.
+///
+///     If Flag is 1:
+///         alpha = 20;
+///     If Flag is 0:
+///         alpha = 10;
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = alpha * log10(A[n] / B[0]);
 pub fn vdbcon(a: []const f32, zero_ref: f32, flag: DbFlag, out: []f32) void {
     c.vDSP_vdbcon(a.ptr, 1, &zero_ref, out.ptr, 1, a.len, @intFromEnum(flag));
 }
+/// Vector convert to decibels, power, or amplitude (double-precision).
+///
+///     If Flag is 1:
+///         alpha = 20;
+///     If Flag is 0:
+///         alpha = 10;
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = alpha * log10(A[n] / B[0]);
 pub fn vdbconD(a: []const f64, zero_ref: f64, flag: DbFlag, out: []f64) void {
     c.vDSP_vdbconD(a.ptr, 1, &zero_ref, out.ptr, 1, a.len, @intFromEnum(flag));
 }

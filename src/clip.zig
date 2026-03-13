@@ -31,37 +31,93 @@ const c = struct {
 
 // -- Clear --
 
+/// Vector clear.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = 0;
 pub fn vclr(out: []f32) void {
     c.vDSP_vclr(out.ptr, 1, out.len);
 }
+/// Vector clear.
+///
+///     for (n = 0; n < N; ++n)
+///         C[n] = 0;
 pub fn vclrD(out: []f64) void {
     c.vDSP_vclrD(out.ptr, 1, out.len);
 }
 
 // -- Compress --
 
+/// Vector compress.
+///
+///     p = 0;
+///     for (n = 0; n < N; ++n)
+///         if (B[n] != 0)
+///             C[p++] = A[n];
 pub fn vcmprs(a: []const f32, gate: []const f32, out: []f32) void {
     c.vDSP_vcmprs(a.ptr, 1, gate.ptr, 1, out.ptr, 1, a.len);
 }
+/// Vector compress.
+///
+///     p = 0;
+///     for (n = 0; n < N; ++n)
+///         if (B[n] != 0)
+///             C[p++] = A[n];
 pub fn vcmprsD(a: []const f64, gate: []const f64, out: []f64) void {
     c.vDSP_vcmprsD(a.ptr, 1, gate.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- Clip --
 
+/// Vector clip.
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         D[n] = A[n];
+///         if (D[n] < B[0]) D[n] = B[0];
+///         if (C[0] < D[n]) D[n] = C[0];
+///     }
 pub fn vclip(a: []const f32, lo: f32, hi: f32, out: []f32) void {
     c.vDSP_vclip(a.ptr, 1, &lo, &hi, out.ptr, 1, a.len);
 }
+/// Vector clip.
+///
+///     for (n = 0; n < N; ++n)
+///     {
+///         D[n] = A[n];
+///         if (D[n] < B[0]) D[n] = B[0];
+///         if (C[0] < D[n]) D[n] = C[0];
+///     }
 pub fn vclipD(a: []const f64, lo: f64, hi: f64, out: []f64) void {
     c.vDSP_vclipD(a.ptr, 1, &lo, &hi, out.ptr, 1, a.len);
 }
 
+/// Vector clip and count.
+///
+///     NLow[0]  = 0;
+///     NHigh[0] = 0;
+///     for (n = 0; n < N; ++n)
+///     {
+///         D[n] = A[n];
+///         if (D[n] < B[0]) { D[n] = B[0]; ++NLow[0];  }
+///         if (C[0] < D[n]) { D[n] = C[0]; ++NHigh[0]; }
+///     }
 pub fn vclipc(a: []const f32, lo: f32, hi: f32, out: []f32) struct { n_low: Length, n_high: Length } {
     var nl: Length = undefined;
     var nh: Length = undefined;
     c.vDSP_vclipc(a.ptr, 1, &lo, &hi, out.ptr, 1, a.len, &nl, &nh);
     return .{ .n_low = nl, .n_high = nh };
 }
+/// Vector clip and count.
+///
+///     NLow[0]  = 0;
+///     NHigh[0] = 0;
+///     for (n = 0; n < N; ++n)
+///     {
+///         D[n] = A[n];
+///         if (D[n] < B[0]) { D[n] = B[0]; ++NLow[0];  }
+///         if (C[0] < D[n]) { D[n] = C[0]; ++NHigh[0]; }
+///     }
 pub fn vclipcD(a: []const f64, lo: f64, hi: f64, out: []f64) struct { n_low: Length, n_high: Length } {
     var nl: Length = undefined;
     var nh: Length = undefined;

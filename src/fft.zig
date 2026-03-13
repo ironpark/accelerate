@@ -28,87 +28,610 @@ pub const Radix = enum(c_int) {
 
 const c = struct {
     // -- Setup / destroy --
+
+    /// vDSP_create_fftsetup allocates memory and prepares constants used by
+    /// single-precision FFT routines.
     extern fn vDSP_create_fftsetup(Log2n: Length, Radix: c_int) ?FFTSetup;
+    /// vDSP_create_fftsetupD allocates memory and prepares constants used by
+    /// double-precision FFT routines.
     extern fn vDSP_create_fftsetupD(Log2n: Length, Radix: c_int) ?FFTSetupD;
+    /// vDSP_destroy_fftsetup frees the memory allocated by vDSP_create_fftsetup.
+    /// It may be passed a null pointer, in which case it has no effect.
     extern fn vDSP_destroy_fftsetup(setup: ?FFTSetup) void;
+    /// vDSP_destroy_fftsetupD frees the memory allocated by vDSP_create_fftsetupD.
+    /// It may be passed a null pointer, in which case it has no effect.
     extern fn vDSP_destroy_fftsetupD(setup: ?FFTSetupD) void;
 
     // -- Complex-to-complex, in-place (zip) --
+
+    /// In-place complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = C->realp[j*IC] + i * C->imagp[j*IC];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// (for single precision) or vDSP_create_fftsetupD (for double precision)
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zip(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// In-place complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = C->realp[j*IC] + i * C->imagp[j*IC];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zipD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// In-place complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zip but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     extern fn vDSP_fft_zipt(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, Buffer: *const SplitComplex, Log2N: Length, Direction: c_int) void;
+    /// In-place complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zipD but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     extern fn vDSP_fft_ziptD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, Direction: c_int) void;
 
     // -- Complex-to-complex, out-of-place (zop) --
+
+    /// Out-of-place complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = A->realp[j*IA] + i * A->imagp[j*IA];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zop(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, C: *const SplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// Out-of-place complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = A->realp[j*IA] + i * A->imagp[j*IA];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zopD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, C: *const DoubleSplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// Out-of-place complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zop but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     extern fn vDSP_fft_zopt(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, C: *const SplitComplex, IC: Stride, Buffer: *const SplitComplex, Log2N: Length, Direction: c_int) void;
+    /// Out-of-place complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zopD but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     extern fn vDSP_fft_zoptD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, C: *const DoubleSplitComplex, IC: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, Direction: c_int) void;
 
     // -- Real-to-complex, in-place (zrip) --
+
+    /// In-place real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex structure.
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zrip(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// In-place real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex structure.
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zripD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// In-place real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zrip but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     extern fn vDSP_fft_zript(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, Buffer: *const SplitComplex, Log2N: Length, Direction: c_int) void;
+    /// In-place real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zripD but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     extern fn vDSP_fft_zriptD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, Direction: c_int) void;
 
     // -- Real-to-complex, out-of-place (zrop) --
+
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex structure.
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zrop(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, C: *const SplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex structure.
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft_zropD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, C: *const DoubleSplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zrop but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     extern fn vDSP_fft_zropt(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, C: *const SplitComplex, IC: Stride, Buffer: *const SplitComplex, Log2N: Length, Direction: c_int) void;
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as vDSP_fft_zropD but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     extern fn vDSP_fft_zroptD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, C: *const DoubleSplitComplex, IC: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, Direction: c_int) void;
 
     // -- 2D complex-to-complex, in-place --
+
+    /// In-place two-dimensional complex Discrete Fourier Transform routine.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zip(Setup: FFTSetup, C: *const SplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// In-place two-dimensional complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zipD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// In-place two-dimensional complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     extern fn vDSP_fft2d_zipt(Setup: FFTSetup, C: *const SplitComplex, IC0: Stride, IC1: Stride, Buffer: *const SplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// In-place two-dimensional complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     extern fn vDSP_fft2d_ziptD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Buffer: *const DoubleSplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
 
     // -- 2D complex-to-complex, out-of-place --
+
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zop(Setup: FFTSetup, A: *const SplitComplex, IA0: Stride, IA1: Stride, C: *const SplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zopD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA0: Stride, IA1: Stride, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     extern fn vDSP_fft2d_zopt(Setup: FFTSetup, A: *const SplitComplex, IA0: Stride, IA1: Stride, C: *const SplitComplex, IC0: Stride, IC1: Stride, Buffer: *const SplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     extern fn vDSP_fft2d_zoptD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA0: Stride, IA1: Stride, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Buffer: *const DoubleSplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
 
     // -- 2D real-to-complex, in-place --
+
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zrip(Setup: FFTSetup, C: *const SplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zripD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     extern fn vDSP_fft2d_zript(Setup: FFTSetup, C: *const SplitComplex, IC0: Stride, IC1: Stride, Buffer: *const SplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     extern fn vDSP_fft2d_zriptD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Buffer: *const DoubleSplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
 
     // -- 2D real-to-complex, out-of-place --
+
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zrop(Setup: FFTSetup, A: *const SplitComplex, IA0: Stride, IA1: Stride, C: *const SplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fft2d_zropD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA0: Stride, IA1: Stride, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     extern fn vDSP_fft2d_zropt(Setup: FFTSetup, A: *const SplitComplex, IA0: Stride, IA1: Stride, C: *const SplitComplex, IC0: Stride, IC1: Stride, Buffer: *const SplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     extern fn vDSP_fft2d_zroptD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA0: Stride, IA1: Stride, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Buffer: *const DoubleSplitComplex, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
 
     // -- Multiple FFT, complex in-place --
+
+    /// In-place multiple complex Discrete Fourier Transform routine.
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zip(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, IM: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// In-place multiple complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zipD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, IM: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// In-place multiple complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_zipt(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, IM: Stride, Buffer: *const SplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
+    /// In-place multiple complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_ziptD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, IM: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
 
     // -- Multiple FFT, complex out-of-place --
+
+    /// Out-of-place multiple complex Discrete Fourier Transform routine.
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zop(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, IMA: Stride, C: *const SplitComplex, IC: Stride, IMC: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// Out-of-place multiple complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zopD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, IMA: Stride, C: *const DoubleSplitComplex, IC: Stride, IMC: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// Out-of-place multiple complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_zopt(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, IMA: Stride, C: *const SplitComplex, IC: Stride, IMC: Stride, Buffer: *const SplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
+    /// Out-of-place multiple complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_zoptD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, IMA: Stride, C: *const DoubleSplitComplex, IC: Stride, IMC: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
 
     // -- Multiple FFT, real in-place --
+
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zrip(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, IM: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zripD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, IM: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_zript(Setup: FFTSetup, C: *const SplitComplex, IC: Stride, IM: Stride, Buffer: *const SplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_zriptD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC: Stride, IM: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
 
     // -- Multiple FFT, real out-of-place --
+
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetup
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zrop(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, IMA: Stride, C: *const SplitComplex, IC: Stride, IMC: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Setup must have been properly created by a call to vDSP_create_fftsetupD
+    /// and not subsequently destroyed.
+    ///
+    /// Direction must be +1 or -1.
     extern fn vDSP_fftm_zropD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, IMA: Stride, C: *const DoubleSplitComplex, IC: Stride, IMC: Stride, Log2N: Length, M: Length, Direction: c_int) void;
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_zropt(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, IMA: Stride, C: *const SplitComplex, IC: Stride, IMC: Stride, Buffer: *const SplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     extern fn vDSP_fftm_zroptD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, IMA: Stride, C: *const DoubleSplitComplex, IC: Stride, IMC: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, M: Length, Direction: c_int) void;
 
     // -- Interleaved conversion --
+
+    /// Convert a complex array to a complex-split array.
+    ///
+    /// This computes:
+    ///     for (n = 0; n < N; ++n)
+    ///         Z[n] = C[n];
+    ///
+    /// where C[n] is C[n*IC/2].real + i * C[n*IC/2].imag
+    /// and Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ].
     extern fn vDSP_ctoz(C: [*]const extern struct { real: f32, imag: f32 }, IC: Stride, Z: *const SplitComplex, IZ: Stride, N: Length) void;
+    /// Convert a complex array to a complex-split array (double precision).
+    ///
+    /// This computes:
+    ///     for (n = 0; n < N; ++n)
+    ///         Z[n] = C[n];
+    ///
+    /// where C[n] is C[n*IC/2].real + i * C[n*IC/2].imag
+    /// and Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ].
     extern fn vDSP_ctozD(C: [*]const extern struct { real: f64, imag: f64 }, IC: Stride, Z: *const DoubleSplitComplex, IZ: Stride, N: Length) void;
+    /// Convert a complex-split array to a complex array.
+    ///
+    /// This computes:
+    ///     for (n = 0; n < N; ++n)
+    ///         C[n] = Z[n];
+    ///
+    /// where Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ]
+    /// and C[n] is C[n*IC/2].real + i * C[n*IC/2].imag.
     extern fn vDSP_ztoc(Z: *const SplitComplex, IZ: Stride, C: [*]extern struct { real: f32, imag: f32 }, IC: Stride, N: Length) void;
+    /// Convert a complex-split array to a complex array (double precision).
+    ///
+    /// This computes:
+    ///     for (n = 0; n < N; ++n)
+    ///         C[n] = Z[n];
+    ///
+    /// where Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ]
+    /// and C[n] is C[n*IC/2].real + i * C[n*IC/2].imag.
     extern fn vDSP_ztocD(Z: *const DoubleSplitComplex, IZ: Stride, C: [*]extern struct { real: f64, imag: f64 }, IC: Stride, N: Length) void;
 };
 
@@ -119,18 +642,48 @@ const c = struct {
 pub const Complex = extern struct { real: f32, imag: f32 };
 pub const DoubleComplex = extern struct { real: f64, imag: f64 };
 
-/// Convert interleaved complex to split complex
+/// Convert a complex array to a complex-split array.
+///
+/// This computes:
+///     for (n = 0; n < N; ++n)
+///         Z[n] = C[n];
+///
+/// where C[n] is C[n*IC/2].real + i * C[n*IC/2].imag
+/// and Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ].
 pub fn ctoz(input: [*]const Complex, output: *const SplitComplex, n: Length) void {
     c.vDSP_ctoz(input, 2, output, 1, n);
 }
+/// Convert a complex array to a complex-split array (double precision).
+///
+/// This computes:
+///     for (n = 0; n < N; ++n)
+///         Z[n] = C[n];
+///
+/// where C[n] is C[n*IC/2].real + i * C[n*IC/2].imag
+/// and Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ].
 pub fn ctozD(input: [*]const DoubleComplex, output: *const DoubleSplitComplex, n: Length) void {
     c.vDSP_ctozD(input, 2, output, 1, n);
 }
 
-/// Convert split complex to interleaved complex
+/// Convert a complex-split array to a complex array.
+///
+/// This computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = Z[n];
+///
+/// where Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ]
+/// and C[n] is C[n*IC/2].real + i * C[n*IC/2].imag.
 pub fn ztoc(input: *const SplitComplex, output: [*]Complex, n: Length) void {
     c.vDSP_ztoc(input, 1, output, 2, n);
 }
+/// Convert a complex-split array to a complex array (double precision).
+///
+/// This computes:
+///     for (n = 0; n < N; ++n)
+///         C[n] = Z[n];
+///
+/// where Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ]
+/// and C[n] is C[n*IC/2].real + i * C[n*IC/2].imag.
 pub fn ztocD(input: *const DoubleSplitComplex, output: [*]DoubleComplex, n: Length) void {
     c.vDSP_ztocD(input, 1, output, 2, n);
 }
@@ -143,6 +696,7 @@ pub const FFT = struct {
     setup: FFTSetup,
     log2n: Length,
 
+    /// Allocates memory and prepares constants used by single-precision FFT routines.
     pub fn init(log2n: Length, radix: Radix) ?FFT {
         return .{
             .setup = c.vDSP_create_fftsetup(log2n, @intFromEnum(radix)) orelse return null,
@@ -150,112 +704,316 @@ pub const FFT = struct {
         };
     }
 
+    /// Frees the memory allocated by init. May be called on a destroyed setup
+    /// with no effect.
     pub fn deinit(self: FFT) void {
         c.vDSP_destroy_fftsetup(self.setup);
     }
 
     // -- 1D complex --
 
+    /// In-place complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = C->realp[j*IC] + i * C->imagp[j*IC];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Direction must be +1 or -1.
     pub fn zip(self: FFT, io: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zip(self.setup, io, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// In-place complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zip but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     pub fn zipt(self: FFT, io: *const SplitComplex, buffer: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zipt(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = A->realp[j*IA] + i * A->imagp[j*IA];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Direction must be +1 or -1.
     pub fn zop(self: FFT, input: *const SplitComplex, output: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zop(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zop but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     pub fn zopt(self: FFT, input: *const SplitComplex, output: *const SplitComplex, buffer: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zopt(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
     // -- 1D real --
 
+    /// In-place real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex
+    /// structure.
+    ///
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrip(self: FFT, io: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zrip(self.setup, io, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// In-place real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zrip but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     pub fn zript(self: FFT, io: *const SplitComplex, buffer: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zript(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex
+    /// structure.
+    ///
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrop(self: FFT, input: *const SplitComplex, output: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zrop(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zrop but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     pub fn zropt(self: FFT, input: *const SplitComplex, output: *const SplitComplex, buffer: *const SplitComplex, direction: Direction) void {
         c.vDSP_fft_zropt(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
     // -- 2D complex --
 
+    /// In-place two-dimensional complex Discrete Fourier Transform routine.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zip2d(self: FFT, io: *const SplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zip(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// In-place two-dimensional complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     pub fn zipt2d(self: FFT, io: *const SplitComplex, ic0: Stride, buffer: *const SplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zipt(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zop2d(self: FFT, input: *const SplitComplex, ia0: Stride, output: *const SplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zop(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     pub fn zopt2d(self: FFT, input: *const SplitComplex, ia0: Stride, output: *const SplitComplex, ic0: Stride, buffer: *const SplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zopt(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
     // -- 2D real --
 
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrip2d(self: FFT, io: *const SplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zrip(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     pub fn zript2d(self: FFT, io: *const SplitComplex, ic0: Stride, buffer: *const SplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zript(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrop2d(self: FFT, input: *const SplitComplex, ia0: Stride, output: *const SplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zrop(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     pub fn zropt2d(self: FFT, input: *const SplitComplex, ia0: Stride, output: *const SplitComplex, ic0: Stride, buffer: *const SplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zropt(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
     // -- Batch --
 
+    /// In-place multiple complex Discrete Fourier Transform routine.
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzip(self: FFT, io: *const SplitComplex, im: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zip(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// In-place multiple complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzipt(self: FFT, io: *const SplitComplex, im: Stride, buffer: *const SplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_zipt(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple complex Discrete Fourier Transform routine.
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzop(self: FFT, input: *const SplitComplex, ima: Stride, output: *const SplitComplex, imc: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zop(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple complex Discrete Fourier Transform routine, with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzopt(self: FFT, input: *const SplitComplex, ima: Stride, output: *const SplitComplex, imc: Stride, buffer: *const SplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_zopt(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzrip(self: FFT, io: *const SplitComplex, im: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zrip(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzript(self: FFT, io: *const SplitComplex, im: Stride, buffer: *const SplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_zript(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzrop(self: FFT, input: *const SplitComplex, ima: Stride, output: *const SplitComplex, imc: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zrop(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine, with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzropt(self: FFT, input: *const SplitComplex, ima: Stride, output: *const SplitComplex, imc: Stride, buffer: *const SplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_zropt(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction));
     }
@@ -265,6 +1023,7 @@ pub const FFTD = struct {
     setup: FFTSetupD,
     log2n: Length,
 
+    /// Allocates memory and prepares constants used by double-precision FFT routines.
     pub fn init(log2n: Length, radix: Radix) ?FFTD {
         return .{
             .setup = c.vDSP_create_fftsetupD(log2n, @intFromEnum(radix)) orelse return null,
@@ -272,112 +1031,316 @@ pub const FFTD = struct {
         };
     }
 
+    /// Frees the memory allocated by init. May be called on a destroyed setup
+    /// with no effect.
     pub fn deinit(self: FFTD) void {
         c.vDSP_destroy_fftsetupD(self.setup);
     }
 
     // -- 1D complex --
 
+    /// In-place complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = C->realp[j*IC] + i * C->imagp[j*IC];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Direction must be +1 or -1.
     pub fn zip(self: FFTD, io: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_zipD(self.setup, io, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// In-place complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zip but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     pub fn zipt(self: FFTD, io: *const DoubleSplitComplex, buffer: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_ziptD(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// These compute:
+    ///
+    ///     N = 1 << Log2N;
+    ///     scale = 0 < Direction ? 1 : 1./N;
+    ///
+    ///     // Define a complex vector, h:
+    ///     for (j = 0; j < N; ++j)
+    ///         h[j] = A->realp[j*IA] + i * A->imagp[j*IA];
+    ///
+    ///     // Perform Discrete Fourier Transform.
+    ///     for (k = 0; k < N; ++k)
+    ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+    ///
+    ///     // Store result.
+    ///     for (k = 0; k < N; ++k)
+    ///     {
+    ///         C->realp[k*IC] = Re(H[k]);
+    ///         C->imagp[k*IC] = Im(H[k]);
+    ///     }
+    ///
+    /// Direction must be +1 or -1.
     pub fn zop(self: FFTD, input: *const DoubleSplitComplex, output: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_zopD(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zop but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
+    /// or better.
     pub fn zopt(self: FFTD, input: *const DoubleSplitComplex, output: *const DoubleSplitComplex, buffer: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_zoptD(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
     // -- 1D real --
 
+    /// In-place real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex
+    /// structure.
+    ///
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrip(self: FFTD, io: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_zripD(self.setup, io, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// In-place real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zrip but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     pub fn zript(self: FFTD, io: *const DoubleSplitComplex, buffer: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_zriptD(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed, taking
+    /// input from a real vector that has been coerced into the complex
+    /// structure.
+    ///
+    /// If Direction is -1, a complex-to-real inverse transform is performed,
+    /// producing a real output vector coerced into the complex structure.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrop(self: FFTD, input: *const DoubleSplitComplex, output: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_zropD(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction));
     }
 
+    /// Out-of-place real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation as zrop but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
+    /// bytes and is preferably 16-byte aligned or better.
     pub fn zropt(self: FFTD, input: *const DoubleSplitComplex, output: *const DoubleSplitComplex, buffer: *const DoubleSplitComplex, direction: Direction) void {
         c.vDSP_fft_zroptD(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction));
     }
 
     // -- 2D complex --
 
+    /// In-place two-dimensional complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Direction must be +1 or -1.
     pub fn zip2d(self: FFTD, io: *const DoubleSplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zipD(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// In-place two-dimensional complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     pub fn zipt2d(self: FFTD, io: *const DoubleSplitComplex, ic0: Stride, buffer: *const DoubleSplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_ziptD(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Direction must be +1 or -1.
     pub fn zop2d(self: FFTD, input: *const DoubleSplitComplex, ia0: Stride, output: *const DoubleSplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zopD(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
+    /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
+    /// aligned or better.
     pub fn zopt2d(self: FFTD, input: *const DoubleSplitComplex, ia0: Stride, output: *const DoubleSplitComplex, ic0: Stride, buffer: *const DoubleSplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zoptD(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
     // -- 2D real --
 
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrip2d(self: FFTD, io: *const DoubleSplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zripD(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// In-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     pub fn zript2d(self: FFTD, io: *const DoubleSplitComplex, ic0: Stride, buffer: *const DoubleSplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zriptD(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// If Direction is +1, a real-to-complex transform is performed.
+    /// If Direction is -1, a complex-to-real inverse transform is performed.
+    ///
+    /// Unlike the two-dimensional complex transform, the dimensions are not
+    /// symmetric in this real-to-complex transform.
+    ///
+    /// Direction must be +1 or -1.
     pub fn zrop2d(self: FFTD, input: *const DoubleSplitComplex, ia0: Stride, output: *const DoubleSplitComplex, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zropD(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction));
     }
 
+    /// Out-of-place two-dimensional real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for the greater
+    /// of N1 or N0/2 floating-point elements.  The addresses are preferably
+    /// 16-byte aligned or better.
     pub fn zropt2d(self: FFTD, input: *const DoubleSplitComplex, ia0: Stride, output: *const DoubleSplitComplex, ic0: Stride, buffer: *const DoubleSplitComplex, log2n0: Length, log2n1: Length, direction: Direction) void {
         c.vDSP_fft2d_zroptD(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction));
     }
 
     // -- Batch --
 
+    /// In-place multiple complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzip(self: FFTD, io: *const DoubleSplitComplex, im: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zipD(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// In-place multiple complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzipt(self: FFTD, io: *const DoubleSplitComplex, im: Stride, buffer: *const DoubleSplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_ziptD(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple complex Discrete Fourier Transform routine (double precision).
+    ///
+    /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzop(self: FFTD, input: *const DoubleSplitComplex, ima: Stride, output: *const DoubleSplitComplex, imc: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zopD(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzopt(self: FFTD, input: *const DoubleSplitComplex, ima: Stride, output: *const DoubleSplitComplex, imc: Stride, buffer: *const DoubleSplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_zoptD(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzrip(self: FFTD, io: *const DoubleSplitComplex, im: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zripD(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// In-place multiple real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzript(self: FFTD, io: *const DoubleSplitComplex, im: Stride, buffer: *const DoubleSplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_zriptD(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine (double precision).
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// Performs M individual real-to-complex (Direction +1) or complex-to-real
+    /// (Direction -1) DFTs, each of length N = 1 << Log2N.
+    ///
+    /// Direction must be +1 or -1.
     pub fn mzrop(self: FFTD, input: *const DoubleSplitComplex, ima: Stride, output: *const DoubleSplitComplex, imc: Stride, m: Length, direction: Direction) void {
         c.vDSP_fftm_zropD(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction));
     }
 
+    /// Out-of-place multiple real-to-complex Discrete Fourier Transform routine (double precision), with temporary memory.
+    /// We suggest you use the DFT routines instead of these.
+    ///
+    /// The temporary buffer version performs the same operation but is
+    /// permitted to use the temporary buffer for improved performance.  Each
+    /// of Buffer->realp and Buffer->imagp must contain space for N/2
+    /// floating-point elements and is preferably 16-byte aligned or better.
     pub fn mzropt(self: FFTD, input: *const DoubleSplitComplex, ima: Stride, output: *const DoubleSplitComplex, imc: Stride, buffer: *const DoubleSplitComplex, m: Length, direction: Direction) void {
         c.vDSP_fftm_zroptD(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction));
     }
