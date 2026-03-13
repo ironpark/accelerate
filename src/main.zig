@@ -1,5 +1,5 @@
 const std = @import("std");
-const accelerate = @import("vdsp");
+const accelerate = @import("accelerate");
 const vdsp = accelerate.vdsp;
 
 pub fn main() !void {
