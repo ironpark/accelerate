@@ -64,62 +64,6 @@ const c = struct {
 };
 
 // ============================================================================
-// Low-level functions
-// ============================================================================
-
-// -- Single-channel --
-
-pub fn biquad_create_setup(coefficients: []const f64, sections: Length) ?BiquadSetup {
-    return c.vDSP_biquad_CreateSetup(coefficients.ptr, sections);
-}
-
-pub fn biquad_create_setupD(coefficients: []const f64, sections: Length) ?BiquadSetupD {
-    return c.vDSP_biquad_CreateSetupD(coefficients.ptr, sections);
-}
-
-pub fn biquad_destroy_setup(setup: ?BiquadSetup) void {
-    c.vDSP_biquad_DestroySetup(setup);
-}
-
-pub fn biquad_destroy_setupD(setup: ?BiquadSetupD) void {
-    c.vDSP_biquad_DestroySetupD(setup);
-}
-
-pub fn biquad(setup: BiquadSetup, delay: [*]f32, x: []const f32, y: []f32) void {
-    c.vDSP_biquad(setup, delay, x.ptr, 1, y.ptr, 1, x.len);
-}
-
-pub fn biquadD(setup: BiquadSetupD, delay: [*]f64, x: []const f64, y: []f64) void {
-    c.vDSP_biquadD(setup, delay, x.ptr, 1, y.ptr, 1, x.len);
-}
-
-// -- Multi-channel --
-
-pub fn biquadm_create_setup(coefficients: []const f64, sections: Length, channels: Length) ?BiquadmSetup {
-    return c.vDSP_biquadm_CreateSetup(coefficients.ptr, sections, channels);
-}
-
-pub fn biquadm_create_setupD(coefficients: []const f64, sections: Length, channels: Length) ?BiquadmSetupD {
-    return c.vDSP_biquadm_CreateSetupD(coefficients.ptr, sections, channels);
-}
-
-pub fn biquadm_destroy_setup(setup: BiquadmSetup) void {
-    c.vDSP_biquadm_DestroySetup(setup);
-}
-
-pub fn biquadm_destroy_setupD(setup: BiquadmSetupD) void {
-    c.vDSP_biquadm_DestroySetupD(setup);
-}
-
-pub fn biquadm(setup: BiquadmSetup, x: [*]const [*]const f32, y: [*]const [*]f32, n: Length) void {
-    c.vDSP_biquadm(setup, x, 1, y, 1, n);
-}
-
-pub fn biquadmD(setup: BiquadmSetupD, x: [*]const [*]const f64, y: [*]const [*]f64, n: Length) void {
-    c.vDSP_biquadmD(setup, x, 1, y, 1, n);
-}
-
-// ============================================================================
 // High-level wrappers
 // ============================================================================
 
@@ -131,20 +75,20 @@ pub const Biquad = struct {
 
     /// coefficients: 5 doubles per section [b0, b1, b2, a1, a2] x sections
     pub fn init(allocator: @import("std").mem.Allocator, coefficients: []const f64, sections: Length) !Biquad {
-        const setup = biquad_create_setup(coefficients, sections) orelse return error.SetupFailed;
+        const setup = c.vDSP_biquad_CreateSetup(coefficients.ptr, sections) orelse return error.SetupFailed;
         const delay = try allocator.alloc(f32, (sections + 1) * 2);
         @memset(delay, 0);
         return .{ .setup = setup, .delay = delay, .sections = sections };
     }
 
     pub fn deinit(self: *Biquad, allocator: @import("std").mem.Allocator) void {
-        biquad_destroy_setup(self.setup);
+        c.vDSP_biquad_DestroySetup(self.setup);
         allocator.free(self.delay);
         self.* = undefined;
     }
 
     pub fn apply(self: *Biquad, input: []const f32, output: []f32) void {
-        biquad(self.setup, self.delay.ptr, input, output);
+        c.vDSP_biquad(self.setup, self.delay.ptr, input.ptr, 1, output.ptr, 1, input.len);
     }
 
     pub fn setCoefficientsDouble(self: Biquad, coeffs: []const f64, start_section: Length) void {
@@ -163,20 +107,20 @@ pub const BiquadD = struct {
     sections: Length,
 
     pub fn init(allocator: @import("std").mem.Allocator, coefficients: []const f64, sections: Length) !BiquadD {
-        const setup = biquad_create_setupD(coefficients, sections) orelse return error.SetupFailed;
+        const setup = c.vDSP_biquad_CreateSetupD(coefficients.ptr, sections) orelse return error.SetupFailed;
         const delay = try allocator.alloc(f64, (sections + 1) * 2);
         @memset(delay, 0);
         return .{ .setup = setup, .delay = delay, .sections = sections };
     }
 
     pub fn deinit(self: *BiquadD, allocator: @import("std").mem.Allocator) void {
-        biquad_destroy_setupD(self.setup);
+        c.vDSP_biquad_DestroySetupD(self.setup);
         allocator.free(self.delay);
         self.* = undefined;
     }
 
     pub fn apply(self: *BiquadD, input: []const f64, output: []f64) void {
-        biquadD(self.setup, self.delay.ptr, input, output);
+        c.vDSP_biquadD(self.setup, self.delay.ptr, input.ptr, 1, output.ptr, 1, input.len);
     }
 };
 
@@ -189,18 +133,18 @@ pub const Biquadm = struct {
     /// coefficients: 5 doubles per section per channel, row-major [ch0_sec0, ch0_sec1, ..., ch1_sec0, ...]
     pub fn init(coefficients: []const f64, sections: Length, channels: Length) ?Biquadm {
         return .{
-            .setup = biquadm_create_setup(coefficients, sections, channels) orelse return null,
+            .setup = c.vDSP_biquadm_CreateSetup(coefficients.ptr, sections, channels) orelse return null,
             .sections = sections,
             .channels = channels,
         };
     }
 
     pub fn deinit(self: Biquadm) void {
-        biquadm_destroy_setup(self.setup);
+        c.vDSP_biquadm_DestroySetup(self.setup);
     }
 
     pub fn apply(self: Biquadm, input: [*]const [*]const f32, output: [*]const [*]f32, n: Length) void {
-        biquadm(self.setup, input, output, n);
+        c.vDSP_biquadm(self.setup, input, 1, output, 1, n);
     }
 
     pub fn resetState(self: Biquadm) void {
@@ -240,18 +184,18 @@ pub const BiquadmD = struct {
 
     pub fn init(coefficients: []const f64, sections: Length, channels: Length) ?BiquadmD {
         return .{
-            .setup = biquadm_create_setupD(coefficients, sections, channels) orelse return null,
+            .setup = c.vDSP_biquadm_CreateSetupD(coefficients.ptr, sections, channels) orelse return null,
             .sections = sections,
             .channels = channels,
         };
     }
 
     pub fn deinit(self: BiquadmD) void {
-        biquadm_destroy_setupD(self.setup);
+        c.vDSP_biquadm_DestroySetupD(self.setup);
     }
 
     pub fn apply(self: BiquadmD, input: [*]const [*]const f64, output: [*]const [*]f64, n: Length) void {
-        biquadmD(self.setup, input, output, n);
+        c.vDSP_biquadmD(self.setup, input, 1, output, 1, n);
     }
 
     pub fn resetState(self: BiquadmD) void {

@@ -73,89 +73,6 @@ const c = struct {
 };
 
 // ============================================================================
-// Split-complex DFT
-// ============================================================================
-
-/// Create DFT setup for complex-to-complex (zop)
-pub fn zop_create_setup(previous: ?DFTSetup, length: Length, direction: Direction) ?DFTSetup {
-    return c.vDSP_DFT_zop_CreateSetup(previous, length, @intFromEnum(direction));
-}
-pub fn zop_create_setupD(previous: ?DFTSetupD, length: Length, direction: Direction) ?DFTSetupD {
-    return c.vDSP_DFT_zop_CreateSetupD(previous, length, @intFromEnum(direction));
-}
-
-/// Create DFT setup for real-to-complex (zrop)
-pub fn zrop_create_setup(previous: ?DFTSetup, length: Length, direction: Direction) ?DFTSetup {
-    return c.vDSP_DFT_zrop_CreateSetup(previous, length, @intFromEnum(direction));
-}
-pub fn zrop_create_setupD(previous: ?DFTSetupD, length: Length, direction: Direction) ?DFTSetupD {
-    return c.vDSP_DFT_zrop_CreateSetupD(previous, length, @intFromEnum(direction));
-}
-
-/// Create legacy DFT setup (use with dft_zop)
-pub fn create_setup(previous: ?DFTSetup, length: Length) ?DFTSetup {
-    return c.vDSP_DFT_CreateSetup(previous, length);
-}
-
-/// Destroy DFT setup
-pub fn destroy_setup(setup: ?DFTSetup) void {
-    c.vDSP_DFT_DestroySetup(setup);
-}
-pub fn destroy_setupD(setup: ?DFTSetupD) void {
-    c.vDSP_DFT_DestroySetupD(setup);
-}
-
-/// Execute DFT (split complex, stride 1)
-pub fn execute(setup: DFTSetup, ir: []const f32, ii: []const f32, or_out: []f32, oi_out: []f32) void {
-    c.vDSP_DFT_Execute(setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
-}
-pub fn executeD(setup: DFTSetupD, ir: []const f64, ii: []const f64, or_out: []f64, oi_out: []f64) void {
-    c.vDSP_DFT_ExecuteD(setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
-}
-
-// ============================================================================
-// DCT
-// ============================================================================
-
-/// Create DCT setup (types II, III, IV)
-pub fn dct_create_setup(previous: ?DFTSetup, length: Length, dct_type: DCTType) ?DFTSetup {
-    return c.vDSP_DCT_CreateSetup(previous, length, @intFromEnum(dct_type));
-}
-
-/// Execute DCT
-pub fn dct_execute(setup: DFTSetup, input: []const f32, output: []f32) void {
-    c.vDSP_DCT_Execute(setup, input.ptr, output.ptr);
-}
-
-// ============================================================================
-// Interleaved DFT
-// ============================================================================
-
-/// Create interleaved DFT setup (single-precision)
-pub fn interleaved_create_setup(previous: ?DFTInterleavedSetup, length: Length, direction: Direction, rtc: RealToComplex) ?DFTInterleavedSetup {
-    return c.vDSP_DFT_Interleaved_CreateSetup(previous, length, @intFromEnum(direction), @intFromEnum(rtc));
-}
-pub fn interleaved_create_setupD(previous: ?DFTInterleavedSetupD, length: Length, direction: Direction, rtc: RealToComplex) ?DFTInterleavedSetupD {
-    return c.vDSP_DFT_Interleaved_CreateSetupD(previous, length, @intFromEnum(direction), @intFromEnum(rtc));
-}
-
-/// Execute interleaved DFT
-pub fn interleaved_execute(setup: DFTInterleavedSetup, input: []const Complex, output: []Complex) void {
-    c.vDSP_DFT_Interleaved_Execute(setup, input.ptr, output.ptr);
-}
-pub fn interleaved_executeD(setup: DFTInterleavedSetupD, input: []const DoubleComplex, output: []DoubleComplex) void {
-    c.vDSP_DFT_Interleaved_ExecuteD(setup, input.ptr, output.ptr);
-}
-
-/// Destroy interleaved DFT setup
-pub fn interleaved_destroy_setup(setup: ?DFTInterleavedSetup) void {
-    c.vDSP_DFT_Interleaved_DestroySetup(setup);
-}
-pub fn interleaved_destroy_setupD(setup: ?DFTInterleavedSetupD) void {
-    c.vDSP_DFT_Interleaved_DestroySetupD(setup);
-}
-
-// ============================================================================
 // High-level DFT wrappers (manage setup lifetime)
 // ============================================================================
 
@@ -164,19 +81,19 @@ pub const DFT = struct {
     setup: DFTSetup,
 
     pub fn init(length: Length, direction: Direction) ?DFT {
-        return .{ .setup = zop_create_setup(null, length, direction) orelse return null };
+        return .{ .setup = c.vDSP_DFT_zop_CreateSetup(null, length, @intFromEnum(direction)) orelse return null };
     }
 
     pub fn initShared(previous: DFTSetup, length: Length, direction: Direction) ?DFT {
-        return .{ .setup = zop_create_setup(previous, length, direction) orelse return null };
+        return .{ .setup = c.vDSP_DFT_zop_CreateSetup(previous, length, @intFromEnum(direction)) orelse return null };
     }
 
     pub fn deinit(self: DFT) void {
-        destroy_setup(self.setup);
+        c.vDSP_DFT_DestroySetup(self.setup);
     }
 
     pub fn exec(self: DFT, ir: []const f32, ii: []const f32, or_out: []f32, oi_out: []f32) void {
-        execute(self.setup, ir, ii, or_out, oi_out);
+        c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
     }
 };
 
@@ -185,15 +102,15 @@ pub const DFTD = struct {
     setup: DFTSetupD,
 
     pub fn init(length: Length, direction: Direction) ?DFTD {
-        return .{ .setup = zop_create_setupD(null, length, direction) orelse return null };
+        return .{ .setup = c.vDSP_DFT_zop_CreateSetupD(null, length, @intFromEnum(direction)) orelse return null };
     }
 
     pub fn deinit(self: DFTD) void {
-        destroy_setupD(self.setup);
+        c.vDSP_DFT_DestroySetupD(self.setup);
     }
 
     pub fn exec(self: DFTD, ir: []const f64, ii: []const f64, or_out: []f64, oi_out: []f64) void {
-        executeD(self.setup, ir, ii, or_out, oi_out);
+        c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
     }
 };
 
@@ -202,15 +119,15 @@ pub const RealDFT = struct {
     setup: DFTSetup,
 
     pub fn init(length: Length, direction: Direction) ?RealDFT {
-        return .{ .setup = zrop_create_setup(null, length, direction) orelse return null };
+        return .{ .setup = c.vDSP_DFT_zrop_CreateSetup(null, length, @intFromEnum(direction)) orelse return null };
     }
 
     pub fn deinit(self: RealDFT) void {
-        destroy_setup(self.setup);
+        c.vDSP_DFT_DestroySetup(self.setup);
     }
 
     pub fn exec(self: RealDFT, ir: []const f32, ii: []const f32, or_out: []f32, oi_out: []f32) void {
-        execute(self.setup, ir, ii, or_out, oi_out);
+        c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
     }
 };
 
@@ -219,15 +136,15 @@ pub const RealDFTD = struct {
     setup: DFTSetupD,
 
     pub fn init(length: Length, direction: Direction) ?RealDFTD {
-        return .{ .setup = zrop_create_setupD(null, length, direction) orelse return null };
+        return .{ .setup = c.vDSP_DFT_zrop_CreateSetupD(null, length, @intFromEnum(direction)) orelse return null };
     }
 
     pub fn deinit(self: RealDFTD) void {
-        destroy_setupD(self.setup);
+        c.vDSP_DFT_DestroySetupD(self.setup);
     }
 
     pub fn exec(self: RealDFTD, ir: []const f64, ii: []const f64, or_out: []f64, oi_out: []f64) void {
-        executeD(self.setup, ir, ii, or_out, oi_out);
+        c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
     }
 };
 
@@ -236,15 +153,15 @@ pub const DCT = struct {
     setup: DFTSetup,
 
     pub fn init(length: Length, dct_type: DCTType) ?DCT {
-        return .{ .setup = dct_create_setup(null, length, dct_type) orelse return null };
+        return .{ .setup = c.vDSP_DCT_CreateSetup(null, length, @intFromEnum(dct_type)) orelse return null };
     }
 
     pub fn deinit(self: DCT) void {
-        destroy_setup(self.setup);
+        c.vDSP_DFT_DestroySetup(self.setup);
     }
 
     pub fn exec(self: DCT, input: []const f32, output: []f32) void {
-        dct_execute(self.setup, input, output);
+        c.vDSP_DCT_Execute(self.setup, input.ptr, output.ptr);
     }
 };
 
@@ -253,15 +170,15 @@ pub const InterleavedDFT = struct {
     setup: DFTInterleavedSetup,
 
     pub fn init(length: Length, direction: Direction, rtc: RealToComplex) ?InterleavedDFT {
-        return .{ .setup = interleaved_create_setup(null, length, direction, rtc) orelse return null };
+        return .{ .setup = c.vDSP_DFT_Interleaved_CreateSetup(null, length, @intFromEnum(direction), @intFromEnum(rtc)) orelse return null };
     }
 
     pub fn deinit(self: InterleavedDFT) void {
-        interleaved_destroy_setup(self.setup);
+        c.vDSP_DFT_Interleaved_DestroySetup(self.setup);
     }
 
     pub fn exec(self: InterleavedDFT, input: []const Complex, output: []Complex) void {
-        interleaved_execute(self.setup, input, output);
+        c.vDSP_DFT_Interleaved_Execute(self.setup, input.ptr, output.ptr);
     }
 };
 
@@ -270,14 +187,14 @@ pub const InterleavedDFTD = struct {
     setup: DFTInterleavedSetupD,
 
     pub fn init(length: Length, direction: Direction, rtc: RealToComplex) ?InterleavedDFTD {
-        return .{ .setup = interleaved_create_setupD(null, length, direction, rtc) orelse return null };
+        return .{ .setup = c.vDSP_DFT_Interleaved_CreateSetupD(null, length, @intFromEnum(direction), @intFromEnum(rtc)) orelse return null };
     }
 
     pub fn deinit(self: InterleavedDFTD) void {
-        interleaved_destroy_setupD(self.setup);
+        c.vDSP_DFT_Interleaved_DestroySetupD(self.setup);
     }
 
     pub fn exec(self: InterleavedDFTD, input: []const DoubleComplex, output: []DoubleComplex) void {
-        interleaved_executeD(self.setup, input, output);
+        c.vDSP_DFT_Interleaved_ExecuteD(self.setup, input.ptr, output.ptr);
     }
 };
