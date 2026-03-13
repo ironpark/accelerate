@@ -1,73 +1,8 @@
 const types = @import("types.zig");
-const Stride = types.Stride;
 const Length = types.Length;
 const SortOrder = types.SortOrder;
 const WindowFlag = types.WindowFlag;
-
-const c = struct {
-    // -- Reverse / swap / sort --
-    extern fn vDSP_vrvrs(C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vrvrsD(C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vswap(A: [*]f32, IA: Stride, B: [*]f32, IB: Stride, N: Length) void;
-    extern fn vDSP_vswapD(A: [*]f64, IA: Stride, B: [*]f64, IB: Stride, N: Length) void;
-    extern fn vDSP_vsort(C: [*]f32, N: Length, Order: c_int) void;
-    extern fn vDSP_vsortD(C: [*]f64, N: Length, Order: c_int) void;
-    extern fn vDSP_vsorti(C: [*]const f32, I: [*]Length, Temporary: ?[*]Length, N: Length, Order: c_int) void;
-    extern fn vDSP_vsortiD(C: [*]const f64, I: [*]Length, Temporary: ?[*]Length, N: Length, Order: c_int) void;
-    // -- Ramp / generate --
-    extern fn vDSP_vramp(A: *const f32, B: *const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vrampD(A: *const f64, B: *const f64, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vgen(A: *const f32, B: *const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vgenD(A: *const f64, B: *const f64, C: [*]f64, IC: Stride, N: Length) void;
-    // -- Gather / index --
-    extern fn vDSP_vgathr(A: [*]const f32, B: [*]const Length, IB: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vgathrD(A: [*]const f64, B: [*]const Length, IB: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vindex(A: [*]const f32, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vindexD(A: [*]const f64, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vgathra(A: [*]const [*]const f32, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vgathraD(A: [*]const [*]const f64, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    // -- Threshold with signed constant --
-    extern fn vDSP_vthrsc(A: [*]const f32, IA: Stride, B: *const f32, C_val: *const f32, D: [*]f32, ID: Stride, N: Length) void;
-    extern fn vDSP_vthrscD(A: [*]const f64, IA: Stride, B: *const f64, C_val: *const f64, D: [*]f64, ID: Stride, N: Length) void;
-    // -- Table lookup and interpolation --
-    extern fn vDSP_vtabi(A: [*]const f32, IA: Stride, S1: *const f32, S2: *const f32, C: [*]const f32, M: Length, D: [*]f32, ID: Stride, N: Length) void;
-    extern fn vDSP_vtabiD(A: [*]const f64, IA: Stride, S1: *const f64, S2: *const f64, C: [*]const f64, M: Length, D: [*]f64, ID: Stride, N: Length) void;
-    // -- Tapered merge --
-    extern fn vDSP_vtmerg(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vtmergD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    // -- Wiener Levinson --
-    extern fn vDSP_wiener(L: Length, A: [*]const f32, C: [*]const f32, F: [*]f32, P: [*]f32, Flag: c_int, Error: *c_int) void;
-    extern fn vDSP_wienerD(L: Length, A: [*]const f64, C: [*]const f64, F: [*]f64, P: [*]f64, Flag: c_int, Error: *c_int) void;
-    // -- Interpolation --
-    extern fn vDSP_vgenp(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_vgenpD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_vlint(A: [*]const f32, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_vlintD(A: [*]const f64, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_vqint(A: [*]const f32, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_vqintD(A: [*]const f64, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_vintb(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: *const f32, D: [*]f32, ID: Stride, N: Length) void;
-    extern fn vDSP_vintbD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: *const f64, D: [*]f64, ID: Stride, N: Length) void;
-    extern fn vDSP_vpoly(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length, P: Length) void;
-    extern fn vDSP_vpolyD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length, P: Length) void;
-    // -- Integration --
-    extern fn vDSP_vrsum(A: [*]const f32, IA: Stride, S: *const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vrsumD(A: [*]const f64, IA: Stride, S: *const f64, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vsimps(A: [*]const f32, IA: Stride, B: *const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vsimpsD(A: [*]const f64, IA: Stride, B: *const f64, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vtrapz(A: [*]const f32, IA: Stride, B: *const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vtrapzD(A: [*]const f64, IA: Stride, B: *const f64, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vswsum(A: [*]const f32, IA: Stride, C: [*]f32, IC: Stride, N: Length, P: Length) void;
-    extern fn vDSP_vswsumD(A: [*]const f64, IA: Stride, C: [*]f64, IC: Stride, N: Length, P: Length) void;
-    extern fn vDSP_vswmax(A: [*]const f32, IA: Stride, C: [*]f32, IC: Stride, N: Length, P: Length) void;
-    extern fn vDSP_vswmaxD(A: [*]const f64, IA: Stride, C: [*]f64, IC: Stride, N: Length, P: Length) void;
-    // -- Window functions --
-    extern fn vDSP_blkman_window(C: [*]f32, N: Length, Flag: c_int) void;
-    extern fn vDSP_blkman_windowD(C: [*]f64, N: Length, Flag: c_int) void;
-    extern fn vDSP_hamm_window(C: [*]f32, N: Length, Flag: c_int) void;
-    extern fn vDSP_hamm_windowD(C: [*]f64, N: Length, Flag: c_int) void;
-    extern fn vDSP_hann_window(C: [*]f32, N: Length, Flag: c_int) void;
-    extern fn vDSP_hann_windowD(C: [*]f64, N: Length, Flag: c_int) void;
-};
+const c = @import("c.zig");
 
 // ============================================================================
 // Reverse / swap / sort

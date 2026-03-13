@@ -1,24 +1,7 @@
 const types = @import("types.zig");
-const Stride = types.Stride;
 const Length = types.Length;
 const SC = types.SC;
-
-const c = struct {
-    extern fn vDSP_mmul(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_mmulD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_mtrans(A: [*]const f32, IA: Stride, C: [*]f32, IC: Stride, M: Length, N: Length) void;
-    extern fn vDSP_mtransD(A: [*]const f64, IA: Stride, C: [*]f64, IC: Stride, M: Length, N: Length) void;
-    extern fn vDSP_zmma(A: *const SC(f32), IA: Stride, B: *const SC(f32), IB: Stride, C: *const SC(f32), IC: Stride, D: *const SC(f32), ID: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zmmaD(A: *const SC(f64), IA: Stride, B: *const SC(f64), IB: Stride, C: *const SC(f64), IC: Stride, D: *const SC(f64), ID: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zmms(A: *const SC(f32), IA: Stride, B: *const SC(f32), IB: Stride, C: *const SC(f32), IC: Stride, D: *const SC(f32), ID: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zmmsD(A: *const SC(f64), IA: Stride, B: *const SC(f64), IB: Stride, C: *const SC(f64), IC: Stride, D: *const SC(f64), ID: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zmsm(A: *const SC(f32), IA: Stride, B: *const SC(f32), IB: Stride, C: *const SC(f32), IC: Stride, D: *const SC(f32), ID: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zmsmD(A: *const SC(f64), IA: Stride, B: *const SC(f64), IB: Stride, C: *const SC(f64), IC: Stride, D: *const SC(f64), ID: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zmmul(A: *const SC(f32), IA: Stride, B: *const SC(f32), IB: Stride, C: *const SC(f32), IC: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zmmulD(A: *const SC(f64), IA: Stride, B: *const SC(f64), IB: Stride, C: *const SC(f64), IC: Stride, M: Length, N: Length, P: Length) void;
-    extern fn vDSP_zvmmaa(A: *const SC(f32), IA: Stride, B: *const SC(f32), IB: Stride, C: *const SC(f32), IC: Stride, D: *const SC(f32), ID: Stride, E: *const SC(f32), IE: Stride, F: *const SC(f32), IF: Stride, N: Length) void;
-    extern fn vDSP_zvmmaaD(A: *const SC(f64), IA: Stride, B: *const SC(f64), IB: Stride, C: *const SC(f64), IC: Stride, D: *const SC(f64), ID: Stride, E: *const SC(f64), IE: Stride, F: *const SC(f64), IF: Stride, N: Length) void;
-};
+const c = @import("c.zig");
 
 /// Matrix multiply.
 ///

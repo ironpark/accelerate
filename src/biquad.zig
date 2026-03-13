@@ -1,68 +1,16 @@
 const std = @import("std");
 const types = @import("types.zig");
-const Stride = types.Stride;
 const Length = types.Length;
+const c = @import("c.zig");
 
 // ============================================================================
 // Types
 // ============================================================================
 
-pub const BiquadSetup = *opaque {};
-pub const BiquadSetupD = *opaque {};
-pub const BiquadmSetup = *opaque {};
-pub const BiquadmSetupD = *opaque {};
-
-// ============================================================================
-// Raw C extern declarations
-// ============================================================================
-
-const c = struct {
-    // -- Single-channel setup/destroy --
-    extern fn vDSP_biquad_CreateSetup(Coefficients: [*]const f64, M: Length) ?BiquadSetup;
-    extern fn vDSP_biquad_CreateSetupD(Coefficients: [*]const f64, M: Length) ?BiquadSetupD;
-    extern fn vDSP_biquad_DestroySetup(setup: ?BiquadSetup) void;
-    extern fn vDSP_biquad_DestroySetupD(setup: ?BiquadSetupD) void;
-
-    // -- Single-channel coefficient update --
-    extern fn vDSP_biquad_SetCoefficientsDouble(setup: BiquadSetup, coeffs: [*]const f64, start_sec: Length, nsec: Length) void;
-    extern fn vDSP_biquad_SetCoefficientsSingle(setup: BiquadSetup, coeffs: [*]const f32, start_sec: Length, nsec: Length) void;
-
-    // -- Single-channel execute --
-    extern fn vDSP_biquad(Setup: BiquadSetup, Delay: [*]f32, X: [*]const f32, IX: Stride, Y: [*]f32, IY: Stride, N: Length) void;
-    extern fn vDSP_biquadD(Setup: BiquadSetupD, Delay: [*]f64, X: [*]const f64, IX: Stride, Y: [*]f64, IY: Stride, N: Length) void;
-
-    // -- Multi-channel setup/destroy --
-    extern fn vDSP_biquadm_CreateSetup(coeffs: [*]const f64, M: Length, N: Length) ?BiquadmSetup;
-    extern fn vDSP_biquadm_CreateSetupD(coeffs: [*]const f64, M: Length, N: Length) ?BiquadmSetupD;
-    extern fn vDSP_biquadm_DestroySetup(setup: BiquadmSetup) void;
-    extern fn vDSP_biquadm_DestroySetupD(setup: BiquadmSetupD) void;
-
-    // -- Multi-channel state --
-    extern fn vDSP_biquadm_CopyState(dest: BiquadmSetup, src: BiquadmSetup) void;
-    extern fn vDSP_biquadm_CopyStateD(dest: BiquadmSetupD, src: BiquadmSetupD) void;
-    extern fn vDSP_biquadm_ResetState(setup: BiquadmSetup) void;
-    extern fn vDSP_biquadm_ResetStateD(setup: BiquadmSetupD) void;
-
-    // -- Multi-channel coefficient update --
-    extern fn vDSP_biquadm_SetCoefficientsDouble(setup: BiquadmSetup, coeffs: [*]const f64, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-    extern fn vDSP_biquadm_SetCoefficientsDoubleD(setup: BiquadmSetupD, coeffs: [*]const f64, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-    extern fn vDSP_biquadm_SetCoefficientsSingle(setup: BiquadmSetup, coeffs: [*]const f32, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-    extern fn vDSP_biquadm_SetCoefficientsSingleD(setup: BiquadmSetupD, coeffs: [*]const f32, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-
-    // -- Multi-channel target (interpolated coefficient update) --
-    extern fn vDSP_biquadm_SetTargetsDouble(setup: BiquadmSetup, targets: [*]const f64, interp_rate: f32, interp_threshold: f32, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-    extern fn vDSP_biquadm_SetTargetsDoubleD(setup: BiquadmSetupD, targets: [*]const f64, interp_rate: f64, interp_threshold: f64, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-    extern fn vDSP_biquadm_SetTargetsSingle(setup: BiquadmSetup, targets: [*]const f32, interp_rate: f32, interp_threshold: f32, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-    extern fn vDSP_biquadm_SetTargetsSingleD(setup: BiquadmSetupD, targets: [*]const f32, interp_rate: f64, interp_threshold: f64, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void;
-
-    // -- Multi-channel active filter control --
-    extern fn vDSP_biquadm_SetActiveFilters(setup: BiquadmSetup, filter_states: [*]const bool) void;
-    extern fn vDSP_biquadm_SetActiveFiltersD(setup: BiquadmSetupD, filter_states: [*]const bool) void;
-
-    // -- Multi-channel execute --
-    extern fn vDSP_biquadm(Setup: BiquadmSetup, X: [*]const [*]const f32, IX: Stride, Y: [*]const [*]f32, IY: Stride, N: Length) void;
-    extern fn vDSP_biquadmD(Setup: BiquadmSetupD, X: [*]const [*]const f64, IX: Stride, Y: [*]const [*]f64, IY: Stride, N: Length) void;
-};
+pub const BiquadSetup = c.BiquadSetup;
+pub const BiquadSetupD = c.BiquadSetupD;
+pub const BiquadmSetup = c.BiquadmSetup;
+pub const BiquadmSetupD = c.BiquadmSetupD;
 
 // ============================================================================
 // High-level wrappers

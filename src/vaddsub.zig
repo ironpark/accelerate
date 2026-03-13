@@ -1,11 +1,4 @@
-const types = @import("types.zig");
-const Stride = types.Stride;
-const Length = types.Length;
-
-const c = struct {
-    extern fn vDSP_vaddsub(I0: [*]const f32, I0S: Stride, I1: [*]const f32, I1S: Stride, O0: [*]f32, O0S: Stride, O1: [*]f32, O1S: Stride, N: Length) void;
-    extern fn vDSP_vaddsubD(I0: [*]const f64, I0S: Stride, I1: [*]const f64, I1S: Stride, O0: [*]f64, O0S: Stride, O1: [*]f64, O1S: Stride, N: Length) void;
-};
+const c = @import("c.zig");
 
 /// Vector add and subtract.
 ///

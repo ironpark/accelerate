@@ -1,52 +1,7 @@
 const std = @import("std");
 const types = @import("types.zig");
-const Stride = types.Stride;
 const Length = types.Length;
-
-const c = struct {
-    extern fn vDSP_sve(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_sveD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_svesq(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_svesqD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_sve_svesq(A: [*]const f32, IA: Stride, Sum: *f32, SumSq: *f32, N: Length) void;
-    extern fn vDSP_sve_svesqD(A: [*]const f64, IA: Stride, Sum: *f64, SumSq: *f64, N: Length) void;
-    extern fn vDSP_svemg(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_svemgD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_meanv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_meanvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_meamgv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_meamgvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_measqv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_measqvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_rmsqv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_rmsqvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_maxv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_maxvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_maxvi(A: [*]const f32, IA: Stride, C: *f32, I: *Length, N: Length) void;
-    extern fn vDSP_maxviD(A: [*]const f64, IA: Stride, C: *f64, I: *Length, N: Length) void;
-    extern fn vDSP_maxmgv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_maxmgvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_maxmgvi(A: [*]const f32, IA: Stride, C: *f32, I: *Length, N: Length) void;
-    extern fn vDSP_maxmgviD(A: [*]const f64, IA: Stride, C: *f64, I: *Length, N: Length) void;
-    extern fn vDSP_minv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_minvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_minvi(A: [*]const f32, IA: Stride, C: *f32, I: *Length, N: Length) void;
-    extern fn vDSP_minviD(A: [*]const f64, IA: Stride, C: *f64, I: *Length, N: Length) void;
-    extern fn vDSP_minmgv(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_minmgvD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_minmgvi(A: [*]const f32, IA: Stride, C: *f32, I: *Length, N: Length) void;
-    extern fn vDSP_minmgviD(A: [*]const f64, IA: Stride, C: *f64, I: *Length, N: Length) void;
-    extern fn vDSP_normalize(A: [*]const f32, IA: Stride, C: [*]f32, IC: Stride, Mean: *f32, StdDev: *f32, N: Length) void;
-    extern fn vDSP_normalizeD(A: [*]const f64, IA: Stride, C: [*]f64, IC: Stride, Mean: *f64, StdDev: *f64, N: Length) void;
-    extern fn vDSP_mmov(A: [*]const f32, C: [*]f32, M: Length, N: Length, TA: Length, TC: Length) void;
-    extern fn vDSP_mmovD(A: [*]const f64, C: [*]f64, M: Length, N: Length, TA: Length, TC: Length) void;
-    extern fn vDSP_mvessq(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_mvessqD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_nzcros(A: [*]const f32, IA: Stride, B: Length, C: *Length, D: *Length, N: Length) void;
-    extern fn vDSP_nzcrosD(A: [*]const f64, IA: Stride, B: Length, C: *Length, D: *Length, N: Length) void;
-    extern fn vDSP_svs(A: [*]const f32, IA: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_svsD(A: [*]const f64, IA: Stride, C: *f64, N: Length) void;
-};
+const c = @import("c.zig");
 
 pub fn ValueIndex(comptime T: type) type {
     return struct { value: T, index: Length };

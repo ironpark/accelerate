@@ -1,26 +1,7 @@
 const std = @import("std");
 const types = @import("types.zig");
-const Stride = types.Stride;
 const Length = types.Length;
-const SplitComplex = types.SplitComplex;
-const DoubleSplitComplex = types.DoubleSplitComplex;
-
-const c = struct {
-    extern fn vDSP_dotpr(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: *f32, N: Length) void;
-    extern fn vDSP_dotprD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: *f64, N: Length) void;
-    extern fn vDSP_dotpr2(A0: [*]const f32, IA0: Stride, A1: [*]const f32, IA1: Stride, B: [*]const f32, IB: Stride, C0: *f32, C1: *f32, N: Length) void;
-    extern fn vDSP_dotpr2D(A0: [*]const f64, IA0: Stride, A1: [*]const f64, IA1: Stride, B: [*]const f64, IB: Stride, C0: *f64, C1: *f64, N: Length) void;
-    extern fn vDSP_zdotpr(A: *const SplitComplex, IA: Stride, B: *const SplitComplex, IB: Stride, C: *SplitComplex, N: Length) void;
-    extern fn vDSP_zdotprD(A: *const DoubleSplitComplex, IA: Stride, B: *const DoubleSplitComplex, IB: Stride, C: *DoubleSplitComplex, N: Length) void;
-    extern fn vDSP_zidotpr(A: *const SplitComplex, IA: Stride, B: *const SplitComplex, IB: Stride, C: *SplitComplex, N: Length) void;
-    extern fn vDSP_zidotprD(A: *const DoubleSplitComplex, IA: Stride, B: *const DoubleSplitComplex, IB: Stride, C: *DoubleSplitComplex, N: Length) void;
-    extern fn vDSP_zrdotpr(A: *const SplitComplex, IA: Stride, B: [*]const f32, IB: Stride, C: *SplitComplex, N: Length) void;
-    extern fn vDSP_zrdotprD(A: *const DoubleSplitComplex, IA: Stride, B: [*]const f64, IB: Stride, C: *DoubleSplitComplex, N: Length) void;
-    extern fn vDSP_dotpr_s1_15(A: [*]const i16, IA: Stride, B: [*]const i16, IB: Stride, C: *i16, N: Length) void;
-    extern fn vDSP_dotpr2_s1_15(A0: [*]const i16, IA0: Stride, A1: [*]const i16, IA1: Stride, B: [*]const i16, IB: Stride, C0: *i16, C1: *i16, N: Length) void;
-    extern fn vDSP_dotpr_s8_24(A: [*]const i32, IA: Stride, B: [*]const i32, IB: Stride, C: *i32, N: Length) void;
-    extern fn vDSP_dotpr2_s8_24(A0: [*]const i32, IA0: Stride, A1: [*]const i32, IA1: Stride, B: [*]const i32, IB: Stride, C0: *i32, C1: *i32, N: Length) void;
-};
+const c = @import("c.zig");
 
 const SC = types.SC;
 

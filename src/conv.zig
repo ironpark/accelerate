@@ -1,22 +1,7 @@
 const types = @import("types.zig");
-const Stride = types.Stride;
 const Length = types.Length;
 const SC = types.SC;
-
-const c = struct {
-    extern fn vDSP_conv(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_convD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length, M: Length) void;
-    extern fn vDSP_zconv(A: *const SC(f32), IA: Stride, F: *const SC(f32), IF: Stride, C: *const SC(f32), IC: Stride, N: Length, P: Length) void;
-    extern fn vDSP_zconvD(A: *const SC(f64), IA: Stride, F: *const SC(f64), IF: Stride, C: *const SC(f64), IC: Stride, N: Length, P: Length) void;
-    extern fn vDSP_imgfir(A: [*]const f32, NR: Length, NC: Length, B: [*]const f32, C: [*]f32, M: Length, N: Length) void;
-    extern fn vDSP_imgfirD(A: [*]const f64, NR: Length, NC: Length, B: [*]const f64, C: [*]f64, M: Length, N: Length) void;
-    extern fn vDSP_f3x3(A: [*]const f32, NR: Length, NC: Length, B: [*]const f32, C: [*]f32) void;
-    extern fn vDSP_f3x3D(A: [*]const f64, NR: Length, NC: Length, B: [*]const f64, C: [*]f64) void;
-    extern fn vDSP_f5x5(A: [*]const f32, NR: Length, NC: Length, B: [*]const f32, C: [*]f32) void;
-    extern fn vDSP_f5x5D(A: [*]const f64, NR: Length, NC: Length, B: [*]const f64, C: [*]f64) void;
-    extern fn vDSP_deq22(A: [*]const f32, IA: Stride, B: [*]const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_deq22D(A: [*]const f64, IA: Stride, B: [*]const f64, C: [*]f64, IC: Stride, N: Length) void;
-};
+const c = @import("c.zig");
 
 /// Convolution and correlation.
 ///

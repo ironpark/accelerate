@@ -1,12 +1,6 @@
 const fft = @import("fft.zig");
 const Direction = fft.Direction;
-
-const c = struct {
-    extern fn vDSP_FFT16_copv(Output: [*]f32, Input: [*]const f32, Direction: c_int) void;
-    extern fn vDSP_FFT32_copv(Output: [*]f32, Input: [*]const f32, Direction: c_int) void;
-    extern fn vDSP_FFT16_zopv(Or: [*]f32, Oi: [*]f32, Ir: [*]const f32, Ii: [*]const f32, Direction: c_int) void;
-    extern fn vDSP_FFT32_zopv(Or: [*]f32, Oi: [*]f32, Ir: [*]const f32, Ii: [*]const f32, Direction: c_int) void;
-};
+const c = @import("c.zig");
 
 /// vDSP_FFT16_copv performs a 16-element FFT on interleaved complex
 /// unit-stride vector-block-aligned data.

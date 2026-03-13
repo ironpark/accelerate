@@ -1,65 +1,10 @@
 const types = @import("types.zig");
-const Stride = types.Stride;
 const Length = types.Length;
 const DbFlag = types.DbFlag;
+const c = @import("c.zig");
 
-const Int24 = extern struct { bytes: [3]u8 };
-const UInt24 = extern struct { bytes: [3]u8 };
-
-const c = struct {
-    extern fn vDSP_vfix8(A: [*]const f32, IA: Stride, C: [*]i8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfix8D(A: [*]const f64, IA: Stride, C: [*]i8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfix16(A: [*]const f32, IA: Stride, C: [*]i16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfix16D(A: [*]const f64, IA: Stride, C: [*]i16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfix32(A: [*]const f32, IA: Stride, C: [*]i32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfix32D(A: [*]const f64, IA: Stride, C: [*]i32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixu8(A: [*]const f32, IA: Stride, C: [*]u8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixu8D(A: [*]const f64, IA: Stride, C: [*]u8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixu16(A: [*]const f32, IA: Stride, C: [*]u16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixu16D(A: [*]const f64, IA: Stride, C: [*]u16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixu32(A: [*]const f32, IA: Stride, C: [*]u32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixu32D(A: [*]const f64, IA: Stride, C: [*]u32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixr8(A: [*]const f32, IA: Stride, C: [*]i8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixr8D(A: [*]const f64, IA: Stride, C: [*]i8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixr16(A: [*]const f32, IA: Stride, C: [*]i16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixr16D(A: [*]const f64, IA: Stride, C: [*]i16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixr32(A: [*]const f32, IA: Stride, C: [*]i32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixr32D(A: [*]const f64, IA: Stride, C: [*]i32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixru8(A: [*]const f32, IA: Stride, C: [*]u8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixru8D(A: [*]const f64, IA: Stride, C: [*]u8, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixru16(A: [*]const f32, IA: Stride, C: [*]u16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixru16D(A: [*]const f64, IA: Stride, C: [*]u16, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixru32(A: [*]const f32, IA: Stride, C: [*]u32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfixru32D(A: [*]const f64, IA: Stride, C: [*]u32, IC: Stride, N: Length) void;
-    extern fn vDSP_vflt8(A: [*]const i8, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vflt8D(A: [*]const i8, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vflt16(A: [*]const i16, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vflt16D(A: [*]const i16, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vflt32(A: [*]const i32, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vflt32D(A: [*]const i32, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltu8(A: [*]const u8, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltu8D(A: [*]const u8, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltu16(A: [*]const u16, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltu16D(A: [*]const u16, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltu32(A: [*]const u32, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltu32D(A: [*]const u32, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vflt24(A: [*]const Int24, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltu24(A: [*]const UInt24, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltsm24(A: [*]const Int24, IA: Stride, B: *const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vfltsmu24(A: [*]const UInt24, IA: Stride, B: *const f32, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vsmfix24(A: [*]const f32, IA: Stride, B: *const f32, C: [*]Int24, IC: Stride, N: Length) void;
-    extern fn vDSP_vsmfixu24(A: [*]const f32, IA: Stride, B: *const f32, C: [*]UInt24, IC: Stride, N: Length) void;
-    extern fn vDSP_vdpsp(A: [*]const f64, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_vspdp(A: [*]const f32, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vdbcon(A: [*]const f32, IA: Stride, B: *const f32, C: [*]f32, IC: Stride, N: Length, F: c_uint) void;
-    extern fn vDSP_vdbconD(A: [*]const f64, IA: Stride, B: *const f64, C: [*]f64, IC: Stride, N: Length, F: c_uint) void;
-    extern fn vDSP_polar(A: [*]const f32, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_polarD(A: [*]const f64, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_rect(A: [*]const f32, IA: Stride, C: [*]f32, IC: Stride, N: Length) void;
-    extern fn vDSP_rectD(A: [*]const f64, IA: Stride, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_venvlp(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C_val: [*]const f32, IC: Stride, D: [*]f32, ID: Stride, N: Length) void;
-    extern fn vDSP_venvlpD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C_val: [*]const f64, IC: Stride, D: [*]f64, ID: Stride, N: Length) void;
-};
+const Int24 = c.Int24;
+const UInt24 = c.UInt24;
 
 // -- Float precision conversion --
 
