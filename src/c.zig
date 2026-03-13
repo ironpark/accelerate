@@ -24,8 +24,37 @@ pub const BiquadmSetupD = *opaque {};
 
 // -- Special types --
 
-pub const Int24 = extern struct { bytes: [3]u8 };
-pub const UInt24 = extern struct { bytes: [3]u8 };
+pub const Int24 = extern struct {
+    bytes: [3]u8,
+
+    pub fn from(val: i24) Int24 {
+        return .{ .bytes = @bitCast(val) };
+    }
+
+    pub fn to(self: Int24) i24 {
+        return @bitCast(self.bytes);
+    }
+
+    pub fn toI32(self: Int24) i32 {
+        return self.to();
+    }
+};
+
+pub const UInt24 = extern struct {
+    bytes: [3]u8,
+
+    pub fn from(val: u24) UInt24 {
+        return .{ .bytes = @bitCast(val) };
+    }
+
+    pub fn to(self: UInt24) u24 {
+        return @bitCast(self.bytes);
+    }
+
+    pub fn toU32(self: UInt24) u32 {
+        return self.to();
+    }
+};
 
 pub const ComplexF32 = extern struct { real: f32, imag: f32 };
 pub const ComplexF64 = extern struct { real: f64, imag: f64 };
