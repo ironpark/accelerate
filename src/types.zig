@@ -11,6 +11,14 @@ pub const DoubleSplitComplex = extern struct {
     imagp: [*]f64,
 };
 
+pub fn SC(comptime T: type) type {
+    return switch (T) {
+        f32 => SplitComplex,
+        f64 => DoubleSplitComplex,
+        else => @compileError("SC requires f32 or f64"),
+    };
+}
+
 pub const SortOrder = enum(c_int) { ascending = 1, descending = -1 };
 
 pub const DbFlag = enum(c_uint) { power = 0, amplitude = 1 };

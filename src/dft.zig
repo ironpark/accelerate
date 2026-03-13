@@ -1,8 +1,7 @@
 const types = @import("types.zig");
 const Length = types.Length;
 const Stride = types.Stride;
-const SplitComplex = types.SplitComplex;
-const DoubleSplitComplex = types.DoubleSplitComplex;
+const fft = @import("fft.zig");
 
 // ============================================================================
 // Types
@@ -13,10 +12,7 @@ pub const DFTSetupD = *opaque {};
 pub const DFTInterleavedSetup = *opaque {};
 pub const DFTInterleavedSetupD = *opaque {};
 
-pub const Direction = enum(c_int) {
-    forward = 1,
-    inverse = -1,
-};
+pub const Direction = fft.Direction;
 
 pub const DCTType = enum(c_int) {
     dct_II = 2,
@@ -29,8 +25,7 @@ pub const RealToComplex = enum(c_int) {
     real_to_complex = 1,
 };
 
-pub const Complex = extern struct { real: f32, imag: f32 };
-pub const DoubleComplex = extern struct { real: f64, imag: f64 };
+pub const Complex = fft.Complex;
 
 // ============================================================================
 // Raw C extern declarations
@@ -324,7 +319,7 @@ const c = struct {
     ///
     /// Do not call this routine while any DFT setup or destroy routine sharing setup data
     /// might be executing.
-    extern fn vDSP_DFT_Interleaved_Execute(Setup: DFTInterleavedSetup, Iri: [*]const Complex, Ori: [*]Complex) void;
+    extern fn vDSP_DFT_Interleaved_Execute(Setup: DFTInterleavedSetup, Iri: [*]const Complex(f32), Ori: [*]Complex(f32)) void;
     /// vDSP_DFT_Interleaved_ExecuteD is a DFT execution routine for interleaved complex data
     /// (double-precision). It performs a DFT, with the aid of previously created setup data.
     ///
@@ -335,7 +330,7 @@ const c = struct {
     ///
     /// Do not call this routine while any DFT setup or destroy routine sharing setup data
     /// might be executing.
-    extern fn vDSP_DFT_Interleaved_ExecuteD(Setup: DFTInterleavedSetupD, Iri: [*]const DoubleComplex, Ori: [*]DoubleComplex) void;
+    extern fn vDSP_DFT_Interleaved_ExecuteD(Setup: DFTInterleavedSetupD, Iri: [*]const Complex(f64), Ori: [*]Complex(f64)) void;
 
     // -- Interleaved destroy --
 
@@ -359,77 +354,99 @@ const c = struct {
 // High-level DFT wrappers (manage setup lifetime)
 // ============================================================================
 
-/// Complex-to-complex DFT (split complex, single-precision)
-pub const DFT = struct {
-    setup: DFTSetup,
+/// Complex-to-complex DFT (split complex).
+/// Use DFT(f32) for single-precision or DFT(f64) for double-precision.
+pub fn DFT(comptime T: type) type {
+    const Setup = switch (T) {
+        f32 => DFTSetup,
+        f64 => DFTSetupD,
+        else => @compileError("DFT only supports f32 and f64"),
+    };
 
-    pub fn init(length: Length, direction: Direction) ?DFT {
-        return .{ .setup = c.vDSP_DFT_zop_CreateSetup(null, length, @intFromEnum(direction)) orelse return null };
-    }
+    return struct {
+        const Self = @This();
 
-    pub fn initShared(previous: DFTSetup, length: Length, direction: Direction) ?DFT {
-        return .{ .setup = c.vDSP_DFT_zop_CreateSetup(previous, length, @intFromEnum(direction)) orelse return null };
-    }
+        setup: Setup,
 
-    pub fn deinit(self: DFT) void {
-        c.vDSP_DFT_DestroySetup(self.setup);
-    }
+        pub fn init(length: Length, direction: Direction) ?Self {
+            const dir = @intFromEnum(direction);
+            const setup = switch (T) {
+                f32 => c.vDSP_DFT_zop_CreateSetup(null, length, dir),
+                f64 => c.vDSP_DFT_zop_CreateSetupD(null, length, dir),
+                else => unreachable,
+            };
+            return .{ .setup = setup orelse return null };
+        }
 
-    pub fn exec(self: DFT, ir: []const f32, ii: []const f32, or_out: []f32, oi_out: []f32) void {
-        c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
-    }
-};
+        pub fn initShared(previous: Setup, length: Length, direction: Direction) ?Self {
+            const dir = @intFromEnum(direction);
+            const setup = switch (T) {
+                f32 => c.vDSP_DFT_zop_CreateSetup(previous, length, dir),
+                f64 => c.vDSP_DFT_zop_CreateSetupD(previous, length, dir),
+                else => unreachable,
+            };
+            return .{ .setup = setup orelse return null };
+        }
 
-/// Complex-to-complex DFT (split complex, double-precision)
-pub const DFTD = struct {
-    setup: DFTSetupD,
+        pub fn deinit(self: Self) void {
+            switch (T) {
+                f32 => c.vDSP_DFT_DestroySetup(self.setup),
+                f64 => c.vDSP_DFT_DestroySetupD(self.setup),
+                else => unreachable,
+            }
+        }
 
-    pub fn init(length: Length, direction: Direction) ?DFTD {
-        return .{ .setup = c.vDSP_DFT_zop_CreateSetupD(null, length, @intFromEnum(direction)) orelse return null };
-    }
+        pub fn exec(self: Self, ir: []const T, ii: []const T, or_out: []T, oi_out: []T) void {
+            switch (T) {
+                f32 => c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
+                f64 => c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
+                else => unreachable,
+            }
+        }
+    };
+}
 
-    pub fn deinit(self: DFTD) void {
-        c.vDSP_DFT_DestroySetupD(self.setup);
-    }
+/// Real-to-complex DFT (split complex).
+/// Use RealDFT(f32) for single-precision or RealDFT(f64) for double-precision.
+pub fn RealDFT(comptime T: type) type {
+    const Setup = switch (T) {
+        f32 => DFTSetup,
+        f64 => DFTSetupD,
+        else => @compileError("RealDFT only supports f32 and f64"),
+    };
 
-    pub fn exec(self: DFTD, ir: []const f64, ii: []const f64, or_out: []f64, oi_out: []f64) void {
-        c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
-    }
-};
+    return struct {
+        const Self = @This();
 
-/// Real-to-complex DFT (split complex, single-precision)
-pub const RealDFT = struct {
-    setup: DFTSetup,
+        setup: Setup,
 
-    pub fn init(length: Length, direction: Direction) ?RealDFT {
-        return .{ .setup = c.vDSP_DFT_zrop_CreateSetup(null, length, @intFromEnum(direction)) orelse return null };
-    }
+        pub fn init(length: Length, direction: Direction) ?Self {
+            const dir = @intFromEnum(direction);
+            const setup = switch (T) {
+                f32 => c.vDSP_DFT_zrop_CreateSetup(null, length, dir),
+                f64 => c.vDSP_DFT_zrop_CreateSetupD(null, length, dir),
+                else => unreachable,
+            };
+            return .{ .setup = setup orelse return null };
+        }
 
-    pub fn deinit(self: RealDFT) void {
-        c.vDSP_DFT_DestroySetup(self.setup);
-    }
+        pub fn deinit(self: Self) void {
+            switch (T) {
+                f32 => c.vDSP_DFT_DestroySetup(self.setup),
+                f64 => c.vDSP_DFT_DestroySetupD(self.setup),
+                else => unreachable,
+            }
+        }
 
-    pub fn exec(self: RealDFT, ir: []const f32, ii: []const f32, or_out: []f32, oi_out: []f32) void {
-        c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
-    }
-};
-
-/// Real-to-complex DFT (split complex, double-precision)
-pub const RealDFTD = struct {
-    setup: DFTSetupD,
-
-    pub fn init(length: Length, direction: Direction) ?RealDFTD {
-        return .{ .setup = c.vDSP_DFT_zrop_CreateSetupD(null, length, @intFromEnum(direction)) orelse return null };
-    }
-
-    pub fn deinit(self: RealDFTD) void {
-        c.vDSP_DFT_DestroySetupD(self.setup);
-    }
-
-    pub fn exec(self: RealDFTD, ir: []const f64, ii: []const f64, or_out: []f64, oi_out: []f64) void {
-        c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr);
-    }
-};
+        pub fn exec(self: Self, ir: []const T, ii: []const T, or_out: []T, oi_out: []T) void {
+            switch (T) {
+                f32 => c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
+                f64 => c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
+                else => unreachable,
+            }
+        }
+    };
+}
 
 /// DCT (single-precision, type II/III/IV)
 pub const DCT = struct {
@@ -448,36 +465,46 @@ pub const DCT = struct {
     }
 };
 
-/// Interleaved complex DFT (single-precision)
-pub const InterleavedDFT = struct {
-    setup: DFTInterleavedSetup,
+/// Interleaved complex DFT.
+/// Use InterleavedDFT(f32) for single-precision or InterleavedDFT(f64) for double-precision.
+pub fn InterleavedDFT(comptime T: type) type {
+    const Setup = switch (T) {
+        f32 => DFTInterleavedSetup,
+        f64 => DFTInterleavedSetupD,
+        else => @compileError("InterleavedDFT only supports f32 and f64"),
+    };
+    const C = Complex(T);
 
-    pub fn init(length: Length, direction: Direction, rtc: RealToComplex) ?InterleavedDFT {
-        return .{ .setup = c.vDSP_DFT_Interleaved_CreateSetup(null, length, @intFromEnum(direction), @intFromEnum(rtc)) orelse return null };
-    }
+    return struct {
+        const Self = @This();
 
-    pub fn deinit(self: InterleavedDFT) void {
-        c.vDSP_DFT_Interleaved_DestroySetup(self.setup);
-    }
+        setup: Setup,
 
-    pub fn exec(self: InterleavedDFT, input: []const Complex, output: []Complex) void {
-        c.vDSP_DFT_Interleaved_Execute(self.setup, input.ptr, output.ptr);
-    }
-};
+        pub fn init(length: Length, direction: Direction, rtc: RealToComplex) ?Self {
+            const dir = @intFromEnum(direction);
+            const r2c = @intFromEnum(rtc);
+            const setup = switch (T) {
+                f32 => c.vDSP_DFT_Interleaved_CreateSetup(null, length, dir, r2c),
+                f64 => c.vDSP_DFT_Interleaved_CreateSetupD(null, length, dir, r2c),
+                else => unreachable,
+            };
+            return .{ .setup = setup orelse return null };
+        }
 
-/// Interleaved complex DFT (double-precision)
-pub const InterleavedDFTD = struct {
-    setup: DFTInterleavedSetupD,
+        pub fn deinit(self: Self) void {
+            switch (T) {
+                f32 => c.vDSP_DFT_Interleaved_DestroySetup(self.setup),
+                f64 => c.vDSP_DFT_Interleaved_DestroySetupD(self.setup),
+                else => unreachable,
+            }
+        }
 
-    pub fn init(length: Length, direction: Direction, rtc: RealToComplex) ?InterleavedDFTD {
-        return .{ .setup = c.vDSP_DFT_Interleaved_CreateSetupD(null, length, @intFromEnum(direction), @intFromEnum(rtc)) orelse return null };
-    }
-
-    pub fn deinit(self: InterleavedDFTD) void {
-        c.vDSP_DFT_Interleaved_DestroySetupD(self.setup);
-    }
-
-    pub fn exec(self: InterleavedDFTD, input: []const DoubleComplex, output: []DoubleComplex) void {
-        c.vDSP_DFT_Interleaved_ExecuteD(self.setup, input.ptr, output.ptr);
-    }
-};
+        pub fn exec(self: Self, input: []const C, output: []C) void {
+            switch (T) {
+                f32 => c.vDSP_DFT_Interleaved_Execute(self.setup, input.ptr, output.ptr),
+                f64 => c.vDSP_DFT_Interleaved_ExecuteD(self.setup, input.ptr, output.ptr),
+                else => unreachable,
+            }
+        }
+    };
+}

@@ -9,7 +9,7 @@ const c = struct {
     // -- Vector fill (from vDSP_vecop.h) --
     extern fn vDSP_vfill(A: *const f32, C: [*]f32, IC: Stride, N: Length) void;
     extern fn vDSP_vfillD(A: *const f64, C: [*]f64, IC: Stride, N: Length) void;
-    extern fn vDSP_vfilli(A: *const c_int, C: [*]c_int, IC: Stride, N: Length) void;
+    extern fn vDSP_vfilli(A: *const i32, C: [*]i32, IC: Stride, N: Length) void;
     // -- Vector add --
     extern fn vDSP_vadd(A: [*]const f32, IA: Stride, B: [*]const f32, IB: Stride, C: [*]f32, IC: Stride, N: Length) void;
     extern fn vDSP_vaddD(A: [*]const f64, IA: Stride, B: [*]const f64, IB: Stride, C: [*]f64, IC: Stride, N: Length) void;
@@ -176,6 +176,8 @@ const c = struct {
     extern fn vDSP_zrdesampD(A: *const DoubleSplitComplex, DF: Stride, F: [*]const f64, C: *const DoubleSplitComplex, N: Length, P: Length) void;
 };
 
+const SC = types.SC;
+
 // ============================================================================
 // Fill
 // ============================================================================
@@ -184,22 +186,13 @@ const c = struct {
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[0];
-pub fn vfill(val: f32, out: []f32) void {
-    c.vDSP_vfill(&val, out.ptr, 1, out.len);
-}
-/// Vector fill.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[0];
-pub fn vfillD(val: f64, out: []f64) void {
-    c.vDSP_vfillD(&val, out.ptr, 1, out.len);
-}
-/// Vector fill.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[0];
-pub fn vfilli(val: c_int, out: []c_int) void {
-    c.vDSP_vfilli(&val, out.ptr, 1, out.len);
+pub fn vfill(comptime T: type, val: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vfill(&val, out.ptr, 1, out.len),
+        f64 => c.vDSP_vfillD(&val, out.ptr, 1, out.len),
+        i32 => c.vDSP_vfilli(&val, out.ptr, 1, out.len),
+        else => @compileError("vfill requires f32, f64, or i32"),
+    }
 }
 
 // ============================================================================
@@ -210,74 +203,50 @@ pub fn vfilli(val: c_int, out: []c_int) void {
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] + B[n];
-pub fn vadd(a: []const f32, b: []const f32, out: []f32) void {
-    c.vDSP_vadd(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] + B[n];
-pub fn vaddD(a: []const f64, b: []const f64, out: []f64) void {
-    c.vDSP_vaddD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] + B[n];
-pub fn vaddi(a: []const i32, b: []const i32, out: []i32) void {
-    c.vDSP_vaddi(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
+pub fn vadd(comptime T: type, a: []const T, b: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vadd(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vaddD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        i32 => c.vDSP_vaddi(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vadd requires f32, f64, or i32"),
+    }
 }
 
 /// Vector subtract.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] - B[n];
-pub fn vsub(a: []const f32, b: []const f32, out: []f32) void {
-    c.vDSP_vsub(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector subtract.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] - B[n];
-pub fn vsubD(a: []const f64, b: []const f64, out: []f64) void {
-    c.vDSP_vsubD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
+pub fn vsub(comptime T: type, a: []const T, b: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsub(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsubD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vsub requires f32 or f64"),
+    }
 }
 
 /// Vector multiply.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] * B[n];
-pub fn vmul(a: []const f32, b: []const f32, out: []f32) void {
-    c.vDSP_vmul(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector multiply.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] * B[n];
-pub fn vmulD(a: []const f64, b: []const f64, out: []f64) void {
-    c.vDSP_vmulD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
+pub fn vmul(comptime T: type, a: []const T, b: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vmul(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vmulD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vmul requires f32 or f64"),
+    }
 }
 
 /// Vector divide.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] / B[n];
-pub fn vdiv(a: []const f32, b: []const f32, out: []f32) void {
-    c.vDSP_vdiv(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector divide.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] / B[n];
-pub fn vdivD(a: []const f64, b: []const f64, out: []f64) void {
-    c.vDSP_vdivD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector divide.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] / B[n];
-pub fn vdivi(a: []const i32, b: []const i32, out: []i32) void {
-    c.vDSP_vdivi(b.ptr, 1, a.ptr, 1, out.ptr, 1, a.len);
+pub fn vdiv(comptime T: type, a: []const T, b: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vdiv(b.ptr, 1, a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vdivD(b.ptr, 1, a.ptr, 1, out.ptr, 1, a.len),
+        i32 => c.vDSP_vdivi(b.ptr, 1, a.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vdiv requires f32, f64, or i32"),
+    }
 }
 
 /// Vector bit-wise equivalence, NOT (A XOR B).
@@ -296,67 +265,47 @@ pub fn veqvi(a: []const i32, b: []const i32, out: []i32) void {
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] * B[0];
-pub fn vsmul(a: []const f32, scalar: f32, out: []f32) void {
-    c.vDSP_vsmul(a.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-/// Vector-scalar multiply.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] * B[0];
-pub fn vsmulD(a: []const f64, scalar: f64, out: []f64) void {
-    c.vDSP_vsmulD(a.ptr, 1, &scalar, out.ptr, 1, a.len);
+pub fn vsmul(comptime T: type, a: []const T, scalar: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsmul(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsmulD(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        else => @compileError("vsmul requires f32 or f64"),
+    }
 }
 
 /// Vector-scalar add.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] + B[0];
-pub fn vsadd(a: []const f32, scalar: f32, out: []f32) void {
-    c.vDSP_vsadd(a.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-/// Vector-scalar add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] + B[0];
-pub fn vsaddD(a: []const f64, scalar: f64, out: []f64) void {
-    c.vDSP_vsaddD(a.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-/// Vector-scalar add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] + B[0];
-pub fn vsaddi(a: []const i32, scalar: i32, out: []i32) void {
-    c.vDSP_vsaddi(a.ptr, 1, &scalar, out.ptr, 1, a.len);
+pub fn vsadd(comptime T: type, a: []const T, scalar: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsadd(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsaddD(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        i32 => c.vDSP_vsaddi(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        else => @compileError("vsadd requires f32, f64, or i32"),
+    }
 }
 
 /// Vector-scalar divide.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] / B[0];
-pub fn vsdiv(a: []const f32, scalar: f32, out: []f32) void {
-    c.vDSP_vsdiv(a.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-/// Vector-scalar divide.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] / B[0];
-pub fn vsdivD(a: []const f64, scalar: f64, out: []f64) void {
-    c.vDSP_vsdivD(a.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-/// Vector-scalar divide.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] / B[0];
-pub fn vsdivi(a: []const i32, scalar: i32, out: []i32) void {
-    c.vDSP_vsdivi(a.ptr, 1, &scalar, out.ptr, 1, a.len);
+pub fn vsdiv(comptime T: type, a: []const T, scalar: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsdiv(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsdivD(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        i32 => c.vDSP_vsdivi(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        else => @compileError("vsdiv requires f32, f64, or i32"),
+    }
 }
 
 /// Scalar / vector: C[n] = scalar / B[n]
-pub fn svdiv(scalar: f32, b: []const f32, out: []f32) void {
-    c.vDSP_svdiv(&scalar, b.ptr, 1, out.ptr, 1, b.len);
-}
-pub fn svdivD(scalar: f64, b: []const f64, out: []f64) void {
-    c.vDSP_svdivD(&scalar, b.ptr, 1, out.ptr, 1, b.len);
+pub fn svdiv(comptime T: type, scalar: T, b: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_svdiv(&scalar, b.ptr, 1, out.ptr, 1, b.len),
+        f64 => c.vDSP_svdivD(&scalar, b.ptr, 1, out.ptr, 1, b.len),
+        else => @compileError("svdiv requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -367,94 +316,96 @@ pub fn svdivD(scalar: f64, b: []const f64, out: []f64) void {
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = A[n] * B[n] + C[n];
-pub fn vma(a: []const f32, b: []const f32, addend: []const f32, out: []f32) void {
-    c.vDSP_vma(a.ptr, 1, b.ptr, 1, addend.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector multiply and add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         D[n] = A[n] * B[n] + C[n];
-pub fn vmaD(a: []const f64, b: []const f64, addend: []const f64, out: []f64) void {
-    c.vDSP_vmaD(a.ptr, 1, b.ptr, 1, addend.ptr, 1, out.ptr, 1, a.len);
+pub fn vma(comptime T: type, a: []const T, b: []const T, addend: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vma(a.ptr, 1, b.ptr, 1, addend.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vmaD(a.ptr, 1, b.ptr, 1, addend.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vma requires f32 or f64"),
+    }
 }
 
 /// D[n] = A[n] * B[n] + scalar
-pub fn vmsa(a: []const f32, b: []const f32, scalar: f32, out: []f32) void {
-    c.vDSP_vmsa(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-pub fn vmsaD(a: []const f64, b: []const f64, scalar: f64, out: []f64) void {
-    c.vDSP_vmsaD(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len);
+pub fn vmsa(comptime T: type, a: []const T, b: []const T, scalar: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vmsa(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len),
+        f64 => c.vDSP_vmsaD(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len),
+        else => @compileError("vmsa requires f32 or f64"),
+    }
 }
 
 /// D[n] = A[n] * scalar + C[n]
-pub fn vsma(a: []const f32, scalar: f32, addend: []const f32, out: []f32) void {
-    c.vDSP_vsma(a.ptr, 1, &scalar, addend.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vsmaD(a: []const f64, scalar: f64, addend: []const f64, out: []f64) void {
-    c.vDSP_vsmaD(a.ptr, 1, &scalar, addend.ptr, 1, out.ptr, 1, a.len);
+pub fn vsma(comptime T: type, a: []const T, scalar: T, addend: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsma(a.ptr, 1, &scalar, addend.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsmaD(a.ptr, 1, &scalar, addend.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vsma requires f32 or f64"),
+    }
 }
 
 /// Vector add and multiply.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = (A[n] + B[n]) * C[n];
-pub fn vam(a: []const f32, b: []const f32, multiplier: []const f32, out: []f32) void {
-    c.vDSP_vam(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector add and multiply.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         D[n] = (A[n] + B[n]) * C[n];
-pub fn vamD(a: []const f64, b: []const f64, multiplier: []const f64, out: []f64) void {
-    c.vDSP_vamD(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len);
+pub fn vam(comptime T: type, a: []const T, b: []const T, multiplier: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vam(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vamD(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vam requires f32 or f64"),
+    }
 }
 
 /// D[n] = A[n] * B[n] - C[n]
-pub fn vmsb(a: []const f32, b: []const f32, subtrahend: []const f32, out: []f32) void {
-    c.vDSP_vmsb(a.ptr, 1, b.ptr, 1, subtrahend.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vmsbD(a: []const f64, b: []const f64, subtrahend: []const f64, out: []f64) void {
-    c.vDSP_vmsbD(a.ptr, 1, b.ptr, 1, subtrahend.ptr, 1, out.ptr, 1, a.len);
+pub fn vmsb(comptime T: type, a: []const T, b: []const T, subtrahend: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vmsb(a.ptr, 1, b.ptr, 1, subtrahend.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vmsbD(a.ptr, 1, b.ptr, 1, subtrahend.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vmsb requires f32 or f64"),
+    }
 }
 
 /// E[n] = A[n]*B[n] + C[n]*D[n]
-pub fn vmma(a: []const f32, b: []const f32, c_vec: []const f32, d: []const f32, out: []f32) void {
-    c.vDSP_vmma(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vmmaD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f64, out: []f64) void {
-    c.vDSP_vmmaD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
+pub fn vmma(comptime T: type, a: []const T, b: []const T, c_vec: []const T, d: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vmma(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vmmaD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vmma requires f32 or f64"),
+    }
 }
 
 /// E[n] = A[n]*B[n] - C[n]*D[n]
-pub fn vmmsb(a: []const f32, b: []const f32, c_vec: []const f32, d: []const f32, out: []f32) void {
-    c.vDSP_vmmsb(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vmmsbD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f64, out: []f64) void {
-    c.vDSP_vmmsbD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
+pub fn vmmsb(comptime T: type, a: []const T, b: []const T, c_vec: []const T, d: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vmmsb(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vmmsbD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vmmsb requires f32 or f64"),
+    }
 }
 
 /// D[n] = A[n] * scalar + scalar2
-pub fn vsmsa(a: []const f32, scalar: f32, scalar2: f32, out: []f32) void {
-    c.vDSP_vsmsa(a.ptr, 1, &scalar, &scalar2, out.ptr, 1, a.len);
-}
-pub fn vsmsaD(a: []const f64, scalar: f64, scalar2: f64, out: []f64) void {
-    c.vDSP_vsmsaD(a.ptr, 1, &scalar, &scalar2, out.ptr, 1, a.len);
+pub fn vsmsa(comptime T: type, a: []const T, scalar: T, scalar2: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsmsa(a.ptr, 1, &scalar, &scalar2, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsmsaD(a.ptr, 1, &scalar, &scalar2, out.ptr, 1, a.len),
+        else => @compileError("vsmsa requires f32 or f64"),
+    }
 }
 
 /// D[n] = A[n] * scalar - C[n]
-pub fn vsmsb(a: []const f32, scalar: f32, subtrahend: []const f32, out: []f32) void {
-    c.vDSP_vsmsb(a.ptr, 1, &scalar, subtrahend.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vsmsbD(a: []const f64, scalar: f64, subtrahend: []const f64, out: []f64) void {
-    c.vDSP_vsmsbD(a.ptr, 1, &scalar, subtrahend.ptr, 1, out.ptr, 1, a.len);
+pub fn vsmsb(comptime T: type, a: []const T, scalar: T, subtrahend: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsmsb(a.ptr, 1, &scalar, subtrahend.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsmsbD(a.ptr, 1, &scalar, subtrahend.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vsmsb requires f32 or f64"),
+    }
 }
 
 /// E[n] = A[n]*scalarA + C[n]*scalarB
-pub fn vsmsma(a: []const f32, scalar_a: f32, b: []const f32, scalar_b: f32, out: []f32) void {
-    c.vDSP_vsmsma(a.ptr, 1, &scalar_a, b.ptr, 1, &scalar_b, out.ptr, 1, a.len);
-}
-pub fn vsmsmaD(a: []const f64, scalar_a: f64, b: []const f64, scalar_b: f64, out: []f64) void {
-    c.vDSP_vsmsmaD(a.ptr, 1, &scalar_a, b.ptr, 1, &scalar_b, out.ptr, 1, a.len);
+pub fn vsmsma(comptime T: type, a: []const T, scalar_a: T, b: []const T, scalar_b: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsmsma(a.ptr, 1, &scalar_a, b.ptr, 1, &scalar_b, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsmsmaD(a.ptr, 1, &scalar_a, b.ptr, 1, &scalar_b, out.ptr, 1, a.len),
+        else => @compileError("vsmsma requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -462,27 +413,30 @@ pub fn vsmsmaD(a: []const f64, scalar_a: f64, b: []const f64, scalar_b: f64, out
 // ============================================================================
 
 /// E[n] = (A[n] + B[n]) * (C[n] + D[n])
-pub fn vaam(a: []const f32, b: []const f32, c_vec: []const f32, d: []const f32, out: []f32) void {
-    c.vDSP_vaam(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vaamD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f64, out: []f64) void {
-    c.vDSP_vaamD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
+pub fn vaam(comptime T: type, a: []const T, b: []const T, c_vec: []const T, d: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vaam(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vaamD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vaam requires f32 or f64"),
+    }
 }
 
 /// E[n] = (A[n] + B[n]) * (C[n] - D[n])
-pub fn vasbm(a: []const f32, b: []const f32, c_vec: []const f32, d: []const f32, out: []f32) void {
-    c.vDSP_vasbm(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vasbmD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f64, out: []f64) void {
-    c.vDSP_vasbmD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
+pub fn vasbm(comptime T: type, a: []const T, b: []const T, c_vec: []const T, d: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vasbm(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vasbmD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vasbm requires f32 or f64"),
+    }
 }
 
 /// D[n] = (A[n] + B[n]) * scalar
-pub fn vasm(a: []const f32, b: []const f32, scalar: f32, out: []f32) void {
-    c.vDSP_vasm(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-pub fn vasmD(a: []const f64, b: []const f64, scalar: f64, out: []f64) void {
-    c.vDSP_vasmD(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len);
+pub fn vasm(comptime T: type, a: []const T, b: []const T, scalar: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vasm(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len),
+        f64 => c.vDSP_vasmD(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len),
+        else => @compileError("vasm requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -490,27 +444,30 @@ pub fn vasmD(a: []const f64, b: []const f64, scalar: f64, out: []f64) void {
 // ============================================================================
 
 /// D[n] = (A[n] - B[n]) * C[n]
-pub fn vsbm(a: []const f32, b: []const f32, multiplier: []const f32, out: []f32) void {
-    c.vDSP_vsbm(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vsbmD(a: []const f64, b: []const f64, multiplier: []const f64, out: []f64) void {
-    c.vDSP_vsbmD(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len);
+pub fn vsbm(comptime T: type, a: []const T, b: []const T, multiplier: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsbm(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsbmD(a.ptr, 1, b.ptr, 1, multiplier.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vsbm requires f32 or f64"),
+    }
 }
 
 /// E[n] = (A[n] - B[n]) * (C[n] - D[n])
-pub fn vsbsbm(a: []const f32, b: []const f32, c_vec: []const f32, d: []const f32, out: []f32) void {
-    c.vDSP_vsbsbm(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vsbsbmD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f64, out: []f64) void {
-    c.vDSP_vsbsbmD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
+pub fn vsbsbm(comptime T: type, a: []const T, b: []const T, c_vec: []const T, d: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsbsbm(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsbsbmD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vsbsbm requires f32 or f64"),
+    }
 }
 
 /// D[n] = (A[n] - B[n]) * scalar
-pub fn vsbsm(a: []const f32, b: []const f32, scalar: f32, out: []f32) void {
-    c.vDSP_vsbsm(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-pub fn vsbsmD(a: []const f64, b: []const f64, scalar: f64, out: []f64) void {
-    c.vDSP_vsbsmD(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len);
+pub fn vsbsm(comptime T: type, a: []const T, b: []const T, scalar: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsbsm(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsbsmD(a.ptr, 1, b.ptr, 1, &scalar, out.ptr, 1, a.len),
+        else => @compileError("vsbsm requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -518,11 +475,12 @@ pub fn vsbsmD(a: []const f64, b: []const f64, scalar: f64, out: []f64) void {
 // ============================================================================
 
 /// C[n] = (C[n]*scalar + A[n]) / (scalar + 1)
-pub fn vavlin(a: []const f32, scalar: f32, out: []f32) void {
-    c.vDSP_vavlin(a.ptr, 1, &scalar, out.ptr, 1, a.len);
-}
-pub fn vavlinD(a: []const f64, scalar: f64, out: []f64) void {
-    c.vDSP_vavlinD(a.ptr, 1, &scalar, out.ptr, 1, a.len);
+pub fn vavlin(comptime T: type, a: []const T, scalar: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vavlin(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        f64 => c.vDSP_vavlinD(a.ptr, 1, &scalar, out.ptr, 1, a.len),
+        else => @compileError("vavlin requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -530,11 +488,12 @@ pub fn vavlinD(a: []const f64, scalar: f64, out: []f64) void {
 // ============================================================================
 
 /// E[n] = sqrt((A[n]-C[n])^2 + (B[n]-D[n])^2)
-pub fn vpythg(a: []const f32, b: []const f32, c_vec: []const f32, d: []const f32, out: []f32) void {
-    c.vDSP_vpythg(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vpythgD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f64, out: []f64) void {
-    c.vDSP_vpythgD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len);
+pub fn vpythg(comptime T: type, a: []const T, b: []const T, c_vec: []const T, d: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vpythg(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vpythgD(a.ptr, 1, b.ptr, 1, c_vec.ptr, 1, d.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vpythg requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -545,257 +504,195 @@ pub fn vpythgD(a: []const f64, b: []const f64, c_vec: []const f64, d: []const f6
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n]**2;
-pub fn vsq(a: []const f32, out: []f32) void {
-    c.vDSP_vsq(a.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector square.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n]**2;
-pub fn vsqD(a: []const f64, out: []f64) void {
-    c.vDSP_vsqD(a.ptr, 1, out.ptr, 1, a.len);
+pub fn vsq(comptime T: type, a: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vsq(a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsqD(a.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vsq requires f32 or f64"),
+    }
 }
 
 /// Vector signed square.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] * |A[n]|;
-pub fn vssq(a: []const f32, out: []f32) void {
-    c.vDSP_vssq(a.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector signed square.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] * |A[n]|;
-pub fn vssqD(a: []const f64, out: []f64) void {
-    c.vDSP_vssqD(a.ptr, 1, out.ptr, 1, a.len);
+pub fn vssq(comptime T: type, a: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vssq(a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vssqD(a.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vssq requires f32 or f64"),
+    }
 }
 
 /// Vector absolute value.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = |A[n]|;
-pub fn vabs(a: []const f32, out: []f32) void {
-    c.vDSP_vabs(a.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector absolute value.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = |A[n]|;
-pub fn vabsD(a: []const f64, out: []f64) void {
-    c.vDSP_vabsD(a.ptr, 1, out.ptr, 1, a.len);
-}
-/// Vector absolute value.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = |A[n]|;
-pub fn vabsi(a: []const i32, out: []i32) void {
-    c.vDSP_vabsi(a.ptr, 1, out.ptr, 1, a.len);
+pub fn vabs(comptime T: type, a: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vabs(a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vabsD(a.ptr, 1, out.ptr, 1, a.len),
+        i32 => c.vDSP_vabsi(a.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vabs requires f32, f64, or i32"),
+    }
 }
 
-pub fn vneg(a: []const f32, out: []f32) void {
-    c.vDSP_vneg(a.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vnegD(a: []const f64, out: []f64) void {
-    c.vDSP_vnegD(a.ptr, 1, out.ptr, 1, a.len);
+pub fn vneg(comptime T: type, a: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vneg(a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vnegD(a.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vneg requires f32 or f64"),
+    }
 }
 
 /// C[n] = -|A[n]|
-pub fn vnabs(a: []const f32, out: []f32) void {
-    c.vDSP_vnabs(a.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vnabsD(a: []const f64, out: []f64) void {
-    c.vDSP_vnabsD(a.ptr, 1, out.ptr, 1, a.len);
-}
-
-pub fn vfrac(a: []const f32, out: []f32) void {
-    c.vDSP_vfrac(a.ptr, 1, out.ptr, 1, a.len);
-}
-pub fn vfracD(a: []const f64, out: []f64) void {
-    c.vDSP_vfracD(a.ptr, 1, out.ptr, 1, a.len);
+pub fn vnabs(comptime T: type, a: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vnabs(a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vnabsD(a.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vnabs requires f32 or f64"),
+    }
 }
 
-pub fn vdist(a: []const f32, b: []const f32, out: []f32) void {
-    c.vDSP_vdist(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
+pub fn vfrac(comptime T: type, a: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vfrac(a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vfracD(a.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vfrac requires f32 or f64"),
+    }
 }
-pub fn vdistD(a: []const f64, b: []const f64, out: []f64) void {
-    c.vDSP_vdistD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len);
+
+pub fn vdist(comptime T: type, a: []const T, b: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vdist(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vdistD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        else => @compileError("vdist requires f32 or f64"),
+    }
 }
 
 /// Euclidean distance, squared.
 /// Computes:
 ///     C[0] = sum((A[n] - B[n]) ** 2, 0 <= n < N);
-pub fn distancesq(a: []const f32, b: []const f32) f32 {
-    var result: f32 = undefined;
-    c.vDSP_distancesq(a.ptr, 1, b.ptr, 1, &result, a.len);
+pub fn distancesq(comptime T: type, a: []const T, b: []const T) T {
+    var result: T = undefined;
+    switch (T) {
+        f32 => c.vDSP_distancesq(a.ptr, 1, b.ptr, 1, &result, a.len),
+        f64 => c.vDSP_distancesqD(a.ptr, 1, b.ptr, 1, &result, a.len),
+        else => @compileError("distancesq requires f32 or f64"),
+    }
     return result;
-}
-/// Euclidean distance, squared.
-/// Computes:
-///     C[0] = sum((A[n] - B[n]) ** 2, 0 <= n < N);
-pub fn distancesqD(a: []const f64, b: []const f64) f64 {
-    var result: f64 = undefined;
-    c.vDSP_distancesqD(a.ptr, 1, b.ptr, 1, &result, a.len);
-    return result;
-}
-
-// ============================================================================
-// Precision conversion
-// ============================================================================
-
-/// Vector convert between double precision and single precision.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n];
-pub fn vdpsp(a: []const f64, out: []f32) void {
-    c.vDSP_vdpsp(a.ptr, 1, out.ptr, 1, a.len);
-}
-
-/// Vector convert between double precision and single precision.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n];
-pub fn vspdp(a: []const f32, out: []f64) void {
-    c.vDSP_vspdp(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // ============================================================================
 // Complex vector arithmetic
 // ============================================================================
 
-/// Vector add.
+/// Complex vector add.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] + B[n];
-pub fn zvadd(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvadd(a, 1, b, 1, out, 1, n);
-}
-/// Vector add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] + B[n];
-pub fn zvaddD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvaddD(a, 1, b, 1, out, 1, n);
+pub fn zvadd(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvadd(a, 1, b, 1, out, 1, n),
+        f64 => c.vDSP_zvaddD(a, 1, b, 1, out, 1, n),
+        else => @compileError("zvadd requires f32 or f64"),
+    }
 }
 
-/// Vector add.
+/// Complex-real vector add.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] + B[n];
-pub fn zrvadd(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zrvadd(a, 1, b.ptr, 1, out, 1, n);
-}
-/// Vector add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] + B[n];
-pub fn zrvaddD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zrvaddD(a, 1, b.ptr, 1, out, 1, n);
+pub fn zrvadd(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zrvadd(a, 1, b.ptr, 1, out, 1, n),
+        f64 => c.vDSP_zrvaddD(a, 1, b.ptr, 1, out, 1, n),
+        else => @compileError("zrvadd requires f32 or f64"),
+    }
 }
 
-/// Vector subtract.
+/// Complex vector subtract.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] - B[n];
-pub fn zvsub(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvsub(a, 1, b, 1, out, 1, n);
-}
-/// Vector subtract.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] - B[n];
-pub fn zvsubD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvsubD(a, 1, b, 1, out, 1, n);
+pub fn zvsub(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvsub(a, 1, b, 1, out, 1, n),
+        f64 => c.vDSP_zvsubD(a, 1, b, 1, out, 1, n),
+        else => @compileError("zvsub requires f32 or f64"),
+    }
 }
 
 /// Subtract real from complex-split.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] - B[n];
-pub fn zrvsub(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zrvsub(a, 1, b.ptr, 1, out, 1, n);
-}
-/// Subtract real from complex-split.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] - B[n];
-pub fn zrvsubD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zrvsubD(a, 1, b.ptr, 1, out, 1, n);
+pub fn zrvsub(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zrvsub(a, 1, b.ptr, 1, out, 1, n),
+        f64 => c.vDSP_zrvsubD(a, 1, b.ptr, 1, out, 1, n),
+        else => @compileError("zrvsub requires f32 or f64"),
+    }
 }
 
-/// Vector multiply.
+/// Complex-real vector multiply.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] * B[n];
-pub fn zrvmul(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zrvmul(a, 1, b.ptr, 1, out, 1, n);
-}
-/// Vector multiply.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] * B[n];
-pub fn zrvmulD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zrvmulD(a, 1, b.ptr, 1, out, 1, n);
+pub fn zrvmul(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zrvmul(a, 1, b.ptr, 1, out, 1, n),
+        f64 => c.vDSP_zrvmulD(a, 1, b.ptr, 1, out, 1, n),
+        else => @compileError("zrvmul requires f32 or f64"),
+    }
 }
 
-/// Vector divide.
+/// Complex vector divide.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] / B[n];
-pub fn zvdiv(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvdiv(b, 1, a, 1, out, 1, n);
-}
-/// Vector divide.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] / B[n];
-pub fn zvdivD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvdivD(b, 1, a, 1, out, 1, n);
+pub fn zvdiv(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvdiv(b, 1, a, 1, out, 1, n),
+        f64 => c.vDSP_zvdivD(b, 1, a, 1, out, 1, n),
+        else => @compileError("zvdiv requires f32 or f64"),
+    }
 }
 
-/// Vector divide.
+/// Complex-real vector divide.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] / B[n];
-pub fn zrvdiv(a: *const SplitComplex, b: []const f32, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zrvdiv(a, 1, b.ptr, 1, out, 1, n);
-}
-/// Vector divide.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] / B[n];
-pub fn zrvdivD(a: *const DoubleSplitComplex, b: []const f64, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zrvdivD(a, 1, b.ptr, 1, out, 1, n);
+pub fn zrvdiv(comptime T: type, a: *const SC(T), b: []const T, out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zrvdiv(a, 1, b.ptr, 1, out, 1, n),
+        f64 => c.vDSP_zrvdivD(a, 1, b.ptr, 1, out, 1, n),
+        else => @compileError("zrvdiv requires f32 or f64"),
+    }
 }
 
-/// Vector absolute value.
+/// Complex vector absolute value.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = |A[n]|;
-pub fn zvabs(a: *const SplitComplex, out: []f32, n: Length) void {
-    c.vDSP_zvabs(a, 1, out.ptr, 1, n);
-}
-/// Vector absolute value.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = |A[n]|;
-pub fn zvabsD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
-    c.vDSP_zvabsD(a, 1, out.ptr, 1, n);
+pub fn zvabs(comptime T: type, a: *const SC(T), out: []T, n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvabs(a, 1, out.ptr, 1, n),
+        f64 => c.vDSP_zvabsD(a, 1, out.ptr, 1, n),
+        else => @compileError("zvabs requires f32 or f64"),
+    }
 }
 
-/// Vector fill.
+/// Complex vector fill.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[0];
-pub fn zvfill(val: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvfill(val, out, 1, n);
-}
-/// Vector fill.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[0];
-pub fn zvfillD(val: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvfillD(val, out, 1, n);
+pub fn zvfill(comptime T: type, val: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvfill(val, out, 1, n),
+        f64 => c.vDSP_zvfillD(val, out, 1, n),
+        else => @compileError("zvfill requires f32 or f64"),
+    }
 }
 
 /// Complex multiplication with optional conjugation.
@@ -806,184 +703,144 @@ pub fn zvfillD(val: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n
 ///     If Conjugate is -1:
 ///         for (n = 0; n < N; ++n)
 ///             C[n] = conj(A[n]) * B[n];
-pub fn zvmul(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length, conjugate: bool) void {
-    c.vDSP_zvmul(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1));
-}
-/// Complex multiplication with optional conjugation.
-/// Computes:
-///     If Conjugate is +1:
-///         for (n = 0; n < N; ++n)
-///             C[n] = A[n] * B[n];
-///     If Conjugate is -1:
-///         for (n = 0; n < N; ++n)
-///             C[n] = conj(A[n]) * B[n];
-pub fn zvmulD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length, conjugate: bool) void {
-    c.vDSP_zvmulD(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1));
+pub fn zvmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length, conjugate: bool) void {
+    switch (T) {
+        f32 => c.vDSP_zvmul(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1)),
+        f64 => c.vDSP_zvmulD(a, 1, b, 1, out, 1, n, if (conjugate) @as(c_int, -1) else @as(c_int, 1)),
+        else => @compileError("zvmul requires f32 or f64"),
+    }
 }
 
 /// Complex-split conjugate multiply and add.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = conj(A[n]) * B[n] + C[n];
-pub fn zvcma(a: *const SplitComplex, b: *const SplitComplex, addend: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvcma(a, 1, b, 1, addend, 1, out, 1, n);
-}
-/// Complex-split conjugate multiply and add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         D[n] = conj(A[n]) * B[n] + C[n];
-pub fn zvcmaD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, addend: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvcmaD(a, 1, b, 1, addend, 1, out, 1, n);
+pub fn zvcma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvcma(a, 1, b, 1, addend, 1, out, 1, n),
+        f64 => c.vDSP_zvcmaD(a, 1, b, 1, addend, 1, out, 1, n),
+        else => @compileError("zvcma requires f32 or f64"),
+    }
 }
 
-/// Vector multiply and add.
+/// Complex vector multiply and add.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = A[n] * B[n] + C[n];
-pub fn zvma(a: *const SplitComplex, b: *const SplitComplex, addend: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvma(a, 1, b, 1, addend, 1, out, 1, n);
-}
-/// Vector multiply and add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         D[n] = A[n] * B[n] + C[n];
-pub fn zvmaD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, addend: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvmaD(a, 1, b, 1, addend, 1, out, 1, n);
+pub fn zvma(comptime T: type, a: *const SC(T), b: *const SC(T), addend: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvma(a, 1, b, 1, addend, 1, out, 1, n),
+        f64 => c.vDSP_zvmaD(a, 1, b, 1, addend, 1, out, 1, n),
+        else => @compileError("zvma requires f32 or f64"),
+    }
 }
 
-/// Vector conjugate and multiply.
+/// Complex vector conjugate and multiply.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = conj(A[n]) * B[n];
-pub fn zvcmul(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvcmul(a, 1, b, 1, out, 1, n);
-}
-/// Vector conjugate and multiply.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = conj(A[n]) * B[n];
-pub fn zvcmulD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvcmulD(a, 1, b, 1, out, 1, n);
+pub fn zvcmul(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvcmul(a, 1, b, 1, out, 1, n),
+        f64 => c.vDSP_zvcmulD(a, 1, b, 1, out, 1, n),
+        else => @compileError("zvcmul requires f32 or f64"),
+    }
 }
 
-/// Vector conjugate.
+/// Complex vector conjugate.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = conj(A[n]);
-pub fn zvconj(a: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvconj(a, 1, out, 1, n);
-}
-/// Vector conjugate.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = conj(A[n]);
-pub fn zvconjD(a: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvconjD(a, 1, out, 1, n);
+pub fn zvconj(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvconj(a, 1, out, 1, n),
+        f64 => c.vDSP_zvconjD(a, 1, out, 1, n),
+        else => @compileError("zvconj requires f32 or f64"),
+    }
 }
 
-/// Vector multiply with scalar.
+/// Complex vector multiply with scalar.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n] * B[0];
-pub fn zvzsml(a: *const SplitComplex, scalar: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvzsml(a, 1, scalar, out, 1, n);
-}
-/// Vector multiply with scalar.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n] * B[0];
-pub fn zvzsmlD(a: *const DoubleSplitComplex, scalar: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvzsmlD(a, 1, scalar, out, 1, n);
+pub fn zvzsml(comptime T: type, a: *const SC(T), scalar: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvzsml(a, 1, scalar, out, 1, n),
+        f64 => c.vDSP_zvzsmlD(a, 1, scalar, out, 1, n),
+        else => @compileError("zvzsml requires f32 or f64"),
+    }
 }
 
-/// Vector magnitudes squared.
+/// Complex vector magnitudes squared.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = |A[n]| ** 2;
-pub fn zvmags(a: *const SplitComplex, out: []f32, n: Length) void {
-    c.vDSP_zvmags(a, 1, out.ptr, 1, n);
-}
-/// Vector magnitudes squared.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = |A[n]| ** 2;
-pub fn zvmagsD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
-    c.vDSP_zvmagsD(a, 1, out.ptr, 1, n);
+pub fn zvmags(comptime T: type, a: *const SC(T), out: []T, n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvmags(a, 1, out.ptr, 1, n),
+        f64 => c.vDSP_zvmagsD(a, 1, out.ptr, 1, n),
+        else => @compileError("zvmags requires f32 or f64"),
+    }
 }
 
-/// Vector magnitudes square and add.
+/// Complex vector magnitudes square and add.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = |A[n]| ** 2 + B[n];
-pub fn zvmgsa(a: *const SplitComplex, b: []const f32, out: []f32, n: Length) void {
-    c.vDSP_zvmgsa(a, 1, b.ptr, 1, out.ptr, 1, n);
-}
-/// Vector magnitudes square and add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = |A[n]| ** 2 + B[n];
-pub fn zvmgsaD(a: *const DoubleSplitComplex, b: []const f64, out: []f64, n: Length) void {
-    c.vDSP_zvmgsaD(a, 1, b.ptr, 1, out.ptr, 1, n);
+pub fn zvmgsa(comptime T: type, a: *const SC(T), b: []const T, out: []T, n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvmgsa(a, 1, b.ptr, 1, out.ptr, 1, n),
+        f64 => c.vDSP_zvmgsaD(a, 1, b.ptr, 1, out.ptr, 1, n),
+        else => @compileError("zvmgsa requires f32 or f64"),
+    }
 }
 
 /// Complex-split vector move.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n];
-pub fn zvmov(a: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvmov(a, 1, out, 1, n);
-}
-/// Complex-split vector move.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = A[n];
-pub fn zvmovD(a: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvmovD(a, 1, out, 1, n);
+pub fn zvmov(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvmov(a, 1, out, 1, n),
+        f64 => c.vDSP_zvmovD(a, 1, out, 1, n),
+        else => @compileError("zvmov requires f32 or f64"),
+    }
 }
 
-/// Vector negate.
+/// Complex vector negate.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = -A[n];
-pub fn zvneg(a: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvneg(a, 1, out, 1, n);
-}
-/// Vector negate.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = -A[n];
-pub fn zvnegD(a: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvnegD(a, 1, out, 1, n);
+pub fn zvneg(comptime T: type, a: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvneg(a, 1, out, 1, n),
+        f64 => c.vDSP_zvnegD(a, 1, out, 1, n),
+        else => @compileError("zvneg requires f32 or f64"),
+    }
 }
 
-/// Vector phase.
+/// Complex vector phase.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = atan2(Im(A[n]), Re(A[n]));
-pub fn zvphas(a: *const SplitComplex, out: []f32, n: Length) void {
-    c.vDSP_zvphas(a, 1, out.ptr, 1, n);
-}
-/// Vector phase.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = atan2(Im(A[n]), Re(A[n]));
-pub fn zvphasD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
-    c.vDSP_zvphasD(a, 1, out.ptr, 1, n);
+pub fn zvphas(comptime T: type, a: *const SC(T), out: []T, n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvphas(a, 1, out.ptr, 1, n),
+        f64 => c.vDSP_zvphasD(a, 1, out.ptr, 1, n),
+        else => @compileError("zvphas requires f32 or f64"),
+    }
 }
 
-/// Vector multiply by scalar and add.
+/// Complex vector multiply by scalar and add.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = A[n] * B[0] + C[n];
-pub fn zvsma(a: *const SplitComplex, scalar: *const SplitComplex, addend: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zvsma(a, 1, scalar, addend, 1, out, 1, n);
-}
-/// Vector multiply by scalar and add.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         D[n] = A[n] * B[0] + C[n];
-pub fn zvsmaD(a: *const DoubleSplitComplex, scalar: *const DoubleSplitComplex, addend: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zvsmaD(a, 1, scalar, addend, 1, out, 1, n);
+pub fn zvsma(comptime T: type, a: *const SC(T), scalar: *const SC(T), addend: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zvsma(a, 1, scalar, addend, 1, out, 1, n),
+        f64 => c.vDSP_zvsmaD(a, 1, scalar, addend, 1, out, 1, n),
+        else => @compileError("zvsma requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -994,90 +851,72 @@ pub fn zvsmaD(a: *const DoubleSplitComplex, scalar: *const DoubleSplitComplex, a
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] += |A[n]| ** 2;
-pub fn zaspec(a: *const SplitComplex, out: []f32, n: Length) void {
-    c.vDSP_zaspec(a, out.ptr, n);
-}
-/// Complex-split accumulating autospectrum.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] += |A[n]| ** 2;
-pub fn zaspecD(a: *const DoubleSplitComplex, out: []f64, n: Length) void {
-    c.vDSP_zaspecD(a, out.ptr, n);
+pub fn zaspec(comptime T: type, a: *const SC(T), out: []T, n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zaspec(a, out.ptr, n),
+        f64 => c.vDSP_zaspecD(a, out.ptr, n),
+        else => @compileError("zaspec requires f32 or f64"),
+    }
 }
 
 /// Coherence function.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         D[n] = |C[n]| ** 2 / (A[n] * B[n]);
-pub fn zcoher(a: []const f32, b: []const f32, cross: *const SplitComplex, out: []f32, n: Length) void {
-    c.vDSP_zcoher(a.ptr, b.ptr, cross, out.ptr, n);
-}
-/// Coherence function.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         D[n] = |C[n]| ** 2 / (A[n] * B[n]);
-pub fn zcoherD(a: []const f64, b: []const f64, cross: *const DoubleSplitComplex, out: []f64, n: Length) void {
-    c.vDSP_zcoherD(a.ptr, b.ptr, cross, out.ptr, n);
+pub fn zcoher(comptime T: type, a: []const T, b: []const T, cross: *const SC(T), out: []T, n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zcoher(a.ptr, b.ptr, cross, out.ptr, n),
+        f64 => c.vDSP_zcoherD(a.ptr, b.ptr, cross, out.ptr, n),
+        else => @compileError("zcoher requires f32 or f64"),
+    }
 }
 
 /// Transfer function, B/A.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = B[n] / A[n];
-pub fn ztrans(a: []const f32, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_ztrans(a.ptr, b, out, n);
-}
-/// Transfer function, B/A.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = B[n] / A[n];
-pub fn ztransD(a: []const f64, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_ztransD(a.ptr, b, out, n);
+pub fn ztrans(comptime T: type, a: []const T, b: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_ztrans(a.ptr, b, out, n),
+        f64 => c.vDSP_ztransD(a.ptr, b, out, n),
+        else => @compileError("ztrans requires f32 or f64"),
+    }
 }
 
 /// Accumulating cross-spectrum.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] += conj(A[n]) * B[n];
-pub fn zcspec(a: *const SplitComplex, b: *const SplitComplex, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zcspec(a, b, out, n);
-}
-/// Accumulating cross-spectrum.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] += conj(A[n]) * B[n];
-pub fn zcspecD(a: *const DoubleSplitComplex, b: *const DoubleSplitComplex, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zcspecD(a, b, out, n);
+pub fn zcspec(comptime T: type, a: *const SC(T), b: *const SC(T), out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zcspec(a, b, out, n),
+        f64 => c.vDSP_zcspecD(a, b, out, n),
+        else => @compileError("zcspec requires f32 or f64"),
+    }
 }
 
 /// Anti-aliasing down-sample with real filter.
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
-pub fn desamp(a: [*]const f32, decimation_factor: Stride, filter: []const f32, out: []f32) void {
-    c.vDSP_desamp(a, decimation_factor, filter.ptr, out.ptr, out.len, filter.len);
-}
-/// Anti-aliasing down-sample with real filter.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
-pub fn desampD(a: [*]const f64, decimation_factor: Stride, filter: []const f64, out: []f64) void {
-    c.vDSP_desampD(a, decimation_factor, filter.ptr, out.ptr, out.len, filter.len);
+pub fn desamp(comptime T: type, a: [*]const T, decimation_factor: Stride, filter: []const T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_desamp(a, decimation_factor, filter.ptr, out.ptr, out.len, filter.len),
+        f64 => c.vDSP_desampD(a, decimation_factor, filter.ptr, out.ptr, out.len, filter.len),
+        else => @compileError("desamp requires f32 or f64"),
+    }
 }
 
-/// Anti-aliasing down-sample with real filter.
+/// Anti-aliasing down-sample with real filter (complex-split).
 /// Computes:
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
-pub fn zrdesamp(a: *const SplitComplex, decimation_factor: Stride, filter: []const f32, out: *const SplitComplex, n: Length) void {
-    c.vDSP_zrdesamp(a, decimation_factor, filter.ptr, out, n, filter.len);
-}
-/// Anti-aliasing down-sample with real filter.
-/// Computes:
-///     for (n = 0; n < N; ++n)
-///         C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P);
-pub fn zrdesampD(a: *const DoubleSplitComplex, decimation_factor: Stride, filter: []const f64, out: *const DoubleSplitComplex, n: Length) void {
-    c.vDSP_zrdesampD(a, decimation_factor, filter.ptr, out, n, filter.len);
+pub fn zrdesamp(comptime T: type, a: *const SC(T), decimation_factor: Stride, filter: []const T, out: *const SC(T), n: Length) void {
+    switch (T) {
+        f32 => c.vDSP_zrdesamp(a, decimation_factor, filter.ptr, out, n, filter.len),
+        f64 => c.vDSP_zrdesampD(a, decimation_factor, filter.ptr, out, n, filter.len),
+        else => @compileError("zrdesamp requires f32 or f64"),
+    }
 }
 
 // ============================================================================
@@ -1088,7 +927,7 @@ test "vadd" {
     const a = [_]f32{ 1.0, 2.0, 3.0 };
     const b = [_]f32{ 4.0, 5.0, 6.0 };
     var out: [3]f32 = undefined;
-    vadd(&a, &b, &out);
+    vadd(f32, &a, &b, &out);
     try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 7.0), out[1], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 9.0), out[2], 0.001);
@@ -1097,7 +936,7 @@ test "vadd" {
 test "vsmul" {
     const a = [_]f32{ 1.0, 2.0, 3.0 };
     var out: [3]f32 = undefined;
-    vsmul(&a, 2.5, &out);
+    vsmul(f32, &a, 2.5, &out);
     try std.testing.expectApproxEqAbs(@as(f32, 2.5), out[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[1], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 7.5), out[2], 0.001);

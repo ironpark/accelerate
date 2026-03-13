@@ -23,7 +23,7 @@ const c = struct {
 
 // -- Float ramp multiply --
 
-/// vDSP_vrampmul, vector single-precision vramp and multiply.
+/// Vector vramp and multiply.
 ///
 /// This routine puts into O the product of I and a ramp function with initial
 /// value *Start and slope *Step.  *Start is updated to continue the ramp
@@ -41,19 +41,19 @@ const c = struct {
 ///
 /// Input:
 ///
-///     const float *I, vDSP_Stride IS.
+///     const T *I, vDSP_Stride IS.
 ///
 ///         Starting address and stride for the input vector.
 ///
-///     float *Start.
+///     T *Start.
 ///
 ///         Starting value for the ramp.
 ///
-///     const float *Step.
+///     const T *Step.
 ///
 ///         Value of the step for the ramp.
 ///
-///     float *O, vDSP_Stride OS.
+///     T *O, vDSP_Stride OS.
 ///
 ///         Starting address and stride for the output vector.
 ///
@@ -66,60 +66,17 @@ const c = struct {
 ///     The results are written to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul(input: []const f32, start: *f32, step: f32, out: []f32) void {
-    c.vDSP_vrampmul(input.ptr, 1, start, &step, out.ptr, 1, input.len);
-}
-
-/// vDSP_vrampmulD, vector double-precision vramp and multiply.
-///
-/// This routine puts into O the product of I and a ramp function with initial
-/// value *Start and slope *Step.  *Start is updated to continue the ramp
-/// in a consecutive call.  To continue the ramp smoothly, the new value of
-/// *Step includes rounding errors accumulated during the routine rather than
-/// being calculated directly as *Start + N * *Step.
-///
-/// This routine calculates:
-///
-///     for (i = 0; i < N; ++i)
-///     {
-///         O[i*OS] = *Start * I[i*IS];
-///         *Start += *Step;
-///     }
-///
-/// Input:
-///
-///     const double *I, vDSP_Stride IS.
-///
-///         Starting address and stride for the input vector.
-///
-///     double *Start.
-///
-///         Starting value for the ramp.
-///
-///     const double *Step.
-///
-///         Value of the step for the ramp.
-///
-///     double *O, vDSP_Stride OS.
-///
-///         Starting address and stride for the output vector.
-///
-///     vDSP_Length Length.
-///
-///         Number of elements in each vector.
-///
-/// Output:
-///
-///     The results are written to O.
-///
-///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmulD(input: []const f64, start: *f64, step: f64, out: []f64) void {
-    c.vDSP_vrampmulD(input.ptr, 1, start, &step, out.ptr, 1, input.len);
+pub fn vrampmul(comptime T: type, input: []const T, start: *T, step: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vrampmul(input.ptr, 1, start, &step, out.ptr, 1, input.len),
+        f64 => c.vDSP_vrampmulD(input.ptr, 1, start, &step, out.ptr, 1, input.len),
+        else => @compileError("vrampmul requires f32 or f64"),
+    }
 }
 
 // -- Float ramp multiply and add --
 
-/// vDSP_vrampmuladd, vector single-precision vramp, multiply and add.
+/// Vector vramp, multiply and add.
 ///
 /// This routine adds to O the product of I and a ramp function with initial
 /// value *Start and slope *Step.  *Start is updated to continue the ramp in a
@@ -137,19 +94,19 @@ pub fn vrampmulD(input: []const f64, start: *f64, step: f64, out: []f64) void {
 ///
 /// Input:
 ///
-///     const float *I, vDSP_Stride IS.
+///     const T *I, vDSP_Stride IS.
 ///
 ///         Starting address and stride for the input vector.
 ///
-///     float *Start.
+///     T *Start.
 ///
 ///         Starting value for the ramp.
 ///
-///     const float *Step.
+///     const T *Step.
 ///
 ///         Value of the step for the ramp.
 ///
-///     float *O, vDSP_Stride OS.
+///     T *O, vDSP_Stride OS.
 ///
 ///         Starting address and stride for the output vector.
 ///
@@ -162,60 +119,17 @@ pub fn vrampmulD(input: []const f64, start: *f64, step: f64, out: []f64) void {
 ///     The results are added to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd(input: []const f32, start: *f32, step: f32, out: []f32) void {
-    c.vDSP_vrampmuladd(input.ptr, 1, start, &step, out.ptr, 1, input.len);
-}
-
-/// vDSP_vrampmuladdD, vector double-precision vramp, multiply and add.
-///
-/// This routine adds to O the product of I and a ramp function with initial
-/// value *Start and slope *Step.  *Start is updated to continue the ramp in a
-/// consecutive call.  To continue the ramp smoothly, the new value of *Step
-/// includes rounding errors accumulated during the routine rather than being
-/// calculated directly as *Start + N * *Step.
-///
-/// This routine calculates:
-///
-///     for (i = 0; i < N; ++i)
-///     {
-///         O[i*OS] += *Start * I[i*IS];
-///         *Start += *Step;
-///     }
-///
-/// Input:
-///
-///     const double *I, vDSP_Stride IS.
-///
-///         Starting address and stride for the input vector.
-///
-///     double *Start.
-///
-///         Starting value for the ramp.
-///
-///     const double *Step.
-///
-///         Value of the step for the ramp.
-///
-///     double *O, vDSP_Stride OS.
-///
-///         Starting address and stride for the output vector.
-///
-///     vDSP_Length Length.
-///
-///         Number of elements in each vector.
-///
-/// Output:
-///
-///     The results are added to O.
-///
-///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladdD(input: []const f64, start: *f64, step: f64, out: []f64) void {
-    c.vDSP_vrampmuladdD(input.ptr, 1, start, &step, out.ptr, 1, input.len);
+pub fn vrampmuladd(comptime T: type, input: []const T, start: *T, step: T, out: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vrampmuladd(input.ptr, 1, start, &step, out.ptr, 1, input.len),
+        f64 => c.vDSP_vrampmuladdD(input.ptr, 1, start, &step, out.ptr, 1, input.len),
+        else => @compileError("vrampmuladd requires f32 or f64"),
+    }
 }
 
 // -- Stereo float ramp multiply --
 
-/// vDSP_vrampmul2, stereo vector single-precision vramp and multiply.
+/// Stereo vector vramp and multiply.
 ///
 /// This routine:
 ///
@@ -241,19 +155,19 @@ pub fn vrampmuladdD(input: []const f64, start: *f64, step: f64, out: []f64) void
 ///
 /// Input:
 ///
-///     const float *I0, const float *I1, vDSP_Stride IS.
+///     const T *I0, const T *I1, vDSP_Stride IS.
 ///
 ///         Starting addresses of both inputs and stride for the input vectors.
 ///
-///     float *Start.
+///     T *Start.
 ///
 ///         Starting value for the ramp.
 ///
-///     const float *Step.
+///     const T *Step.
 ///
 ///         Value of the step for the ramp.
 ///
-///     float *O0, float *O1, vDSP_Stride OS.
+///     T *O0, T *O1, vDSP_Stride OS.
 ///
 ///         Starting addresses of both outputs and stride for the output
 ///         vectors.
@@ -267,69 +181,17 @@ pub fn vrampmuladdD(input: []const f64, start: *f64, step: f64, out: []f64) void
 ///     The results are written to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul2(input_a: []const f32, input_b: []const f32, start: *f32, step: f32, out_a: []f32, out_b: []f32) void {
-    c.vDSP_vrampmul2(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
-}
-
-/// vDSP_vrampmul2D, stereo vector double-precision vramp and multiply.
-///
-/// This routine:
-///
-///     Puts into O0 the product of I0 and a ramp function with initial value
-///     *Start and slope *Step.
-///
-///     Puts into O1 the product of I1 and a ramp function with initial value
-///     *Start and slope *Step.
-///
-/// *Start is updated to continue the ramp in a consecutive call.  To continue
-/// the ramp smoothly, the new value of *Step includes rounding errors
-/// accumulated during the routine rather than being calculated directly as
-/// *Start + N * *Step.
-///
-/// This routine calculates:
-///
-///     for (i = 0; i < N; ++i)
-///     {
-///         O0[i*OS] = *Start * I0[i*IS];
-///         O1[i*OS] = *Start * I1[i*IS];
-///         *Start += *Step;
-///     }
-///
-/// Input:
-///
-///     const double *I0, const double *I1, vDSP_Stride IS.
-///
-///         Starting addresses of both inputs and stride for the input vectors.
-///
-///     double *Start.
-///
-///         Starting value for the ramp.
-///
-///     const double *Step.
-///
-///         Value of the step for the ramp.
-///
-///     double *O0, double *O1, vDSP_Stride OS.
-///
-///         Starting addresses of both outputs and stride for the output
-///         vectors.
-///
-///     vDSP_Length Length.
-///
-///         Number of elements in each vector.
-///
-/// Output:
-///
-///     The results are written to O0 and O1.
-///
-///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul2D(input_a: []const f64, input_b: []const f64, start: *f64, step: f64, out_a: []f64, out_b: []f64) void {
-    c.vDSP_vrampmul2D(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+pub fn vrampmul2(comptime T: type, input_a: []const T, input_b: []const T, start: *T, step: T, out_a: []T, out_b: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vrampmul2(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        f64 => c.vDSP_vrampmul2D(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        else => @compileError("vrampmul2 requires f32 or f64"),
+    }
 }
 
 // -- Stereo float ramp multiply and add --
 
-/// vDSP_vrampmuladd2, stereo vector single-precision vramp, multiply and add.
+/// Stereo vector vramp, multiply and add.
 ///
 /// This routine:
 ///
@@ -355,19 +217,19 @@ pub fn vrampmul2D(input_a: []const f64, input_b: []const f64, start: *f64, step:
 ///
 /// Input:
 ///
-///     const float *I0, const float *I1, vDSP_Stride IS.
+///     const T *I0, const T *I1, vDSP_Stride IS.
 ///
 ///         Starting addresses of both inputs and stride for the input vectors.
 ///
-///     float *Start.
+///     T *Start.
 ///
 ///         Starting value for the ramp.
 ///
-///     const float *Step.
+///     const T *Step.
 ///
 ///         Value of the step for the ramp.
 ///
-///     float *O0, float *O1, vDSP_Stride OS.
+///     T *O0, T *O1, vDSP_Stride OS.
 ///
 ///         Starting addresses of both outputs and stride for the output
 ///         vectors.
@@ -381,64 +243,12 @@ pub fn vrampmul2D(input_a: []const f64, input_b: []const f64, start: *f64, step:
 ///     The results are written to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd2(input_a: []const f32, input_b: []const f32, start: *f32, step: f32, out_a: []f32, out_b: []f32) void {
-    c.vDSP_vrampmuladd2(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
-}
-
-/// vDSP_vrampmuladd2D, stereo vector double-precision vramp, multiply and add.
-///
-/// This routine:
-///
-///     Adds to O0 the product of I0 and a ramp function with initial value
-///     *Start and slope *Step.
-///
-///     Adds to O1 the product of I1 and a ramp function with initial value
-///     *Start and slope *Step.
-///
-/// *Start is updated to continue the ramp in a consecutive call.  To continue
-/// the ramp smoothly, the new value of *Step includes rounding errors
-/// accumulated during the routine rather than being calculated directly as
-/// *Start + N * *Step.
-///
-/// This routine calculates:
-///
-///     for (i = 0; i < N; ++i)
-///     {
-///         O0[i*OS] += *Start * I0[i*IS];
-///         O1[i*OS] += *Start * I1[i*IS];
-///         *Start += *Step;
-///     }
-///
-/// Input:
-///
-///     const double *I0, const double *I1, vDSP_Stride IS.
-///
-///         Starting addresses of both inputs and stride for the input vectors.
-///
-///     double *Start.
-///
-///         Starting value for the ramp.
-///
-///     const double *Step.
-///
-///         Value of the step for the ramp.
-///
-///     double *O0, double *O1, vDSP_Stride OS.
-///
-///         Starting addresses of both outputs and stride for the output
-///         vectors.
-///
-///     vDSP_Length Length.
-///
-///         Number of elements in each vector.
-///
-/// Output:
-///
-///     The results are written to O0 and O1.
-///
-///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd2D(input_a: []const f64, input_b: []const f64, start: *f64, step: f64, out_a: []f64, out_b: []f64) void {
-    c.vDSP_vrampmuladd2D(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+pub fn vrampmuladd2(comptime T: type, input_a: []const T, input_b: []const T, start: *T, step: T, out_a: []T, out_b: []T) void {
+    switch (T) {
+        f32 => c.vDSP_vrampmuladd2(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        f64 => c.vDSP_vrampmuladd2D(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        else => @compileError("vrampmuladd2 requires f32 or f64"),
+    }
 }
 
 // -- Fixed-point s1_15 ramp multiply --
