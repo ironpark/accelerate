@@ -81,14 +81,14 @@ pub fn FFT(comptime T: type) type {
         log2n: Length,
 
         /// Allocates memory and prepares constants used by FFT routines.
-        pub fn init(log2n: Length, radix: Radix) ?Self {
+        pub fn init(log2n: Length, radix: Radix) !Self {
             const setup = switch (T) {
                 f32 => c.vDSP_create_fftsetup(log2n, @intFromEnum(radix)),
                 f64 => c.vDSP_create_fftsetupD(log2n, @intFromEnum(radix)),
                 else => unreachable,
             };
             return .{
-                .setup = setup orelse return null,
+                .setup = setup orelse return error.SetupFailed,
                 .log2n = log2n,
             };
         }

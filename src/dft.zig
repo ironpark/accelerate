@@ -45,24 +45,24 @@ pub fn DFT(comptime T: type) type {
 
         setup: Setup,
 
-        pub fn init(length: Length, direction: Direction) ?Self {
+        pub fn init(length: Length, direction: Direction) !Self {
             const dir = @intFromEnum(direction);
             const setup = switch (T) {
                 f32 => c.vDSP_DFT_zop_CreateSetup(null, length, dir),
                 f64 => c.vDSP_DFT_zop_CreateSetupD(null, length, dir),
                 else => unreachable,
             };
-            return .{ .setup = setup orelse return null };
+            return .{ .setup = setup orelse return error.SetupFailed };
         }
 
-        pub fn initShared(previous: Setup, length: Length, direction: Direction) ?Self {
+        pub fn initShared(previous: Setup, length: Length, direction: Direction) !Self {
             const dir = @intFromEnum(direction);
             const setup = switch (T) {
                 f32 => c.vDSP_DFT_zop_CreateSetup(previous, length, dir),
                 f64 => c.vDSP_DFT_zop_CreateSetupD(previous, length, dir),
                 else => unreachable,
             };
-            return .{ .setup = setup orelse return null };
+            return .{ .setup = setup orelse return error.SetupFailed };
         }
 
         pub fn deinit(self: Self) void {
@@ -97,14 +97,14 @@ pub fn RealDFT(comptime T: type) type {
 
         setup: Setup,
 
-        pub fn init(length: Length, direction: Direction) ?Self {
+        pub fn init(length: Length, direction: Direction) !Self {
             const dir = @intFromEnum(direction);
             const setup = switch (T) {
                 f32 => c.vDSP_DFT_zrop_CreateSetup(null, length, dir),
                 f64 => c.vDSP_DFT_zrop_CreateSetupD(null, length, dir),
                 else => unreachable,
             };
-            return .{ .setup = setup orelse return null };
+            return .{ .setup = setup orelse return error.SetupFailed };
         }
 
         pub fn deinit(self: Self) void {
@@ -129,8 +129,8 @@ pub fn RealDFT(comptime T: type) type {
 pub const DCT = struct {
     setup: DFTSetup,
 
-    pub fn init(length: Length, dct_type: DCTType) ?DCT {
-        return .{ .setup = c.vDSP_DCT_CreateSetup(null, length, @intFromEnum(dct_type)) orelse return null };
+    pub fn init(length: Length, dct_type: DCTType) !DCT {
+        return .{ .setup = c.vDSP_DCT_CreateSetup(null, length, @intFromEnum(dct_type)) orelse return error.SetupFailed };
     }
 
     pub fn deinit(self: DCT) void {
@@ -157,7 +157,7 @@ pub fn InterleavedDFT(comptime T: type) type {
 
         setup: Setup,
 
-        pub fn init(length: Length, direction: Direction, rtc: RealToComplex) ?Self {
+        pub fn init(length: Length, direction: Direction, rtc: RealToComplex) !Self {
             const dir = @intFromEnum(direction);
             const r2c = @intFromEnum(rtc);
             const setup = switch (T) {
@@ -165,7 +165,7 @@ pub fn InterleavedDFT(comptime T: type) type {
                 f64 => c.vDSP_DFT_Interleaved_CreateSetupD(null, length, dir, r2c),
                 else => unreachable,
             };
-            return .{ .setup = setup orelse return null };
+            return .{ .setup = setup orelse return error.SetupFailed };
         }
 
         pub fn deinit(self: Self) void {

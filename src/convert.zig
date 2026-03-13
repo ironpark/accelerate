@@ -1,3 +1,4 @@
+const std = @import("std");
 const types = @import("types.zig");
 const Length = types.Length;
 const DbFlag = types.DbFlag;
@@ -92,15 +93,17 @@ pub fn vfltu32(comptime T: type, a: []const u32, out: []T) void {
 ///
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n];
-pub fn vflt24(a: [*]const Int24, out: [*]f32, n: Length) void {
-    c.vDSP_vflt24(a, 1, out, 1, n);
+pub fn vflt24(a: []const Int24, out: []f32) void {
+    std.debug.assert(out.len >= a.len);
+    c.vDSP_vflt24(a.ptr, 1, out.ptr, 1, a.len);
 }
 /// Vector convert 24-bit unsigned integer to single-precision float.
 ///
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n];
-pub fn vfltu24(a: [*]const UInt24, out: [*]f32, n: Length) void {
-    c.vDSP_vfltu24(a, 1, out, 1, n);
+pub fn vfltu24(a: []const UInt24, out: []f32) void {
+    std.debug.assert(out.len >= a.len);
+    c.vDSP_vfltu24(a.ptr, 1, out.ptr, 1, a.len);
 }
 
 // -- 24-bit int to float with scale --
@@ -109,15 +112,17 @@ pub fn vfltu24(a: [*]const UInt24, out: [*]f32, n: Length) void {
 ///
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = B[0] * (float)A[n];
-pub fn vfltsm24(a: [*]const Int24, scale: f32, out: [*]f32, n: Length) void {
-    c.vDSP_vfltsm24(a, 1, &scale, out, 1, n);
+pub fn vfltsm24(a: []const Int24, scale: f32, out: []f32) void {
+    std.debug.assert(out.len >= a.len);
+    c.vDSP_vfltsm24(a.ptr, 1, &scale, out.ptr, 1, a.len);
 }
 /// Vector convert 24-bit unsigned integer to single-precision float and scale.
 ///
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = B[0] * (float)A[n];
-pub fn vfltsmu24(a: [*]const UInt24, scale: f32, out: [*]f32, n: Length) void {
-    c.vDSP_vfltsmu24(a, 1, &scale, out, 1, n);
+pub fn vfltsmu24(a: []const UInt24, scale: f32, out: []f32) void {
+    std.debug.assert(out.len >= a.len);
+    c.vDSP_vfltsmu24(a.ptr, 1, &scale, out.ptr, 1, a.len);
 }
 
 // -- Float to 24-bit int with scale --
@@ -130,8 +135,9 @@ pub fn vfltsmu24(a: [*]const UInt24, scale: f32, out: [*]f32, n: Length) void {
 ///
 /// Note: Values outside the representable range are clamped to the largest
 /// or smallest representable values of the destination type.
-pub fn vsmfix24(a: [*]const f32, scale: f32, out: [*]Int24, n: Length) void {
-    c.vDSP_vsmfix24(a, 1, &scale, out, 1, n);
+pub fn vsmfix24(a: []const f32, scale: f32, out: []Int24) void {
+    std.debug.assert(out.len >= a.len);
+    c.vDSP_vsmfix24(a.ptr, 1, &scale, out.ptr, 1, a.len);
 }
 /// Vector convert single precision to 24-bit unsigned integer with pre-scaling.
 /// The scaled value is rounded toward zero.
@@ -141,8 +147,9 @@ pub fn vsmfix24(a: [*]const f32, scale: f32, out: [*]Int24, n: Length) void {
 ///
 /// Note: Values outside the representable range are clamped to the largest
 /// or smallest representable values of the destination type.
-pub fn vsmfixu24(a: [*]const f32, scale: f32, out: [*]UInt24, n: Length) void {
-    c.vDSP_vsmfixu24(a, 1, &scale, out, 1, n);
+pub fn vsmfixu24(a: []const f32, scale: f32, out: []UInt24) void {
+    std.debug.assert(out.len >= a.len);
+    c.vDSP_vsmfixu24(a.ptr, 1, &scale, out.ptr, 1, a.len);
 }
 
 // -- Float to int (truncate toward zero) --

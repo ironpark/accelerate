@@ -45,12 +45,14 @@ const c = @import("c.zig");
 ///     The results are written to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul(comptime T: type, input: []const T, start: *T, step: T, out: []T) void {
+pub fn vrampmul(comptime T: type, input: []const T, start: T, step: T, out: []T) T {
+    var s = start;
     switch (T) {
-        f32 => c.vDSP_vrampmul(input.ptr, 1, start, &step, out.ptr, 1, input.len),
-        f64 => c.vDSP_vrampmulD(input.ptr, 1, start, &step, out.ptr, 1, input.len),
+        f32 => c.vDSP_vrampmul(input.ptr, 1, &s, &step, out.ptr, 1, input.len),
+        f64 => c.vDSP_vrampmulD(input.ptr, 1, &s, &step, out.ptr, 1, input.len),
         else => @compileError("vrampmul requires f32 or f64"),
     }
+    return s;
 }
 
 // -- Float ramp multiply and add --
@@ -98,12 +100,14 @@ pub fn vrampmul(comptime T: type, input: []const T, start: *T, step: T, out: []T
 ///     The results are added to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd(comptime T: type, input: []const T, start: *T, step: T, out: []T) void {
+pub fn vrampmuladd(comptime T: type, input: []const T, start: T, step: T, out: []T) T {
+    var s = start;
     switch (T) {
-        f32 => c.vDSP_vrampmuladd(input.ptr, 1, start, &step, out.ptr, 1, input.len),
-        f64 => c.vDSP_vrampmuladdD(input.ptr, 1, start, &step, out.ptr, 1, input.len),
+        f32 => c.vDSP_vrampmuladd(input.ptr, 1, &s, &step, out.ptr, 1, input.len),
+        f64 => c.vDSP_vrampmuladdD(input.ptr, 1, &s, &step, out.ptr, 1, input.len),
         else => @compileError("vrampmuladd requires f32 or f64"),
     }
+    return s;
 }
 
 // -- Stereo float ramp multiply --
@@ -160,12 +164,14 @@ pub fn vrampmuladd(comptime T: type, input: []const T, start: *T, step: T, out: 
 ///     The results are written to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul2(comptime T: type, input_a: []const T, input_b: []const T, start: *T, step: T, out_a: []T, out_b: []T) void {
+pub fn vrampmul2(comptime T: type, input_a: []const T, input_b: []const T, start: T, step: T, out_a: []T, out_b: []T) T {
+    var s = start;
     switch (T) {
-        f32 => c.vDSP_vrampmul2(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
-        f64 => c.vDSP_vrampmul2D(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        f32 => c.vDSP_vrampmul2(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        f64 => c.vDSP_vrampmul2D(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
         else => @compileError("vrampmul2 requires f32 or f64"),
     }
+    return s;
 }
 
 // -- Stereo float ramp multiply and add --
@@ -222,12 +228,14 @@ pub fn vrampmul2(comptime T: type, input_a: []const T, input_b: []const T, start
 ///     The results are written to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd2(comptime T: type, input_a: []const T, input_b: []const T, start: *T, step: T, out_a: []T, out_b: []T) void {
+pub fn vrampmuladd2(comptime T: type, input_a: []const T, input_b: []const T, start: T, step: T, out_a: []T, out_b: []T) T {
+    var s = start;
     switch (T) {
-        f32 => c.vDSP_vrampmuladd2(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
-        f64 => c.vDSP_vrampmuladd2D(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        f32 => c.vDSP_vrampmuladd2(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
+        f64 => c.vDSP_vrampmuladd2D(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len),
         else => @compileError("vrampmuladd2 requires f32 or f64"),
     }
+    return s;
 }
 
 // -- Fixed-point s1_15 ramp multiply --
@@ -277,8 +285,10 @@ pub fn vrampmuladd2(comptime T: type, input_a: []const T, input_b: []const T, st
 ///     The results are written to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul_s1_15(input: []const i16, start: *i16, step: i16, out: []i16) void {
-    c.vDSP_vrampmul_s1_15(input.ptr, 1, start, &step, out.ptr, 1, input.len);
+pub fn vrampmul_s1_15(input: []const i16, start: i16, step: i16, out: []i16) i16 {
+    var s = start;
+    c.vDSP_vrampmul_s1_15(input.ptr, 1, &s, &step, out.ptr, 1, input.len);
+    return s;
 }
 
 /// vDSP_vrampmuladd_s1_15, vector integer 1.15 format vramp, multiply and add.
@@ -326,8 +336,10 @@ pub fn vrampmul_s1_15(input: []const i16, start: *i16, step: i16, out: []i16) vo
 ///     The results are added to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd_s1_15(input: []const i16, start: *i16, step: i16, out: []i16) void {
-    c.vDSP_vrampmuladd_s1_15(input.ptr, 1, start, &step, out.ptr, 1, input.len);
+pub fn vrampmuladd_s1_15(input: []const i16, start: i16, step: i16, out: []i16) i16 {
+    var s = start;
+    c.vDSP_vrampmuladd_s1_15(input.ptr, 1, &s, &step, out.ptr, 1, input.len);
+    return s;
 }
 
 /// vDSP_vrampmul2_s1_15, stereo vector integer 1.15 format vramp and multiply.
@@ -383,8 +395,10 @@ pub fn vrampmuladd_s1_15(input: []const i16, start: *i16, step: i16, out: []i16)
 ///     The results are written to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul2_s1_15(input_a: []const i16, input_b: []const i16, start: *i16, step: i16, out_a: []i16, out_b: []i16) void {
-    c.vDSP_vrampmul2_s1_15(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+pub fn vrampmul2_s1_15(input_a: []const i16, input_b: []const i16, start: i16, step: i16, out_a: []i16, out_b: []i16) i16 {
+    var s = start;
+    c.vDSP_vrampmul2_s1_15(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+    return s;
 }
 
 /// vDSP_vrampmuladd2_s1_15, stereo vector integer 1.15 format vramp, multiply
@@ -441,8 +455,10 @@ pub fn vrampmul2_s1_15(input_a: []const i16, input_b: []const i16, start: *i16, 
 ///     The results are added to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd2_s1_15(input_a: []const i16, input_b: []const i16, start: *i16, step: i16, out_a: []i16, out_b: []i16) void {
-    c.vDSP_vrampmuladd2_s1_15(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+pub fn vrampmuladd2_s1_15(input_a: []const i16, input_b: []const i16, start: i16, step: i16, out_a: []i16, out_b: []i16) i16 {
+    var s = start;
+    c.vDSP_vrampmuladd2_s1_15(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+    return s;
 }
 
 // -- Fixed-point s8_24 ramp multiply --
@@ -492,8 +508,10 @@ pub fn vrampmuladd2_s1_15(input_a: []const i16, input_b: []const i16, start: *i1
 ///     The results are written to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul_s8_24(input: []const i32, start: *i32, step: i32, out: []i32) void {
-    c.vDSP_vrampmul_s8_24(input.ptr, 1, start, &step, out.ptr, 1, input.len);
+pub fn vrampmul_s8_24(input: []const i32, start: i32, step: i32, out: []i32) i32 {
+    var s = start;
+    c.vDSP_vrampmul_s8_24(input.ptr, 1, &s, &step, out.ptr, 1, input.len);
+    return s;
 }
 
 /// vDSP_vrampmuladd_s8_24, vector integer 8.24 format vramp, multiply and add.
@@ -541,8 +559,10 @@ pub fn vrampmul_s8_24(input: []const i32, start: *i32, step: i32, out: []i32) vo
 ///     The results are added to O.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd_s8_24(input: []const i32, start: *i32, step: i32, out: []i32) void {
-    c.vDSP_vrampmuladd_s8_24(input.ptr, 1, start, &step, out.ptr, 1, input.len);
+pub fn vrampmuladd_s8_24(input: []const i32, start: i32, step: i32, out: []i32) i32 {
+    var s = start;
+    c.vDSP_vrampmuladd_s8_24(input.ptr, 1, &s, &step, out.ptr, 1, input.len);
+    return s;
 }
 
 /// vDSP_vrampmul2_s8_24, stereo vector integer 8.24 format vramp and multiply.
@@ -598,8 +618,10 @@ pub fn vrampmuladd_s8_24(input: []const i32, start: *i32, step: i32, out: []i32)
 ///     The results are written to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmul2_s8_24(input_a: []const i32, input_b: []const i32, start: *i32, step: i32, out_a: []i32, out_b: []i32) void {
-    c.vDSP_vrampmul2_s8_24(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+pub fn vrampmul2_s8_24(input_a: []const i32, input_b: []const i32, start: i32, step: i32, out_a: []i32, out_b: []i32) i32 {
+    var s = start;
+    c.vDSP_vrampmul2_s8_24(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+    return s;
 }
 
 /// vDSP_vrampmuladd2_s8_24, stereo vector integer 8.24 format vramp, multiply
@@ -656,6 +678,8 @@ pub fn vrampmul2_s8_24(input_a: []const i32, input_b: []const i32, start: *i32, 
 ///     The results are written to O0 and O1.
 ///
 ///     On return, *Start contains initial *Start + N * *Step.
-pub fn vrampmuladd2_s8_24(input_a: []const i32, input_b: []const i32, start: *i32, step: i32, out_a: []i32, out_b: []i32) void {
-    c.vDSP_vrampmuladd2_s8_24(input_a.ptr, input_b.ptr, 1, start, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+pub fn vrampmuladd2_s8_24(input_a: []const i32, input_b: []const i32, start: i32, step: i32, out_a: []i32, out_b: []i32) i32 {
+    var s = start;
+    c.vDSP_vrampmuladd2_s8_24(input_a.ptr, input_b.ptr, 1, &s, &step, out_a.ptr, out_b.ptr, 1, input_a.len);
+    return s;
 }

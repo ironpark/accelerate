@@ -42,6 +42,11 @@ pub fn Biquad(comptime T: type) type {
                 else => @compileError("Biquad requires f32 or f64"),
             };
             const s = setup orelse return error.SetupFailed;
+            errdefer switch (T) {
+                f32 => c.vDSP_biquad_DestroySetup(s),
+                f64 => c.vDSP_biquad_DestroySetupD(s),
+                else => unreachable,
+            };
             const delay = try allocator.alloc(T, (sections + 1) * 2);
             @memset(delay, 0);
             return .{ .setup = s, .delay = delay, .sections = sections };
@@ -126,14 +131,14 @@ pub fn Biquadm(comptime T: type) type {
         /// used more than once simultaneously, as in multiple threads.
         ///
         /// coefficients: 5 doubles per section per channel, row-major [ch0_sec0, ch0_sec1, ..., ch1_sec0, ...]
-        pub fn init(coefficients: []const f64, sections: Length, channels: Length) ?Self {
+        pub fn init(coefficients: []const f64, sections: Length, channels: Length) !Self {
             const setup = switch (T) {
                 f32 => c.vDSP_biquadm_CreateSetup(coefficients.ptr, sections, channels),
                 f64 => c.vDSP_biquadm_CreateSetupD(coefficients.ptr, sections, channels),
                 else => @compileError("Biquadm requires f32 or f64"),
             };
             return .{
-                .setup = setup orelse return null,
+                .setup = setup orelse return error.SetupFailed,
                 .sections = sections,
                 .channels = channels,
             };
