@@ -1,5 +1,6 @@
 const std = @import("std");
-const vdsp = @import("vdsp");
+const accelerate = @import("vdsp");
+const vdsp = accelerate.vdsp;
 
 pub fn main() !void {
     const a = [_]f32{ 1.0, 2.0, 3.0, 4.0 };
