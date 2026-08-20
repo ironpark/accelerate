@@ -1093,3 +1093,40 @@ test "cposvIterative solves a Hermitian positive definite system" {
         try testing.expectApproxEqAbs(b[i].im, acc.im, 1e-12);
     }
 }
+
+test "hesvWorkspaceSize and hesvWithWorkspace match hesv" {
+    const Z = Complex(f64);
+    const n = 2;
+    const a0 = [_]Z{ Z.init(2, 0), Z.init(0, -1), Z.init(0, 1), Z.init(2, 0) };
+    const b0 = [_]Z{ Z.init(1, 0), Z.init(0, 1) };
+
+    var a_alloc = a0;
+    var b_alloc = b0;
+    var ipiv_alloc: [n]Int = undefined;
+    try hesv(Z, testing.allocator, .upper, n, 1, &a_alloc, n, &ipiv_alloc, &b_alloc, n);
+
+    const size = try hesvWorkspaceSize(Z, .upper, n, 1, n, n);
+    const work = try testing.allocator.alloc(Z, size);
+    defer testing.allocator.free(work);
+
+    var a_manual = a0;
+    var b_manual = b0;
+    var ipiv_manual: [n]Int = undefined;
+    try hesvWithWorkspace(Z, .upper, n, 1, &a_manual, n, &ipiv_manual, &b_manual, n, work);
+
+    for (b_alloc, b_manual) |x, y| {
+        try testing.expectApproxEqAbs(x.re, y.re, 1e-14);
+        try testing.expectApproxEqAbs(x.im, y.im, 1e-14);
+    }
+    // And the solution really solves the original system.
+    for (0..n) |i| {
+        var acc = Z.init(0, 0);
+        for (0..n) |j| {
+            const m = a0[i + j * n];
+            acc.re += m.re * b_manual[j].re - m.im * b_manual[j].im;
+            acc.im += m.re * b_manual[j].im + m.im * b_manual[j].re;
+        }
+        try testing.expectApproxEqAbs(b0[i].re, acc.re, 1e-13);
+        try testing.expectApproxEqAbs(b0[i].im, acc.im, 1e-13);
+    }
+}

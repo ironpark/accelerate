@@ -181,6 +181,15 @@ pub const ormqr = qr.ormqr;
 pub const unmqr = qr.unmqr;
 pub const orglq = qr.orglq;
 pub const ormlq = qr.ormlq;
+pub const unmlq = qr.unmlq;
+pub const ormql = qr.ormql;
+pub const unmql = qr.unmql;
+pub const ormrq = qr.ormrq;
+pub const unmrq = qr.unmrq;
+pub const orgql = qr.orgql;
+pub const orgrq = qr.orgrq;
+pub const geqlf = qr.geqlf;
+pub const gerqf = qr.gerqf;
 pub const gels = qr.gels;
 pub const gelsd = qr.gelsd;
 pub const gelss = qr.gelss;
@@ -407,6 +416,8 @@ pub const unbdb = cs.unbdb;
 pub const orbdbCase = cs.orbdbCase;
 pub const orbdb5 = cs.orbdb5;
 pub const orbdb6 = cs.orbdb6;
+pub const unbdb5 = cs.unbdb5;
+pub const unbdb6 = cs.unbdb6;
 pub const bbcsd = cs.bbcsd;
 pub const CsResult = cs.CsResult;
 pub const SignConvention = cs.SignConvention;
@@ -475,6 +486,73 @@ pub const lanhp = norms.lanhp;
 pub const lantp = norms.lantp;
 pub const lansf = norms.lansf;
 pub const lanhf = norms.lanhf;
+
+// The rest of `factor.zig`, so the flat namespace is not missing the band,
+// packed and tridiagonal halves of families whose dense half is already here.
+pub const gbtrf = factor.gbtrf;
+pub const gbtrs = factor.gbtrs;
+pub const gttrf = factor.gttrf;
+pub const gttrs = factor.gttrs;
+pub const pbtrf = factor.pbtrf;
+pub const pbtrs = factor.pbtrs;
+pub const pptrf = factor.pptrf;
+pub const pptrs = factor.pptrs;
+pub const pptri = factor.pptri;
+pub const pttrf = factor.pttrf;
+pub const pttrs = factor.pttrs;
+pub const pstrf = factor.pstrf;
+pub const sptrf = factor.sptrf;
+pub const sptrs = factor.sptrs;
+pub const sptri = factor.sptri;
+pub const hptrf = factor.hptrf;
+pub const hptrs = factor.hptrs;
+pub const hptri = factor.hptri;
+pub const sytri = factor.sytri;
+pub const hetri = factor.hetri;
+pub const sycon = factor.sycon;
+pub const hecon = factor.hecon;
+pub const tptrs = factor.tptrs;
+pub const tptri = factor.tptri;
+pub const tbtrs = factor.tbtrs;
+pub const trttp = factor.trttp;
+pub const tpttr = factor.tpttr;
+
+pub const getriWorkspaceSize = factor.getriWorkspaceSize;
+pub const getriWithWorkspace = factor.getriWithWorkspace;
+pub const sytrfWorkspaceSize = factor.sytrfWorkspaceSize;
+pub const sytrfWithWorkspace = factor.sytrfWithWorkspace;
+pub const hetrfWorkspaceSize = factor.hetrfWorkspaceSize;
+pub const hetrfWithWorkspace = factor.hetrfWithWorkspace;
+pub const sysvWorkspaceSize = linear.sysvWorkspaceSize;
+pub const sysvWithWorkspace = linear.sysvWithWorkspace;
+pub const hesvWorkspaceSize = linear.hesvWorkspaceSize;
+pub const hesvWithWorkspace = linear.hesvWithWorkspace;
+pub const geqrfWorkspaceSize = qr.geqrfWorkspaceSize;
+pub const geqrfWithWorkspace = qr.geqrfWithWorkspace;
+pub const gelqfWorkspaceSize = qr.gelqfWorkspaceSize;
+pub const gelqfWithWorkspace = qr.gelqfWithWorkspace;
+
+pub const unglq = qr.unglq;
+pub const ungql = qr.ungql;
+pub const ungrq = qr.ungrq;
+
+// The complex-symmetric routines CBLAS does not offer.
+pub const symv = util.symv;
+pub const syr = util.syr;
+pub const spmv = util.spmv;
+pub const spr = util.spr;
+pub const Rotation = util.Rotation;
+pub const ScaleKind = util.ScaleKind;
+
+pub const Part = norms.Part;
+pub const langeWorkspaceLen = norms.langeWorkspaceLen;
+pub const symmetricWorkspaceLen = norms.symmetricWorkspaceLen;
+
+pub const RankResult = qr.RankResult;
+pub const SchurResult = eigen_gen.SchurResult;
+pub const SylvesterResult = eigen_gen.SylvesterResult;
+pub const Factorization = qr_tall.Factorization;
+pub const Workspace = work.Workspace;
 
 test {
     std.testing.refAllDecls(@This());

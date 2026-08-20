@@ -1700,6 +1700,12 @@ pub fn gbequ(
 /// Powers of two scale exactly, so `R A C` introduces no rounding error of its
 /// own. The scaling is coarser and the resulting condition number slightly
 /// worse; use this when you care that equilibration be reversible.
+///
+/// **`max_abs` means something different here.** The `*equ` routines report the
+/// true largest element; the `*equb` ones report it after the same rounding the
+/// scale factors get. Measured on a matrix whose largest entry is 100, `gbequ`
+/// returns 100 and `gbequb` returns 64. Comparing the two against each other,
+/// or against `norms.lange(.max_abs)`, is comparing different quantities.
 pub fn gbequb(
     comptime T: type,
     rows: usize,
@@ -1746,7 +1752,7 @@ fn bandEquilibrate(
 }
 
 /// `geequ` with the scale factors rounded to a power of the radix. See `gbequb`
-/// for why you would want that.
+/// for why you would want that, and for the fact that `max_abs` is rounded too.
 pub fn geequb(
     comptime T: type,
     rows: usize,
@@ -2730,4 +2736,126 @@ test "heequb wants 2n complex scratch where syequb wants 3n real" {
     const e = try heequb(Z, testing.allocator, .upper, 2, &a, 2, &s);
     for (s) |v| try testing.expect(v > 0 and std.math.isFinite(v));
     try testing.expect(e.cond > 0 and e.cond <= 1);
+}
+
+// ============================================================================
+// Tests: the caller-supplied-workspace variants
+// ============================================================================
+
+test "getriWorkspaceSize and getriWithWorkspace match getri" {
+    const n = 3;
+    const a0 = [_]f64{ 4, 1, 0, 1, 4, 1, 0, 1, 4 };
+
+    var a_alloc = a0;
+    var ipiv_alloc: [n]Int = undefined;
+    try getrf(f64, n, n, &a_alloc, n, &ipiv_alloc);
+    try getri(f64, testing.allocator, n, &a_alloc, n, &ipiv_alloc);
+
+    const size = try getriWorkspaceSize(f64, n, n);
+    try testing.expect(size >= n);
+    const work = try testing.allocator.alloc(f64, size);
+    defer testing.allocator.free(work);
+
+    var a_manual = a0;
+    var ipiv_manual: [n]Int = undefined;
+    try getrf(f64, n, n, &a_manual, n, &ipiv_manual);
+    try getriWithWorkspace(f64, n, &a_manual, n, &ipiv_manual, work);
+
+    try testing.expectEqualSlices(f64, &a_alloc, &a_manual);
+}
+
+test "sytrfWorkspaceSize and sytrfWithWorkspace match sytrf" {
+    const n = 3;
+    const a0 = [_]f64{ 1, 2, 0, 2, 1, 2, 0, 2, 1 };
+
+    var a_alloc = a0;
+    var ipiv_alloc: [n]Int = undefined;
+    try sytrf(f64, testing.allocator, .upper, n, &a_alloc, n, &ipiv_alloc);
+
+    const size = try sytrfWorkspaceSize(f64, .upper, n, n);
+    try testing.expect(size >= n);
+    const work = try testing.allocator.alloc(f64, size);
+    defer testing.allocator.free(work);
+
+    var a_manual = a0;
+    var ipiv_manual: [n]Int = undefined;
+    try sytrfWithWorkspace(f64, .upper, n, &a_manual, n, &ipiv_manual, work);
+
+    try testing.expectEqualSlices(f64, &a_alloc, &a_manual);
+    try testing.expectEqualSlices(Int, &ipiv_alloc, &ipiv_manual);
+}
+
+test "hetrfWorkspaceSize and hetrfWithWorkspace match hetrf" {
+    const Z = Complex(f64);
+    const n = 2;
+    const a0 = [_]Z{ Z.init(2, 0), Z.init(0, -1), Z.init(0, 1), Z.init(2, 0) };
+
+    var a_alloc = a0;
+    var ipiv_alloc: [n]Int = undefined;
+    try hetrf(Z, testing.allocator, .upper, n, &a_alloc, n, &ipiv_alloc);
+
+    const size = try hetrfWorkspaceSize(Z, .upper, n, n);
+    const work = try testing.allocator.alloc(Z, size);
+    defer testing.allocator.free(work);
+
+    var a_manual = a0;
+    var ipiv_manual: [n]Int = undefined;
+    try hetrfWithWorkspace(Z, .upper, n, &a_manual, n, &ipiv_manual, work);
+
+    for (a_alloc, a_manual) |x, y| {
+        try testing.expectEqual(x.re, y.re);
+        try testing.expectEqual(x.im, y.im);
+    }
+}
+
+test "hetri inverts a Hermitian matrix where sytri would treat it as symmetric" {
+    const Z = Complex(f64);
+    const n = 2;
+    // [[2, i], [-i, 2]]: Hermitian, eigenvalues 1 and 3, so it is invertible.
+    const original = [_]Z{ Z.init(2, 0), Z.init(0, -1), Z.init(0, 1), Z.init(2, 0) };
+    var a = original;
+    var ipiv: [n]Int = undefined;
+    try hetrf(Z, testing.allocator, .upper, n, &a, n, &ipiv);
+    try hetri(Z, testing.allocator, .upper, n, &a, n, &ipiv);
+
+    // A A^-1 = I, reading the inverse's lower half by conjugate symmetry.
+    for (0..n) |j| {
+        for (0..n) |i| {
+            var acc = Z.init(0, 0);
+            for (0..n) |k| {
+                const inv = if (k <= j) a[k + j * n] else Z.init(a[j + k * n].re, -a[j + k * n].im);
+                const m = original[i + k * n];
+                acc.re += m.re * inv.re - m.im * inv.im;
+                acc.im += m.re * inv.im + m.im * inv.re;
+            }
+            try testing.expectApproxEqAbs(if (i == j) @as(f64, 1) else 0, acc.re, 1e-12);
+            try testing.expectApproxEqAbs(@as(f64, 0), acc.im, 1e-12);
+        }
+    }
+}
+
+test "gbequb rounds the band scale factors to powers of two" {
+    const kl = 1;
+    const ku = 1;
+    const ld = kl + ku + 1;
+    const badly_scaled = [_]f64{ 3, 1, 0, 1, 7, 0, 0, 1, 100 };
+    var ab = [_]f64{0} ** (ld * 3);
+    for (0..3) |j| for (0..3) |i| {
+        if (i + kl < j or j + ku < i) continue;
+        ab[ku + i - j + j * ld] = badly_scaled[i + j * 3];
+    };
+
+    var r: [3]f64 = undefined;
+    var col: [3]f64 = undefined;
+    const b = try gbequb(f64, 3, 3, kl, ku, &ab, ld, &r, &col);
+    for (r) |v| try testing.expectEqual(@as(f64, 0.5), std.math.frexp(v).significand);
+    try testing.expectApproxEqAbs(@as(f64, 1.0 / 64.0), r[2], 1e-15);
+
+    // gbequ uses the reciprocals themselves, and reports the true largest
+    // element. The b variant reports the *rounded* one: 64 rather than 100.
+    var r_plain: [3]f64 = undefined;
+    const plain = try gbequ(f64, 3, 3, kl, ku, &ab, ld, &r_plain, &col);
+    try testing.expectApproxEqAbs(@as(f64, 0.01), r_plain[2], 1e-15);
+    try testing.expectApproxEqAbs(@as(f64, 100), plain.max_abs, 1e-15);
+    try testing.expectApproxEqAbs(@as(f64, 64), b.max_abs, 1e-15);
 }

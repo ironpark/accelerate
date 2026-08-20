@@ -461,6 +461,9 @@ pub fn orbdb5(
     return orthogonalizeAgainst(T, "bdb5", allocator, m1, m2, n, x1, incx1, x2, incx2, q1, ldq1, q2, ldq2);
 }
 
+/// `orbdb5` under its complex name.
+pub const unbdb5 = orbdb5;
+
 /// `orbdb5` without the fallback: a vector already in the span comes back as
 /// zero rather than replaced.
 pub fn orbdb6(
@@ -480,6 +483,9 @@ pub fn orbdb6(
 ) Fail!void {
     return orthogonalizeAgainst(T, "bdb6", allocator, m1, m2, n, x1, incx1, x2, incx2, q1, ldq1, q2, ldq2);
 }
+
+/// `orbdb6` under its complex name.
+pub const unbdb6 = orbdb6;
 
 fn orthogonalizeAgainst(
     comptime T: type,

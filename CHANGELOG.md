@@ -145,6 +145,19 @@
     by a conjugation. The wrapper takes it uniformly and drops it for a real
     `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
     either precision.
+  - **Fixed before release: `ormlq` and `ormrq` asserted the wrong shape.**
+    `geqrf` and `geqlf` store their reflectors down columns, so the array is
+    `q_order x k`; `gelqf` and `gerqf` store theirs along rows, so it is
+    `k x q_order`. The shared helper asserted the first shape for all four,
+    which rejected *every* valid `ormlq`/`ormrq` call. It went unnoticed because
+    no test instantiated those two, and a generic Zig function that nothing
+    calls is never type-checked — an audit for exactly that turned up 14 such
+    functions, all now covered.
+  - The `*equb` routines report `max_abs` **after** the same power-of-two
+    rounding the scale factors get, where the `*equ` routines report the true
+    largest element. Measured on a matrix whose largest entry is 100: `gbequ`
+    returns 100 and `gbequb` returns 64. Comparing one against the other, or
+    against `norms.lange(.max_abs)`, compares different quantities.
   - RFP takes *two* shape flags, not one: `uplo` says which triangle the data
     came from and `RfpLayout` says whether the rectangle itself is stored
     transposed. They are independent, the four combinations are four different

@@ -480,6 +480,9 @@ pub fn ormql(
     return applyAlloc(T, "mql", allocator, side, trans, rows, cols, k, a, lda, tau, cm, ldc);
 }
 
+/// LAPACK's name for `ormql` on complex elements.
+pub const unmql = ormql;
+
 /// `ormqr` for a `gerqf` factorization.
 pub fn ormrq(
     comptime T: type,
@@ -498,6 +501,9 @@ pub fn ormrq(
     return applyAlloc(T, "mrq", allocator, side, trans, rows, cols, k, a, lda, tau, cm, ldc);
 }
 
+/// LAPACK's name for `ormrq` on complex elements.
+pub const unmrq = ormrq;
+
 fn applyAlloc(
     comptime T: type,
     comptime suffix: []const u8,
@@ -515,7 +521,18 @@ fn applyAlloc(
 ) Fail!void {
     const q_order = if (side == .left) rows else cols;
     std.debug.assert(k <= q_order);
-    assertMatrix(a.len, q_order, k, lda);
+
+    // The reflector array is not the same shape for all four factorizations.
+    // `geqrf` and `geqlf` store their vectors down columns, so `a` is
+    // `q_order x k`; `gelqf` and `gerqf` store theirs along rows, so it is
+    // `k x q_order`. Asserting the first shape for all four rejects every valid
+    // `ormlq` and `ormrq` call.
+    const rowwise = comptime std.mem.eql(u8, suffix, "mlq") or std.mem.eql(u8, suffix, "mrq");
+    if (rowwise) {
+        assertMatrix(a.len, k, q_order, lda);
+    } else {
+        assertMatrix(a.len, q_order, k, lda);
+    }
     assertMatrix(cm.len, rows, cols, ldc);
     std.debug.assert(tau.len >= k);
 
@@ -1520,4 +1537,197 @@ test "ggrqf is the RQ counterpart" {
     // rather than two independent factorizations.
     for (taua) |v| try testing.expect(std.math.isFinite(v));
     for (taub) |v| try testing.expect(std.math.isFinite(v));
+}
+
+// ============================================================================
+// Tests: the routines the tiers above left uninstantiated
+// ============================================================================
+
+test "gelqfWorkspaceSize and gelqfWithWorkspace match gelqf" {
+    const m = 3;
+    const n = 4;
+    const a0 = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3 };
+
+    var a_alloc = a0;
+    var tau_alloc: [3]f64 = undefined;
+    try gelqf(f64, testing.allocator, m, n, &a_alloc, m, &tau_alloc);
+
+    const size = try gelqfWorkspaceSize(f64, m, n, m);
+    try testing.expect(size >= m);
+    const work = try testing.allocator.alloc(f64, size);
+    defer testing.allocator.free(work);
+
+    var a_manual = a0;
+    var tau_manual: [3]f64 = undefined;
+    try gelqfWithWorkspace(f64, m, n, &a_manual, m, &tau_manual, work);
+
+    try testing.expectEqualSlices(f64, &a_alloc, &a_manual);
+    try testing.expectEqualSlices(f64, &tau_alloc, &tau_manual);
+}
+
+test "orgrq builds the Q of a gerqf factorization" {
+    const m = 3;
+    const n = 4;
+    const a0 = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3 };
+    var a = a0;
+    var tau: [3]f64 = undefined;
+    try gerqf(f64, testing.allocator, m, n, &a, m, &tau);
+
+    // A = R Q, with R in the trailing m x m upper triangle of a and Q the
+    // trailing m rows of an n x n orthogonal matrix. orgrq forms those rows.
+    var q = [_]f64{0} ** (m * n);
+    // The reflectors live in the first n - m columns plus the strict lower part
+    // of the trailing block; orgrq reads them from a itself.
+    @memcpy(&q, &a);
+    try orgrq(f64, testing.allocator, m, n, m, &q, m, &tau);
+
+    // Rows of Q are orthonormal.
+    for (0..m) |i| {
+        var norm: f64 = 0;
+        for (0..n) |j| norm += q[i + j * m] * q[i + j * m];
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-11);
+    }
+
+    // R Q reconstructs A. R occupies columns n-m .. n-1, upper triangular.
+    for (0..n) |j| {
+        for (0..m) |i| {
+            var acc: f64 = 0;
+            for (0..m) |k| {
+                if (k < i) continue;
+                acc += a[i + (n - m + k) * m] * q[k + j * m];
+            }
+            try testing.expectApproxEqAbs(a0[i + j * m], acc, 1e-10);
+        }
+    }
+}
+
+test "ormlq applies the same Q that orglq builds" {
+    const m = 3;
+    const n = 4;
+    var a = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3 };
+    var tau: [3]f64 = undefined;
+    try gelqf(f64, testing.allocator, m, n, &a, m, &tau);
+
+    // Apply Q^T to the identity from the right: the result is Q itself,
+    // transposed, so its first m rows match what orglq produces.
+    var applied = [_]f64{0} ** (n * n);
+    for (0..n) |i| applied[i + i * n] = 1;
+    try ormlq(f64, testing.allocator, .right, .transpose, n, n, m, &a, m, &tau, &applied, n);
+
+    var built = [_]f64{0} ** (m * n);
+    @memcpy(&built, &a);
+    try orglq(f64, testing.allocator, m, n, m, &built, m, &tau);
+
+    for (0..m) |i| {
+        for (0..n) |j| {
+            try testing.expectApproxEqAbs(built[i + j * m], applied[j + i * n], 1e-11);
+        }
+    }
+}
+
+test "ormql and ormrq apply their factorizations' Q" {
+    const m = 4;
+    const n = 3;
+
+    // QL: A = Q L, Q is m x m and applying it to the identity gives Q.
+    var aq = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3 };
+    var tauq: [3]f64 = undefined;
+    try geqlf(f64, testing.allocator, m, n, &aq, m, &tauq);
+
+    var q = [_]f64{0} ** (m * m);
+    for (0..m) |i| q[i + i * m] = 1;
+    try ormql(f64, testing.allocator, .left, .no_trans, m, m, n, &aq, m, &tauq, &q, m);
+    for (0..m) |j| {
+        var norm: f64 = 0;
+        for (0..m) |i| norm += q[i + j * m] * q[i + j * m];
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-11);
+    }
+
+    // RQ: A = R Q with Q of order n = 4 here, so use a 3 x 4 input.
+    var ar = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3 };
+    var taur: [3]f64 = undefined;
+    try gerqf(f64, testing.allocator, n, m, &ar, n, &taur);
+
+    var z = [_]f64{0} ** (m * m);
+    for (0..m) |i| z[i + i * m] = 1;
+    try ormrq(f64, testing.allocator, .left, .no_trans, m, m, n, &ar, n, &taur, &z, m);
+    for (0..m) |j| {
+        var norm: f64 = 0;
+        for (0..m) |i| norm += z[i + j * m] * z[i + j * m];
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-11);
+    }
+}
+
+test "unmlq is the complex spelling of ormlq" {
+    const Z = Complex(f64);
+    const m = 2;
+    const n = 3;
+    var a = [_]Z{
+        Z.init(1, 1), Z.init(2, 0),
+        Z.init(0, 1), Z.init(3, 1),
+        Z.init(2, 0), Z.init(1, -1),
+    };
+    var tau: [2]Z = undefined;
+    try gelqf(Z, testing.allocator, m, n, &a, m, &tau);
+
+    var applied = [_]Z{Z.init(0, 0)} ** (n * n);
+    for (0..n) |i| applied[i + i * n] = Z.init(1, 0);
+    try unmlq(Z, testing.allocator, .right, .transpose, n, n, m, &a, m, &tau, &applied, n);
+
+    // Q^H is unitary: every column has unit norm.
+    for (0..n) |j| {
+        var norm: f64 = 0;
+        for (0..n) |i| {
+            const v = applied[i + j * n];
+            norm += v.re * v.re + v.im * v.im;
+        }
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-11);
+    }
+}
+
+test "unmql and unmrq are the complex spellings, and pick the C transpose" {
+    const Z = Complex(f64);
+    const m = 3;
+    const n = 2;
+    var a = [_]Z{
+        Z.init(1, 1), Z.init(2, 0), Z.init(3, -1),
+        Z.init(0, 1), Z.init(1, 1), Z.init(2, 0),
+    };
+    var tau: [n]Z = undefined;
+    try geqlf(Z, testing.allocator, m, n, &a, m, &tau);
+
+    var q = [_]Z{Z.init(0, 0)} ** (m * m);
+    for (0..m) |i| q[i + i * m] = Z.init(1, 0);
+    try unmql(Z, testing.allocator, .left, .no_trans, m, m, n, &a, m, &tau, &q, m);
+
+    // .transpose means the adjoint for complex, so Q is unitary column by
+    // column - a plain transpose would not give unit norms here.
+    for (0..m) |j| {
+        var norm: f64 = 0;
+        for (0..m) |i| {
+            const v = q[i + j * m];
+            norm += v.re * v.re + v.im * v.im;
+        }
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-11);
+    }
+
+    var b = [_]Z{
+        Z.init(1, 1), Z.init(2, 0),
+        Z.init(0, 1), Z.init(1, 1),
+        Z.init(3, 0), Z.init(2, -1),
+    };
+    var taur: [n]Z = undefined;
+    try gerqf(Z, testing.allocator, n, m, &b, n, &taur);
+
+    var z = [_]Z{Z.init(0, 0)} ** (m * m);
+    for (0..m) |i| z[i + i * m] = Z.init(1, 0);
+    try unmrq(Z, testing.allocator, .left, .no_trans, m, m, n, &b, n, &taur, &z, m);
+    for (0..m) |j| {
+        var norm: f64 = 0;
+        for (0..m) |i| {
+            const v = z[i + j * m];
+            norm += v.re * v.re + v.im * v.im;
+        }
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-11);
+    }
 }
