@@ -457,6 +457,18 @@ pub fn hann_window(comptime T: type, out: []T, flag: WindowFlag) void {
 // Tests
 // ============================================================================
 
+test "vrvrs" {
+    var buf = [_]f32{ 1.0, 2.0, 3.0, 4.0, 5.0 };
+    vrvrs(f32, &buf);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 5.0, 4.0, 3.0, 2.0, 1.0 }, &buf);
+}
+
+test "vrvrs odd single element" {
+    var buf = [_]f32{42.0};
+    vrvrs(f32, &buf);
+    try std.testing.expectEqualSlices(f32, &[_]f32{42.0}, &buf);
+}
+
 test "vswap" {
     // A[n] swapped with B[n] is order-independent by definition, so this
     // just verifies the contents actually get exchanged.

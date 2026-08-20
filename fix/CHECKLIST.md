@@ -222,7 +222,7 @@
 
 ### `src/vdsp/util.zig`
 
-- [ ] `vrvrs` — L18
+- [x] `vrvrs` — L18
 - [x] `vswap` — L32
 - [ ] `vsort` — L44
 - [ ] `vsorti` — L60
