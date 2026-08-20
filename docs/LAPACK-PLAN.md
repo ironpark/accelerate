@@ -1,8 +1,9 @@
 # LAPACK binding plan
 
 Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
-computational routines complete; expert drivers, iterative refinement and the
-`_aa`/`_rk`/`_rook` variants outstanding.
+computational routines complete; the T3 orthogonal factorizations and least
+squares drivers complete. Expert drivers, iterative refinement, the
+`_aa`/`_rk`/`_rook` variants, eigenproblems and SVD outstanding.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -394,33 +395,33 @@ prefix is two characters, not one — a naming trap for the generator.
 
 - [ ] `gelq` <sub>cdsz</sub>
 - [ ] `gelq2` <sub>cdsz</sub>
-- [ ] `gelqf` <sub>cdsz</sub>
+- [x] `gelqf` <sub>cdsz</sub>
 - [ ] `gelqt` <sub>cdsz</sub>
 - [ ] `gelqt3` <sub>cdsz</sub>
-- [ ] `gels` <sub>cdsz</sub>
-- [ ] `gelsd` <sub>cdsz</sub>
-- [ ] `gelss` <sub>cdsz</sub>
+- [x] `gels` <sub>cdsz</sub>
+- [x] `gelsd` <sub>cdsz</sub>
+- [x] `gelss` <sub>cdsz</sub>
 - [ ] `gelst` <sub>cdsz</sub>
 - [ ] `gelsx` <sub>cdsz</sub>
-- [ ] `gelsy` <sub>cdsz</sub>
+- [x] `gelsy` <sub>cdsz</sub>
 - [ ] `gemlq` <sub>cdsz</sub>
 - [ ] `gemlqt` <sub>cdsz</sub>
 - [ ] `gemqr` <sub>cdsz</sub>
 - [ ] `gemqrt` <sub>cdsz</sub>
 - [ ] `geql2` <sub>cdsz</sub>
-- [ ] `geqlf` <sub>cdsz</sub>
-- [ ] `geqp3` <sub>cdsz</sub>
+- [x] `geqlf` <sub>cdsz</sub>
+- [x] `geqp3` <sub>cdsz</sub>
 - [ ] `geqpf` <sub>cdsz</sub>
 - [ ] `geqr` <sub>cdsz</sub>
 - [ ] `geqr2` <sub>cdsz</sub>
 - [ ] `geqr2p` <sub>cdsz</sub>
-- [ ] `geqrf` <sub>cdsz</sub>
+- [x] `geqrf` <sub>cdsz</sub>
 - [ ] `geqrfp` <sub>cdsz</sub>
 - [ ] `geqrt` <sub>cdsz</sub>
 - [ ] `geqrt2` <sub>cdsz</sub>
 - [ ] `geqrt3` <sub>cdsz</sub>
 - [ ] `gerq2` <sub>cdsz</sub>
-- [ ] `gerqf` <sub>cdsz</sub>
+- [x] `gerqf` <sub>cdsz</sub>
 - [ ] `getsls` <sub>cdsz</sub>
 - [ ] `getsqrhrt` <sub>cdsz</sub>
 - [ ] `ggglm` <sub>cdsz</sub>
@@ -443,11 +444,11 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `orgbr` <sub>ds</sub>
 - [ ] `orghr` <sub>ds</sub>
 - [ ] `orgl2` <sub>ds</sub>
-- [ ] `orglq` <sub>ds</sub>
-- [ ] `orgql` <sub>ds</sub>
-- [ ] `orgqr` <sub>ds</sub>
+- [x] `orglq` <sub>ds</sub>
+- [x] `orgql` <sub>ds</sub>
+- [x] `orgqr` <sub>ds</sub>
 - [ ] `orgr2` <sub>ds</sub>
-- [ ] `orgrq` <sub>ds</sub>
+- [x] `orgrq` <sub>ds</sub>
 - [ ] `orgtr` <sub>ds</sub>
 - [ ] `orgtsqr` <sub>ds</sub>
 - [ ] `orgtsqr_row` <sub>ds</sub>
@@ -458,12 +459,12 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `ormbr` <sub>ds</sub>
 - [ ] `ormhr` <sub>ds</sub>
 - [ ] `orml2` <sub>ds</sub>
-- [ ] `ormlq` <sub>ds</sub>
-- [ ] `ormql` <sub>ds</sub>
-- [ ] `ormqr` <sub>ds</sub>
+- [x] `ormlq` <sub>ds</sub>
+- [x] `ormql` <sub>ds</sub>
+- [x] `ormqr` <sub>ds</sub>
 - [ ] `ormr2` <sub>ds</sub>
 - [ ] `ormr3` <sub>ds</sub>
-- [ ] `ormrq` <sub>ds</sub>
+- [x] `ormrq` <sub>ds</sub>
 - [ ] `ormrz` <sub>ds</sub>
 - [ ] `ormtr` <sub>ds</sub>
 - [ ] `tplqt` <sub>cdsz</sub>
@@ -489,11 +490,11 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `ungbr` <sub>cz</sub>
 - [ ] `unghr` <sub>cz</sub>
 - [ ] `ungl2` <sub>cz</sub>
-- [ ] `unglq` <sub>cz</sub>
-- [ ] `ungql` <sub>cz</sub>
-- [ ] `ungqr` <sub>cz</sub>
+- [x] `unglq` <sub>cz</sub>
+- [x] `ungql` <sub>cz</sub>
+- [x] `ungqr` <sub>cz</sub>
 - [ ] `ungr2` <sub>cz</sub>
-- [ ] `ungrq` <sub>cz</sub>
+- [x] `ungrq` <sub>cz</sub>
 - [ ] `ungtr` <sub>cz</sub>
 - [ ] `ungtsqr` <sub>cz</sub>
 - [ ] `ungtsqr_row` <sub>cz</sub>
@@ -504,12 +505,12 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `unmbr` <sub>cz</sub>
 - [ ] `unmhr` <sub>cz</sub>
 - [ ] `unml2` <sub>cz</sub>
-- [ ] `unmlq` <sub>cz</sub>
-- [ ] `unmql` <sub>cz</sub>
-- [ ] `unmqr` <sub>cz</sub>
+- [x] `unmlq` <sub>cz</sub>
+- [x] `unmql` <sub>cz</sub>
+- [x] `unmqr` <sub>cz</sub>
 - [ ] `unmr2` <sub>cz</sub>
 - [ ] `unmr3` <sub>cz</sub>
-- [ ] `unmrq` <sub>cz</sub>
+- [x] `unmrq` <sub>cz</sub>
 - [ ] `unmrz` <sub>cz</sub>
 - [ ] `unmtr` <sub>cz</sub>
 - [ ] `upgtr` <sub>cz</sub>
