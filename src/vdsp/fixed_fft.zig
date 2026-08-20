@@ -190,8 +190,8 @@ pub fn fft32_zopv(out_real: *[32]f32, out_imag: *[32]f32, in_real: *const [32]f3
 // leading `scale` term. The tests below both hand-verify the impulse
 // closed-form and cross-check against the already-verified general
 // FFT(f32).zip at the same N, and confirm empirically that these routines
-// are likewise unnormalized in both directions (consistent with
-// fix/REQUEST.md's note that vDSP FFTs generally are not normalized).
+// are likewise unnormalized in both directions, consistent with the rest of
+// the vDSP FFT family.
 
 test "fft16_zopv forward: impulse closed form" {
     // For an impulse h[0] = a + i*b (rest zero), the DFT sum collapses to

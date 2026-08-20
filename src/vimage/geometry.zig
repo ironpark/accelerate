@@ -524,8 +524,8 @@ test "affineWarp: pure translation (a=1,b=0,c=0,d=1) shifts by exactly (tx,ty) p
     // +x right, +y up. With a=d=1, b=c=0 this reduces to a pure translation
     // (x'=x+tx, y'=y+ty). This test lets runtime execution determine how
     // "+x"/"+y" in that coordinate space map onto the buffer's (row, col)
-    // indexing (row-major, row 0 first in memory) rather than assuming it,
-    // per fix/REQUEST.md's no-guessing rule.
+    // indexing (row-major, row 0 first in memory) rather than assuming it:
+    // where the header is silent, this suite measures rather than guesses.
     const allocator = std.testing.allocator;
     var src = try makePlanar8Buffer(allocator, 5, 5, 2);
     defer allocator.free(src.mem);
@@ -615,8 +615,7 @@ test "rotate: positive angleInRadians is a standard mathematical CCW rotation (r
     // separate degrees variant exists for vImageRotate_<fmt>), so degrees
     // vs radians is settled by the parameter's own name. The *sign*
     // convention (CW vs CCW) is not documented in prose anywhere in
-    // Geometry.h, so runtime execution is the only evidence, per
-    // fix/REQUEST.md.
+    // Geometry.h, so runtime execution is the only evidence available.
     //
     // 9x9 image, center at (row=4,col=4). Marker at (row=4,col=7): offset
     // from center is (drow=0, dcol=+3). affineWarp's already-confirmed

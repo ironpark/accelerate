@@ -811,7 +811,7 @@ test "tentConvolvePlanar8: runtime-confirmed triangular weighting for kernel siz
     // triangular weighting that peaks at the center and falls off linearly;
     // for N=3 that is {1,2,1} (sum=4), and the 2D kernel is the separable
     // outer product. This test treats that as a hypothesis and lets runtime
-    // execution be the judge, per fix/REQUEST.md.
+    // execution be the judge.
     //   1 2 3
     //   4 5 6
     //   7 8 9

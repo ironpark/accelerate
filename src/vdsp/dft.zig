@@ -583,8 +583,9 @@ test "DCT(.dct_III) matches hand-computed cosine sums for an asymmetric input" {
 
 test "InterleavedDFT(f32) complex-to-complex matches split-complex DFT(f32) for the same input" {
     // Cross-check against the already-verified DFT(T) (split-complex) type
-    // above, per fix/REQUEST.md's suggestion to cross-check FFT/DFT variants
-    // against each other. Same asymmetric input, same length, same
+    // above: where a header is silent, agreement between two independently
+    // verified variants is the available evidence. Same asymmetric input,
+    // same length, same
     // direction - outputs must agree element-wise.
     const n: Length = 8;
     const split = try DFT(f32).init(n, .forward);

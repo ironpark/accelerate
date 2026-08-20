@@ -734,8 +734,8 @@ test "FFT init/deinit and zip forward+inverse round-trip" {
     // Impulse at n=0: forward DFT is a constant spectrum, [1,1,1,1] for
     // N=4. vDSP.h's pseudocode says the inverse direction applies a 1/N
     // scale ("scale = 0 < Direction ? 1 : 1./N"), but the actual (hardware-
-    // accelerated) implementation does NOT normalize either direction - per
-    // fix/REQUEST.md's own note that vDSP FFTs are unnormalized. Measured:
+    // accelerated) implementation does NOT normalize either direction.
+    // Measured:
     // inverting [1,1,1,1] yields [4,0,0,0], i.e. N times the original
     // impulse, not the impulse itself. This confirms the binding passes
     // Direction through correctly; the header's scale comment just doesn't
@@ -1231,7 +1231,7 @@ test "zop2d matches zip2d (out-of-place equals in-place)" {
 // format... due to a legacy implementation" that interleaves Re/Im pairs
 // across doubled row indices for interior rows, unlike the clean 1D
 // realp[k]/imagp[k] = Re/Im split. Rather than hand-derive that packing
-// (risking an unverified guess, which fix/REQUEST.md forbids), these tests
+// from documentation that contradicts itself (an unverified guess), these tests
 // cross-check the buffered/out-of-place variants against zrip2d itself
 // (whose argument order is confirmed against vDSP.h above) and verify the
 // scale convention empirically via a round trip, the same way the 1D real
