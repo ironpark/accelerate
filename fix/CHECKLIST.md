@@ -184,7 +184,7 @@
 
 - [x] `ValueIndex` — L6
 - [x] `NormResult` — L10
-- [ ] `sve` — L19
+- [x] `sve` — L19
 - [x] `svesq` — L32
 - [x] `sve_svesq` — L46
 - [x] `svemg` — L60
@@ -209,16 +209,16 @@
 ### `src/vdsp/types.zig`
 
 - [x] `SplitComplex` — L6
-- [ ] `Complex` — L13
-- [ ] `Complex(T).init` — L20
-- [ ] `Complex(T).fromStd` — L24
-- [ ] `Complex(T).toStd` — L28
-- [ ] `Int24.from` — L37
-- [ ] `Int24.to` — L41
-- [ ] `Int24.toI32` — L45
-- [ ] `UInt24.from` — L53
-- [ ] `UInt24.to` — L57
-- [ ] `UInt24.toU32` — L61
+- [x] `Complex` — L13
+- [x] `Complex(T).init` — L20
+- [x] `Complex(T).fromStd` — L24
+- [x] `Complex(T).toStd` — L28
+- [x] `Int24.from` — L37
+- [x] `Int24.to` — L41
+- [x] `Int24.toI32` — L45
+- [x] `UInt24.from` — L53
+- [x] `UInt24.to` — L57
+- [x] `UInt24.toU32` — L61
 
 ### `src/vdsp/util.zig`
 
@@ -251,12 +251,12 @@
 
 ### `src/vdsp/vaddsub.zig`
 
-- [ ] `vaddsub` — L39
+- [x] `vaddsub` — L39
 
 ### `src/vdsp/vecop.zig`
 
 - [x] `vfill` — L14
-- [ ] `vadd` — L31
+- [x] `vadd` — L31
 - [x] `vsub` — L46
 - [x] `vmul` — L60
 - [x] `vdiv` — L74

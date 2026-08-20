@@ -72,3 +72,42 @@ pub const WindowFlag = enum(c_int) {
     hann_denorm = 0,
     hann_norm = 2,
 };
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+test "Complex(T).init, fromStd, toStd" {
+    const c1 = Complex(f32).init(3.0, -4.0);
+    try std.testing.expectEqual(@as(f32, 3.0), c1.real);
+    try std.testing.expectEqual(@as(f32, -4.0), c1.imag);
+
+    const std_z = std.math.Complex(f32){ .re = 1.5, .im = 2.5 };
+    const c2 = Complex(f32).fromStd(std_z);
+    try std.testing.expectEqual(@as(f32, 1.5), c2.real);
+    try std.testing.expectEqual(@as(f32, 2.5), c2.imag);
+
+    const back = c2.toStd();
+    try std.testing.expectEqual(std_z.re, back.re);
+    try std.testing.expectEqual(std_z.im, back.im);
+}
+
+test "Int24 round trip and toI32, full range including negatives" {
+    // i24 range is [-8388608, 8388607]; verify the @bitCast round trip holds
+    // at both extremes and at a negative asymmetric value, not just 0.
+    const values = [_]i24{ -8388608, -100, 0, 100, 8388607 };
+    for (values) |v| {
+        const packed_val = Int24.from(v);
+        try std.testing.expectEqual(v, packed_val.to());
+        try std.testing.expectEqual(@as(i32, v), packed_val.toI32());
+    }
+}
+
+test "UInt24 round trip and toU32, full range" {
+    const values = [_]u24{ 0, 100, 8388607, 16777215 };
+    for (values) |v| {
+        const packed_val = UInt24.from(v);
+        try std.testing.expectEqual(v, packed_val.to());
+        try std.testing.expectEqual(@as(u32, v), packed_val.toU32());
+    }
+}

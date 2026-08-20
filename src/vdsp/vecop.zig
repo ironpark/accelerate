@@ -499,6 +499,25 @@ test "vadd" {
     try std.testing.expectApproxEqAbs(@as(f32, 9.0), out[2], 0.001);
 }
 
+test "vadd f64 and i32 dispatch" {
+    // vDSP.h:2738-2764: vDSP_vadd/vaddD/vaddi all declare (A, B, C) in that
+    // order, matching the wrapper's (a, b, out) positionally. Addition is
+    // commutative so an A/B swap wouldn't be independently observable here,
+    // but the f64/i32 dispatch itself is worth covering (previously only
+    // f32 had a test).
+    const a_f64 = [_]f64{ 1.5, -2.0, 3.25 };
+    const b_f64 = [_]f64{ 4.0, 5.0, -6.25 };
+    var out_f64: [3]f64 = undefined;
+    vadd(f64, &a_f64, &b_f64, &out_f64);
+    try std.testing.expectEqualSlices(f64, &[_]f64{ 5.5, 3.0, -3.0 }, &out_f64);
+
+    const a_i32 = [_]i32{ 1, -2, 3 };
+    const b_i32 = [_]i32{ 4, 5, -6 };
+    var out_i32: [3]i32 = undefined;
+    vadd(i32, &a_i32, &b_i32, &out_i32);
+    try std.testing.expectEqualSlices(i32, &[_]i32{ 5, 3, -3 }, &out_i32);
+}
+
 test "vsub" {
     // Asymmetric inputs: a symmetric test (e.g. a=[1,2,3], b=[1,2,3]) can't
     // catch an argument-order bug because a-b == b-a when a==b.
