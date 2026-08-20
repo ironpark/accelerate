@@ -4,6 +4,39 @@
 
 ### Added
 
+- **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
+  `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
+  type. 156 extern declarations, generated from `cblas_new.h` rather than
+  transcribed, behind checked wrappers.
+
+  **This binds the current interface, not the obvious one.** Accelerate exports
+  every routine three times: `_cblas_sgemm` (legacy), `_cblas_sgemm$NEWLAPACK`
+  (current, LP64) and `_cblas_sgemm$NEWLAPACK$ILP64` (current, 64-bit indices).
+  The unsuffixed name is what plain `cblas.h` declares, and that whole header
+  has been `API_DEPRECATED` since macOS 13.3 in favour of the ILP64-capable
+  one. The suffixes come from `__LAPACK_ALIAS`, which is an `__asm` label
+  rename, so a C caller never sees them - and a Zig caller binding the obvious
+  name would silently get the deprecated routine. `types.zig` reproduces
+  `lapack_version.h`'s arch test so `Int` and the symbol suffix are chosen
+  together; getting that pairing wrong links cleanly and then reads the wrong
+  half of every dimension.
+
+  What the Zig layer adds over a transliteration:
+
+  - Matrices and vectors are slices, checked against the dimensions, leading
+    dimensions and increments - including negative increments, which BLAS
+    allows and which span the same elements as positive ones.
+  - `Order`, `Transpose`, `Uplo`, `Diag` and `Side` are enums.
+  - The Hermitian routines that require a **real** scalar - `her`, `hpr`,
+    `herk`, and `her2k`'s `beta` - take `Scalar(T)`, so a complex one does not
+    compile. A complex alpha there would silently produce a non-Hermitian
+    result.
+  - `iamax` returns `?usize`, rather than overloading 0 to mean both "first
+    element" and "empty input".
+  - Every extern is referenced by a test, because Zig resolves declarations
+    lazily and an unreferenced `@extern` with a wrong symbol name would link
+    fine until its first caller.
+
 - **`quadrature` module - numerical integration.** One-dimensional integration
   of a real function via QNG, QAG or QAGS, including infinite intervals.
 
@@ -91,8 +124,8 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 128 tests covering the two modules above, including struct-layout assertions
-  against the C headers for every ABI type. Those are not decoration: each one is passed to
+- 202 tests covering the three modules above, including struct-layout
+  assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
   asserted for the same reason - a wrong one is a wild jump, not a type error.
