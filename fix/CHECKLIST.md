@@ -150,10 +150,10 @@
 
 ### `src/vdsp/fixed_fft.zig`
 
-- [ ] `fft16_copv` — L44
-- [ ] `fft32_copv` — L87
-- [ ] `fft16_zopv` — L131
-- [ ] `fft32_zopv` — L175
+- [x] `fft16_copv` — L44
+- [x] `fft32_copv` — L87
+- [x] `fft16_zopv` — L131
+- [x] `fft32_zopv` — L175
 
 ### `src/vdsp/matrix.zig`
 
