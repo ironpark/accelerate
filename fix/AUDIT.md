@@ -1,13 +1,15 @@
 # Accelerate binding audit
 
-Progress: 253/476 checklist items verified (see `fix/checklist.sh` for live status).
+Progress: 295/476 checklist items verified (see `fix/checklist.sh` for live status).
 Completed: priority 1 (8 "swapped" functions), priority 2 (16 ultrasync
 dependencies), priority 3 (vecop.zig, zvecop.zig, reduction.zig, clip.zig,
 util.zig, convert.zig - 168 functions), priority 4 (fft.zig remainder,
-dft.zig, fixed_fft.zig - 41 functions), and priority 5 (biquad.zig remainder,
-conv.zig, matrix.zig, ramp.zig, dotp.zig - 47 functions) from `fix/REQUEST.md`.
-Priorities 4 and 5 were each run as three parallel worktree agents and merged
-back cleanly. Priorities 6-7 not yet started.
+dft.zig, fixed_fft.zig - 41 functions), priority 5 (biquad.zig remainder,
+conv.zig, matrix.zig, ramp.zig, dotp.zig - 47 functions), and priority 6
+(vforce/root.zig - 42 functions) from `fix/REQUEST.md`. Priorities 4, 5, and
+6 were each run as three parallel worktree agents and merged back (priority 6
+via cherry-pick + manual conflict resolution, since all three agents shared
+a single file). Priority 7 (vimage/) not yet started.
 
 ## Behavior changes
 
@@ -18,6 +20,7 @@ back cleanly. Priorities 6-7 not yet started.
 | `vdsp.deq22` | Zero callers anywhere in the codebase, not in ultrasync's list - safe to change directly | `vDSP.h:3940-3967`: the pseudocode loop is `for (n=2; n<N+2; ++n) C[n]=...` with the comment "Note outputs start with C[2]". Runtime probe (calling `vDSP_deq22` directly with a sentinel-filled, padded buffer) confirmed writes land at relative offsets `[2, N+2)` from the passed pointer. The old wrapper passed `out.len` directly as `N` while only providing `out.len` elements of buffer, guaranteeing a 2-element out-of-bounds write on every call, and `out[0]`/`out[1]` were never populated. | Added an explicit `n_out: Length` parameter independent of `out.len`, plus `a.len >= n_out+2` / `out.len >= n_out+2` asserts and a doc comment explaining the `[2, n_out+2)` offset convention (same pattern as the `vswmax` fix above). |
 | `Biquadm(T).copyState` | Zero callers anywhere in the codebase, not in ultrasync's list - safe to change directly | `vDSP.h:472-478` declares `vDSP_biquadm_CopyState(__dest, __src)` with `__dest` first. The binding called `c.vDSP_biquadm_CopyState(src.setup, self.setup)` - `src` in the `__dest` slot, `self` in the `__src` slot, backwards relative to the parameter names. Runtime-confirmed with two filters holding distinct nonzero delay states: before the fix, `a.copyState(b)` overwrote `b` with `a`'s state (the receiver mutated its argument); after the fix, `a` absorbs `b`'s state as the name promises. | Swapped the two arguments in the C call to match the header's declared `__dest, __src` order. |
 | `vdsp.zdotpr`, `vdsp.zidotpr`, `vdsp.zrdotpr` | Only re-exported from `root.zig`, no other callers, not in ultrasync's list - a caller could not previously invoke these successfully anyway, given the hang | `vDSP.h:3092-3128` (zdotpr/zrdotpr) and `vDSP.h:3255-3277` (zidotpr) declare the scalar complex result `C` as `const DSPSplitComplex *__C`, an output written through `C->realp[0]`/`C->imagp[0]` - the caller must supply real backing storage. The old wrapper did `var result: SC(T) = undefined;` then passed `&result` straight into the C call, leaving `realp`/`imagp` as garbage pointers the C function then wrote through (undefined behavior). This was not theoretical: isolating the zdotpr test with `--test-filter` showed execution hang indefinitely (confirmed via `ps` showing a CPU-spinning process), matching this audit's established "undocumented preconditions cause hangs" pattern (`vsorti`). A standalone probe with real backing storage confirmed the underlying C function itself is correct. | Changed the return type from `SC(T)` to `Complex(T)` (the plain `{real, imag}` value struct already used elsewhere in this codebase, e.g. `dft.zig`/`fft.zig`'s `ctoz`) - `SC(T)`'s pointer-based representation can never be made safe as a return value here, since the backing storage it would point to goes out of scope the moment the function returns. The function now allocates real/imag storage on its own stack frame, passes pointers into the C call, then copies the values out into a `Complex(T)` before that storage goes out of scope. |
+| `vforce.pows` | No callers elsewhere in the codebase (only re-exported from `src/root.zig`), safe to change directly | `vForce.h:467-475`: `vvpowsf`/`vvpows` document `y` as "Input **scalar**, exponent in calculation" (singular) - unlike `vvpowf`/`vvpow`'s `y`, documented as a full per-element vector (`vForce.h:398-429`). Runtime-confirmed: calling with `base=[2,3,4]`, junk `exp_vec=[3,999,999]` produced `[8,27,64]` (all using `exp_vec[0]=3`), not `[8, 3^999, 4^999]` - the C function only ever reads element 0. The old wrapper's `pows(exp_vec: []const T, ...)` signature, same shape as `pow`'s, silently dropped all data past index 0 with no type-level warning. | Changed the wrapper's signature from `pows(exp_vec: []const T, base, out)` to `pows(exponent: T, base, out)` - a plain scalar instead of a same-shaped-as-`pow` slice. New regression test confirms `out[i] = base[i]^exponent` for every element (f32 and f64). |
 
 ## Comment-only corrections
 
@@ -29,6 +32,7 @@ back cleanly. Priorities 6-7 not yet started.
 | `RealDFT(T)`, `InterleavedDFT(T)` (real-to-complex mode) | Not called elsewhere in the codebase. | Runtime round trip shows an asymmetric scale: forward applies `C=2`, inverse applies `C=1` (so round trip returns `2N`x, not `N`x or `4N`x) - `vDSP.h` documents this for `RealDFT` (~L7103-7104) but `InterleavedDFT`'s real-to-complex mode has **no packing/scaling documentation at all** in the header. | Documented both functions' runtime-confirmed `C=2` forward / `C=1` inverse scaling and DC/Nyquist-in-slot-0 packing (DC to `Or[0]`/real-part-0, Nyquist to `Oi[0]`/imag-part-0), pinned down with a DC+Nyquist+k=1-sine superposed test signal whose three distinct closed-form values (16, 16, -8) can't hide a slot-swap bug. |
 | `DFT(T)` (complex-to-complex zop) | Not called elsewhere in the codebase. | Confirmed via impulse forward+inverse round trip returning exactly `N`x the original - unnormalized in both directions, same family of finding as `zip`/`zop`/`zrip`. | Documented as unnormalized in both directions (previously had no doc comment at all - `dft.zig` had almost no doc comments before this pass). |
 | `DCT` | Not called elsewhere in the codebase. | `vDSP.h` documents the length constraint (`f*2**n`, `f`∈{1,3,5,15}, `n`≥4) and per-type (`II`/`III`/`IV`) cosine-sum formulas, but the wrapper had no doc comment restating them. Empirically confirmed `CreateSetup` fails for `N=4` (violates the constraint). | Documented the exact per-type formulas and length constraint. |
+| `vforce.pow` | Not called elsewhere in the codebase. | Doc comment said `out[i] = exp[i] ^ base[i]` (operands backwards); actual (already-correct) behavior per `vForce.h:398-429` (`z=pow(x,y)`, x=base, y=exponent) and the existing "pow" test (`2^3=8`, not `3^2=9`) is `out[i] = base[i] ^ exp[i]`. | Doc comment corrected to match the already-correct code; no behavior change. |
 
 ## Verified, no behavior change
 
@@ -53,12 +57,12 @@ argument-order verification method used, not an exhaustive re-listing.
 | `matrix.zig` (7/7) | `mmul`/`mtrans`/`zmma`/`zmms`/`zmsm`/`zmmul`/`zvmmaa` all confirmed against header using non-square (2x3 * 3x2) matrices specifically because square matrices can hide a dimension-order bug; a `zmsm == -zmms` cross-check confirmed the "reverse subtract" genuinely reverses operands. Added missing `std.debug.assert` dimension checks to `mmul`/`mtrans` (matching `clip.zig` precedent); pointer-based functions (`imgfir`/`f3x3`/`f5x5`, and all the `SplitComplex`-taking functions) got no length asserts since there's no embedded length to check against, consistent with `zvecop.zig`'s existing pattern. |
 | `ramp.zig` (12/12) | `vrampmul`/`vrampmuladd` (mono) and `vrampmul2`/`vrampmuladd2` (interleaved-stereo) fade/crossfade multiplies, plus their `_s1_15` (Q1.15) and `_s8_24` (Q8.24) fixed-point variants, confirmed against header argument order and fixed-point scaling convention with hand-computed decimal-to-fixed-point encodings (e.g. 0.5 in Q1.15 = 16384). `*add` variants confirmed to accumulate into pre-seeded nonzero output rather than overwrite. Added missing length asserts. |
 | `dotp.zig` (9/9) | See behavior-change section above for `zdotpr`/`zidotpr`/`zrdotpr`. `dotpr` (single-precision-accumulator) vs `dotpr2` (higher-precision accumulator) and the `_s1_15`/`_s8_24` fixed-point dot products confirmed against header scaling notes; a test verifying `zidotpr`'s (conjugate) result differs from `zdotpr`'s (non-conjugate) on identical inputs confirms the `conj()` is actually applied, not just present in the doc comment. |
+| `vforce/root.zig` (42/42) | See behavior-change/comment-only sections above for `pows`/`pow`. All other 40 functions matched `vForce.h` argument order exactly - no swap bugs found, including at the two functions REQUEST.md's own methodology most expected one (`atan2(y,x)` and `div`, vForce's argument order is genuinely different from vDSP's already-confirmed-swapped `vDSP_vdiv`, and was verified independently rather than assumed to share the bug). `sinpi`/`cospi`/`tanpi` confirmed to compute `trig(pi*x)`, not `pi*trig(x)`, with a test that would fail under the wrong interpretation. `fmod` vs `remainder` sign conventions distinguished (`fmod(5.5,2)=1.5` vs `remainder(5.5,2)=-0.5`). `expm1`/`log1p` precision-near-zero claims runtime-confirmed by showing the naive `f32` route (`exp(x)-1`/`log(1+x)`) loses all precision at `x=1e-8` while the vForce functions don't. Found a header quirk worth flagging: `vForce.h`'s `vvnextafterf` `@param` docs for `y`/`x` say "magnitude"/"sign" - copy-pasted from the preceding `vvcopysignf` doc block and inapplicable to `nextafter` (no magnitude/sign concept); the wrapper correctly follows the unambiguous `@abstract` line instead, no change needed but worth noting so a future reader doesn't "fix" it to match the copy-pasted text. |
 
 ## Not yet verified
 
-223 of 476 checklist items remain (see `fix/checklist.sh` for the live, up-to-date
+181 of 476 checklist items remain (see `fix/checklist.sh` for the live, up-to-date
 breakdown by module/file/function). Not yet started:
-- Priority 6: `vforce/root.zig` (42 functions).
 - Priority 7: `vimage/` (168 functions, not used by ultrasync - REQUEST.md
   asks to check in before starting this one; it uses a different error-code
   convention and buffer alignment model than vDSP).
@@ -163,3 +167,44 @@ breakdown by module/file/function). Not yet started:
   stack frame that backs it when returned by value. Worth checking every
   other function in the unverified remainder that returns a pointer-based
   split-complex/struct type by value for the same trap.
+- vForce (priority 6) uses a genuinely different C calling convention than
+  vDSP: `output` comes BEFORE `input` in the argument list (vDSP is
+  `input, ..., output`), and precision dispatch is `vv<name>` for double /
+  `vv<name>f` for single - the OPPOSITE of vDSP's `D`-suffix-for-double
+  convention. Despite this being flagged as a prime suspect for a swapped-
+  argument bug going in (especially `atan2(y,x)` and `div`, since vDSP's
+  `vDSP_vdiv` is already confirmed swapped), every one of vForce's 42
+  functions had correct argument order - a reminder that "looks like a prior
+  bug's shape" is a reason to check carefully, not a reason to assume the bug
+  recurs.
+- A same-shaped-signature sibling function can hide a scalar-vs-vector
+  mismatch that no compiler error catches: `pows`'s wrapper took
+  `exp_vec: []const T` (identical shape to `pow`'s per-element exponent
+  slice) but the underlying `vvpowsf`/`vvpows` C function only ever reads
+  index 0 through that pointer - a scalar exponent, not a vector. The slice
+  type gave no signal that data past index 0 was silently discarded; this
+  is a distinct failure shape from `vswmax`'s "buffer must be larger than
+  N" bug, but shares the same root cause (an API surface that looks safe by
+  its type but isn't, because the actual C contract needs verifying, not
+  inferring).
+- Doc-comment/pseudocode errors can be pure copy-paste artifacts, not
+  independently-wrong prose: `vForce.h`'s `vvnextafterf` per-parameter docs
+  describe "magnitude"/"sign" for its two inputs - text that only makes
+  sense for the *preceding* `vvcopysignf` entry in the header and doesn't
+  apply to `nextafter` at all. The wrapper correctly followed the header's
+  unambiguous `@abstract` summary instead of the copy-pasted `@param` text;
+  recognizing *why* a doc conflicts with itself (adjacent-entry bleed-over)
+  is as useful as recognizing that it does, so a future pass doesn't "fix"
+  working code to match stale copy-pasted text.
+- When several agents must edit the *same* file concurrently (priority 6's
+  three vforce agents all touched `src/vforce/root.zig`, split by function
+  group), assigning each agent an explicit "only touch these functions plus
+  your own new tests, do not reformat or reorder anything else" instruction
+  kept all three diffs to disjoint, append-only regions. This didn't
+  eliminate merge conflicts entirely (two of the three still conflicted on
+  adjacent append points at the end of the file, and one agent's branch also
+  needed cherry-picking rather than merging since it started from a stale
+  base and included an unrelated "sync fix/ tracking files" commit not worth
+  merging wholesale) but kept every conflict trivial (concatenate two
+  adjacent append blocks) rather than requiring real reconciliation of
+  overlapping logic.
