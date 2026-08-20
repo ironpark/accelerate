@@ -4,6 +4,402 @@
 
 ### Added
 
+- **`lapack` module.** The complete 2032-symbol extern surface in
+  `src/lapack/c.zig`, generated from `lapack.h` by `tools/gen_lapack.py`, plus
+  shared types, `info` translation and workspace sizing. Typed wrappers are
+  being added tier by tier; `docs/LAPACK-PLAN.md` is the checklist. Same symbol
+  story as `blas`: this binds `$NEWLAPACK[$ILP64]`, since the unsuffixed names
+  belong to the deprecated `clapack.h`.
+
+  Wrapped so far: the simple linear-system drivers in `linear.zig` (`gesv`,
+  `gbsv`, `gtsv`, `posv`, `ppsv`, `pbsv`, `ptsv`, `sysv`, `spsv`, `hesv`,
+  `hpsv`, `dsgesv`, `dsposv`); the computational routines behind them in
+  `factor.zig` (LU, Cholesky, Bunch-Kaufman and triangular factor/solve/invert,
+  condition estimation and equilibration, in full, packed and band storage);
+  the `lan*` norms plus `lacpy`/`laset` in `norms.zig`; and the orthogonal
+  factorizations and least squares drivers in `qr.zig` (`geqrf`, `gelqf`,
+  `geqlf`, `gerqf`, `geqp3`, `orgqr`/`ungqr`, `ormqr`/`unmqr` and the LQ/QL/RQ
+  equivalents, `gels`, `gelsd`, `gelss`, `gelsy`); the symmetric/Hermitian
+  eigenvalue drivers in `eigen.zig` (`syev`, `syevd`, `syevr`, `spev`, `sbev`,
+  `stev`, `sygv`, each with its `he*`/`hp*`/`hb*` complex counterpart); and
+  `gesvd`/`gesdd` in `svd.zig`; and the nonsymmetric and generalized
+  eigenproblems in `eigen_gen.zig` (`geev`, `gees`, `ggev`, `trsyl`); and the
+  utilities and complex-symmetric routines in `util.zig` (`lamch`, `ilaenv`,
+  `larnv`, `lartg`, `lascl`, `lasrt`, `lacgv`, `ladiv`, `rscl`, `symv`, `syr`,
+  `spmv`, `spr`); and iterative refinement with error bounds in `refine.zig`
+  (`gerfs`, `porfs`, `syrfs`, `herfs`, `trrfs`); and the expert drivers in
+  `expert.zig` (`gesvx`, `posvx`, `sysvx`).
+
+  Every storage form now carries the same four services as the dense one:
+  condition estimation (`gbcon`, `gtcon`, `pbcon`, `ppcon`, `ptcon`, `spcon`,
+  `hpcon`, `tbcon`, `tpcon`), equilibration (`gbequ`, `gbequb`, `geequb`,
+  `pbequ`, `poequ`, `poequb`, `ppequ`, `syequb`, `heequb`), iterative
+  refinement (`gbrfs`, `gtrfs`, `pbrfs`, `pprfs`, `ptrfs`, `sprfs`, `hprfs`,
+  `tbrfs`, `tprfs`) and an expert driver (`gbsvx`, `gtsvx`, `pbsvx`, `ppsvx`,
+  `ptsvx`, `spsvx`, `hpsvx`, `hesvx`).
+
+  `reduce.zig` has the reductions to condensed form that every dense eigenvalue
+  and SVD algorithm starts with — `sytrd`/`hetrd`, `sptrd`, `sbtrd`, `gehrd`,
+  `gebrd` and `gbbrd` — along with the routines that build (`orgtr`, `opgtr`,
+  `orghr`, `orgbr`) or apply (`ormtr`, `opmtr`, `ormhr`, `ormbr`) their
+  orthogonal factors, and balancing (`gebal`, `gebak`).
+
+  `tridiag.zig` has the six symmetric tridiagonal eigensolvers that run on what
+  `reduce.zig` produces, with the module documentation laying out which to pick:
+  `sterf` (values only, cheapest), `steqr` (QL/QR, most robust), `stedc`
+  (divide and conquer), `stemr`/`stegr` (MRRR), `pteqr` (positive definite,
+  accurate small eigenvalues) and the `stebz`/`stein` bisection pair.
+
+  The expert and divide-and-conquer eigenvalue variants: `syevx`, `spevd`,
+  `spevx`, `sbevd`, `sbevx`, `stevd`, `stevx`, `stevr` in `eigen.zig`, and
+  `geevx` and `geesx` in `eigen_gen.zig`. The last two return their condition
+  numbers as a typed result rather than as out-parameters, and `geesx`'s
+  `info = n + 2` — reordering succeeded but the cluster is no longer separable,
+  so the condition numbers may be wrong — comes back as a
+  `condition_unreliable` flag rather than as an error, since the factorization
+  itself is valid.
+
+  The generalized symmetric eigenproblem in every storage form: the reductions
+  `sygst`, `spgst` and `sbgst`, and the drivers `sygvd`, `sygvx`, `spgv`,
+  `spgvd`, `spgvx`, `sbgv`, `sbgvd`, `sbgvx`, each with its Hermitian
+  counterpart. `factor.pbstf` comes with them, since `sbgst` needs its split
+  factorization and will not accept a `pbtrf` one.
+
+  **Behaviour change:** `sygv`/`hegv` previously reported a non-positive-definite
+  `B` as `error.NoConvergence`. LAPACK signals it with `info > n`, and every
+  generalized driver now reads that split — above `n` is
+  `error.NotPositiveDefinite`, at or below it is a genuine convergence failure.
+  `lastInfo()` still carries the raw value, so `lastInfo() - n` is the leading
+  minor of `B` that failed.
+
+  `eigen_gen.zig` also gains the Schur toolkit — `hseqr`, `hsein`, `trevc`,
+  `trevc3`, `trexc`, `trsen`, `trsna`, `trsyl3` — and `qz.zig` is the
+  generalized problem taken apart the same way: `ggbal`/`ggbak`,
+  `gghrd`/`gghd3`, `hgeqz`, `tgevc`, `tgexc`, `tgsen`, `tgsna`, `tgsyl`, the
+  `gges`/`gges3`/`ggesx`/`ggev3`/`ggevx` drivers, and the generalized SVD pair
+  `ggsvd3`/`tgsja`.
+
+  `svd.zig` gains the rest of the SVD family: the bidiagonal solvers `bdsqr`,
+  `bdsdc` and `bdsvdx`, the range-restricted `gesvdx`, and the high-accuracy
+  Jacobi drivers `gesvj`, `gejsv` and `gesvdq`. `util.zig` gains `disna` and
+  `csum1`, and `linear.zig` gains the complex mixed-precision pair
+  `cgesvIterative`/`cposvIterative` that had been missing next to the real one.
+
+  `qr_tall.zig` is the modern factorization interfaces: `geqr`/`gemqr` and
+  `gelq`/`gemlq`, which let the library choose between blocked and
+  communication-avoiding QR and return an opaque `Factorization(T)` that owns
+  its array; the explicit block reflectors `geqrt`/`gemqrt`; the
+  triangular-pentagonal family `tpqrt`/`tpmqrt`/`tplqt`/`tpmlqt`/`tprfb` for
+  building your own blocked or out-of-core QR; `getsls` and `gelst`; the
+  sign-fixed `geqrfp`/`geqr2p`; and the RZ factorization `tzrzf`/`ormrz`.
+  `qr.zig` gains the constrained and generalized least squares routines
+  `gglse`, `ggglm`, `ggqrf` and `ggrqf`.
+
+  `rfp.zig` is rectangular full packed storage — the layout that is both
+  `n(n+1)/2` elements *and* usable by the blocked kernels, where plain packed
+  storage gives up the performance. The four conversions (`trttf`, `tfttr`,
+  `tpttf`, `tfttp`) plus `pftrf`/`pftrs`/`pftri`, `tftri`, `tfsm` and
+  `sfrk`/`hfrk`.
+
+  `norms.zig` is finished off with the `lan*` norms that were missing:
+  `langt`, `lanhs`, `lansb`/`lanhb`, `lantb`, `lantp` and `lansf`/`lanhf`.
+  `lanhs` is worth knowing about — it reads only the upper triangle and first
+  subdiagonal, so on a `gehrd` output it and `lange` give different answers and
+  `lanhs` is the one you want.
+
+  `cs.zig` is the CS decomposition: `orcsd` for a full square orthogonal
+  matrix, `orcsd2by1` for the common single-block-column case, and the two
+  halves `orbdb` and `bbcsd` they are built from, plus the `orbdb1`-`orbdb6`
+  helpers.
+
+  That completes the user-facing surface. What remains unwrapped is
+  deliberately so: the `_aa`/`_rk`/`_rook`/`_2stage` variants (alternative
+  algorithms for problems already covered), the unblocked kernels the blocked
+  routines call internally, eight deprecated routines, and the `la*`/`ila*`
+  helpers — all reachable through `c`. What the wrappers add:
+
+  - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
+    illegal argument, positive is a routine-specific numerical condition - and
+    positive means something different for each family, so there is no single
+    `check`. `checkLu` reports a zero pivot, `checkCholesky` a failed leading
+    minor, `checkConvergence` a stalled iteration. The offending value is
+    readable via `lastInfo()`.
+  - `hesv`/`hpsv` are complex-only and `sysv`/`spsv` mean *symmetric* even for
+    complex elements. These are different problems, LAPACK ships both, and
+    neither routine can tell you that you picked the wrong one. Asking for
+    `hesv(f64, ...)` is a compile error pointing at `sysv`, rather than a
+    missing symbol at link time.
+  - `ptsv` takes its diagonal as `[]Real(T)`: a Hermitian tridiagonal has a real
+    diagonal by definition, so for `Complex(f64)` that is `[]f64` sitting next
+    to `[]Complex(f64)`, which the C signature only implies.
+  - `gbsv`'s band storage needs `kl` extra rows above the band for fill-in and
+    is *not* the layout `gbmv` wants; `ldab >= 2*kl + ku + 1` is asserted rather
+    than trusted, since passing a BLAS-shaped array otherwise factors a
+    different matrix without complaint.
+  - Solves are tested by residual against the original matrix rather than
+    against a solution vector written down by hand, so a wrong answer and a
+    wrong expectation cannot cancel.
+  - `ptrfs` takes a `uplo` that the *real* routine does not have. A real
+    symmetric tridiagonal has the same off-diagonal read either way, so LAPACK
+    omits the argument; the complex one needs it, since the two readings differ
+    by a conjugation. The wrapper takes it uniformly and drops it for a real
+    `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
+    either precision.
+  - **Fixed before release: `ormlq` and `ormrq` asserted the wrong shape.**
+    `geqrf` and `geqlf` store their reflectors down columns, so the array is
+    `q_order x k`; `gelqf` and `gerqf` store theirs along rows, so it is
+    `k x q_order`. The shared helper asserted the first shape for all four,
+    which rejected *every* valid `ormlq`/`ormrq` call. It went unnoticed because
+    no test instantiated those two, and a generic Zig function that nothing
+    calls is never type-checked — an audit for exactly that turned up 14 such
+    functions, all now covered.
+  - The `*equb` routines report `max_abs` **after** the same power-of-two
+    rounding the scale factors get, where the `*equ` routines report the true
+    largest element. Measured on a matrix whose largest entry is 100: `gbequ`
+    returns 100 and `gbequb` returns 64. Comparing one against the other, or
+    against `norms.lange(.max_abs)`, compares different quantities.
+  - RFP takes *two* shape flags, not one: `uplo` says which triangle the data
+    came from and `RfpLayout` says whether the rectangle itself is stored
+    transposed. They are independent, the four combinations are four different
+    arrangements of the same values, and telling `tfttr` the wrong one gives a
+    wrong matrix rather than an error. A test sorts both layouts and shows they
+    hold the same multiset in a different order.
+  - `orcsd`'s `trans` is a **storage** flag saying whether `X` is row-major, not
+    a transpose — the only place in this binding where LAPACK offers a choice of
+    layout at all.
+  - `sfrk` and `hfrk` take real `alpha` and `beta` even for a complex `T`,
+    because a Hermitian result has a real diagonal and a complex scale factor
+    would break that.
+  - **`gglse` does not reliably detect a rank-deficient constraint.** Its
+    documented `info = 1` is a test on a QR pivot, and an exactly duplicated row
+    in `B` leaves a pivot that is small but not zero, so the call returns
+    success on a problem that is not well posed. The docstring says so and a
+    characterization test pins it.
+  - `tprfb` has no `info` parameter at all, so its wrapper returns
+    `Allocator.Error!void` rather than the usual error set — it is the only
+    routine here that cannot fail.
+  - **`gejsv` has no workspace query.** Every other queryable routine here is
+    sized by calling it with `lwork = -1` first; `gejsv` returns `info = -17`,
+    an illegal value for `lwork` itself. Its workspace is therefore sized from
+    the documented formulas, taken at their maximum over every option
+    combination the wrapper can produce. A test pins the `-17`, because that
+    choice is only justified while it holds, and another runs every accuracy
+    level through the single size.
+  - `csum1` is the **true** 1-norm of a complex vector, summing `|z|`.
+    `blas.asum` is not: it sums `|re| + |im|`, which is up to `sqrt(2)` larger.
+    The two names read as synonyms; on two unit-modulus entries they return 2
+    and 2.83.
+  - `disna`'s `.left_singular` and `.right_singular` differ on a non-square
+    matrix: the side with the null space has its last entry capped by
+    `sigma_min` rather than by a gap. Measured on `d = {5, 3, 1}`,
+    `left_singular` at 5x3 gives `{2, 2, 1}` and at 3x5 gives `{2, 2, 2}`.
+  - `bdsvdx`'s `z` has `2n` rows, not `n`: each column stacks a left and a right
+    singular vector, each separately normalized, because the bisection runs on
+    the `2n x 2n` matrix `[[0, B], [B^T, 0]]`.
+  - `tgsna`'s and `ggevx`'s condition numbers are **not** bounded by 1, where
+    `trsna`'s and `geevx`'s are. They are chordal distances against an
+    unnormalized pencil; measured, a diagonal pair with entries 2,3,4 and 1,2,3
+    gives 1.49, 0.72, 0.91. Both docstrings say so and the tests assert
+    finiteness rather than a bound.
+  - `tgexc` and `tgsen` take their "do you want the vectors" flags as Fortran
+    *logicals* rather than option characters — the only two routines in this
+    binding that do. They are `bool` here and converted at the boundary.
+  - `ggsvd3` takes its extents as `m, n, p` and `tgsja`, its own computational
+    half, takes them as `m, p, n`. The wrappers keep each routine's order rather
+    than imposing one, so the LAPACK documentation still reads across, and both
+    docstrings flag it.
+  - `sytrd`, `gebrd` and `gbbrd` write their diagonals as `[]Real(T)`, not
+    `[]T`. A Hermitian tridiagonal has a real diagonal and can be made to have
+    a real off-diagonal, and a bidiagonal reduction is real by construction; the
+    C signature says `double *` in both the real and complex routine and leaves
+    you to notice.
+  - `gebal`'s window comes back as a `Window { ilo, ihi }` documented as
+    1-based inclusive, because it is handed straight back to `gehrd`, `orghr`
+    and `gebak`. Converting it to 0-based at the boundary would mean converting
+    it back at four call sites.
+  - The band routines disagree with each other about band layout, and nothing
+    checks. `gbrfs` and `gbsvx` want the *original* matrix in the narrow
+    `kl + ku + 1` form and its *factor* in the wide `2*kl + ku + 1` one, in
+    adjacent arguments. `pbrfs` and `pbsvx` use the same `kd + 1` layout for
+    both, because a band Cholesky creates no fill-in. Both leading dimensions
+    are asserted.
+
+  Verifying the ABI before writing any of it turned up two things the header
+  does not tell you:
+
+  - **`__LAPACK_bool` is 8 bytes under ILP64, not 4.** `lapack_types.h`
+    comments the LP64 branch with "Because the fortran logical is 4 bytes" and
+    then the ILP64 branch silently widens it to `long`. 163 declarations take a
+    `bwork` array; a 4-byte definition reads every other element. There is a
+    test that fails under the wrong width - which took a second attempt, because
+    the obvious version (poison the array, check the tail) passes at either
+    stride. What discriminates is the *value* of the elements that were written.
+
+  - **`cladiv` and `zladiv` are declared wrongly.** The header types them as
+    writing through a leading `ret` out-parameter, and calling them that way
+    leaves `ret` untouched - reproduced from C as well as Zig. Disassembly shows
+    the shipping symbol is a thunk that drops its first argument and tail-calls
+    an implementation returning the quotient by value:
+
+    ```asm
+    cladiv$NEWLAPACK$ILP64:
+        mov  x0, x1
+        mov  x1, x2
+        b    <impl>
+    ```
+
+    All three pointers must still be passed - a two-argument call reads whatever
+    `x2` holds and crashes - but the result comes back in registers. The
+    generator carries these two as hand-written overrides, and *aborts* if it
+    ever meets a new routine with the same leading-`ret` shape rather than
+    trusting the header. `chla_transtype`, the only other routine with a leading
+    `ret`, is unaffected.
+
+  - The condition estimators allocate their own scratch and return `rcond`
+    directly. The sizes vary by routine *and* by whether `T` is real or complex
+    - a real `gecon` wants `4n` reals and `n` integers, a complex one `2n`
+    complex and `2n` reals - and `sycon`/`hecon` are an outright exception,
+    taking no `rwork` at all where `gecon`, `pocon` and `trcon` all do. None of
+    that is in the header, and getting one wrong is a heap overflow rather than
+    an error, so it is not a number worth exposing. Two tests over-allocate and
+    poison past the documented ends to check the sizes empirically.
+  - `*con` takes `||A||` of the *original* matrix, not of the factorization
+    that overwrote it. Passing the wrong one produces a confident, meaningless
+    number with no diagnostic anywhere, so there is a characterization test
+    pinning that the two differ.
+  - Every real/complex split is a `switch (T)`, not an `if` on a type
+    predicate. Zig analyses both arms of a plain `if` even when the condition is
+    comptime-known, which type-checks the complex call shape against the real
+    symbol and fails to compile; only the selected `switch` prong is analysed.
+    The same applies to the `@compileError` guards, which otherwise fire on
+    every instantiation including the valid ones.
+
+  - `or*` and `un*` are exposed as one name. LAPACK calls the real routines
+    `orgqr`/`ormqr` and the complex ones `ungqr`/`unmqr`; here `orgqr` works for
+    all four element types and resolves to `zungqr` for `Complex(f64)`, with
+    the LAPACK spellings kept as aliases.
+  - `ormqr`'s transpose flag is a two-valued `QTrans` rather than a character.
+    LAPACK accepts `'T'` for real precisions and `'C'` for complex, and passing
+    `'T'` to `zunmqr` is an illegal-argument failure. `.transpose` means "the
+    adjoint" and emits the right one; applying the unconjugated transpose of a
+    complex `Q` is not an operation anyone wants, so nothing is lost.
+  - **`gels` barely checks its full-rank assumption, and `gelsy`'s documented
+    default makes it worse.** `gels` raises an error only on an *exactly* zero
+    pivot; on a 3x2 matrix of all ones it returns success and
+    `x = (-7.5e15, 7.5e15)`. `gelsy` with `rcond = -1` -- which LAPACK
+    documents as "use machine precision", and which reads like a safe default
+    -- reports that same matrix as full rank and returns the same nonsense,
+    because the threshold becomes a condition number of `1/eps`. Any explicit
+    `rcond` from `1e-16` up gives rank 1 and the correct minimum-norm
+    `x = (1, 1)`. `gelsd` is unaffected, since it compares singular values
+    rather than a condition estimate. All three behaviours are pinned by tests
+    and called out in the doc comments; the tests were written expecting the
+    opposite and were corrected to match what the routines actually do.
+
+  - `sy*` and `he*` are exposed as one name for the *eigenvalue* routines, the
+    same way `or*`/`un*` are - `syev(Complex(f64), ...)` calls `zheev`. This is
+    deliberately **not** done for the linear solvers, where `sysv` and `hesv`
+    both exist for complex elements and solve different problems. There is no
+    complex-symmetric eigensolver in LAPACK at all, so with one interpretation
+    available the unification loses nothing; with two it would hide a real
+    choice.
+  - Eigenvalues and singular values come back as `[]Real(T)`, so a
+    `Complex(f64)` problem yields `[]f64`. Both are real by construction and
+    the signature now says so.
+  - `syevr`'s five loosely-coupled range arguments (`range`, `vl`, `vu`, `il`,
+    `iu`, where the two that matter depend on the first) collapse into a
+    `Selection` union: `.all`, `.interval`, or `.indices`.
+  - `sygv` overloads `info > 0`: up to `n` it means the iteration did not
+    converge, above `n` it means the Cholesky factorization of `B` failed at
+    minor `info - n`, i.e. `B` was not positive definite. Both surface as
+    `error.NoConvergence`, so the doc comment says to read `lastInfo()` and a
+    test pins the `> n` case.
+  - Eigendecompositions are tested by `A v = lambda v` and SVDs by
+    `U S V^H = A`, never by comparing vectors against written-down values -
+    signs and phases are arbitrary. One test specifically checks that `vt` is
+    used as `V^H` rather than `V`, on an asymmetric matrix where the two
+    differ.
+
+  - **Nonsymmetric eigenvalues are always `[]Complex(Real(T))`.** LAPACK's real
+    routines split them across `wr` and `wi`, with a conjugate pair in
+    consecutive entries; the complex ones return one array. These wrappers
+    gather the real pair internally, so a real matrix's complex eigenvalues are
+    in the type rather than in a comment.
+  - `unpackVectors` expands the packed real eigenvector layout. When
+    eigenvalues `j` and `j+1` are a conjugate pair, `geev` puts the *real part*
+    in column `j` and the *imaginary part* in column `j+1` - so reading column
+    `j+1` as an eigenvector in its own right gives a plausible wrong answer.
+    The eigenvector arrays are left in LAPACK's layout (copying them would be
+    wasteful) and this converts on request; the test verifies `A v = lambda v`
+    in genuine complex arithmetic afterwards.
+  - `gees`'s sorting predicate takes one complex number at any precision. The
+    raw LAPACK callback takes *two* pointers for real input and one for
+    complex; a threadlocal trampoline bridges them, which is safe because
+    LAPACK invokes the callback synchronously on the calling thread within the
+    call that installed it.
+  - `ggev` returns `alpha` and `beta` as a pair rather than their quotient,
+    with `value()` returning null when `beta` is zero. A singular `B` gives the
+    pencil genuinely infinite eigenvalues, and dividing without checking turns
+    a meaningful result into a NaN.
+  - `trsyl` reports `perturbed` rather than erroring when `A` and `-B` share an
+    eigenvalue: LAPACK solves a nearby problem and says so, which is a result
+    the caller needs but not a failure.
+
+  - **`symv`, `syr`, `spmv`, `spr` are complex *symmetric*, and CBLAS has no
+    equivalent.** CBLAS offers `hemv`/`her` for complex and `symv`/`syr` only
+    for real, so a complex symmetric matrix (`A = A^T`, not `A = A^H`) has
+    nowhere else to go: `hemv` conjugates when it reflects the stored triangle
+    and silently returns a different answer. A test runs the same stored
+    triangle through both and pins that they differ. `syr` also takes a complex
+    `alpha`, where `blas.her` requires a real one - the Hermitian constraint
+    does not apply to the symmetric update.
+  - `lamch` exists because LAPACK's epsilon is **half** of Zig's
+    `std.math.floatEps`: LAPACK defines it as the rounding unit, Zig as the gap
+    to the next representable number. A tolerance built from the wrong one is
+    off by a factor of two, which is enough for a routine not to behave as
+    documented. Pinned by a test.
+  - `larnv`'s seed carries a constraint LAPACK does not check: four values in
+    `[0, 4095]` with the **last odd**, or the generator's period collapses.
+    `Seed.init` enforces it for any input.
+  - `lascl` and `rscl` scale without the intermediate overflow a direct ratio
+    would cause - `1e300 / 1e-300` is not representable even though the scaled
+    matrix is. Both have tests that overflow the naive computation first to
+    show the difference is real.
+  - `rscl`'s complex symbols are `csrscl` and `zdrscl`, with *two* precision
+    letters (complex vector, real scalar), so the one-letter prefix lookup used
+    everywhere else does not reach them.
+
+  - `refine.zig` answers the question every solver leaves open: how much of the
+    computed `x` is signal. `berr` is a computed quantity - the smallest
+    relative perturbation of `A` and `b` for which `x` is exact - and sits near
+    machine epsilon for any sane solve. `ferr` is an *estimate* of the relative
+    forward error, built from a condition bound, and is usually pessimistic. A
+    test on a nearly singular system pins the distinction: `berr` stays below
+    1e-14 because the solver did its job, while `ferr` exceeds 1e-8 because the
+    problem itself does not determine `x`.
+
+    These take the original matrix *and* its factorization, so the matrix has to
+    be copied (`norms.lacpy`) before factoring - the factor routines overwrite
+    their input, and there would otherwise be nothing to refine against.
+
+  - **The expert drivers treat `info = n + 1` as a result, not a failure.** They
+    overload the positive `info`: `1..n` means the factorization hit an exactly
+    zero pivot and nothing was solved, but `n + 1` means the factorization
+    succeeded, `rcond` came out below machine precision, *and the system was
+    solved anyway*. `x`, `ferr` and `berr` are all valid; LAPACK is reporting
+    that the matrix is singular to working precision. Returning an error there
+    would discard both a computed answer and the diagnostic attached to it, so
+    it surfaces as `singular_to_working_precision` on the result instead.
+
+    Provoking that case for a test took measurement rather than guesswork - the
+    window is about one ULP wide. Perturbing the identity-like matrix by less
+    than an ULP rounds away and yields an exactly zero pivot; by a few ULPs
+    lifts `rcond` back above eps and the warning stops firing.
+  - `equed` is the only option character in this binding that LAPACK *writes*:
+    an input when reusing a supplied factorization, an output when asking the
+    routine to equilibrate. It is therefore a `*Equed` and cannot come from the
+    shared immutable byte table the other options use.
+
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
   type. 156 extern declarations, generated from `cblas_new.h` rather than
@@ -124,7 +520,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 202 tests covering the three modules above, including struct-layout
+- 384 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
