@@ -45,12 +45,12 @@
 
 ### `src/vdsp/conv.zig`
 
-- [ ] `conv` — L15
-- [ ] `imgfir` — L40
-- [ ] `f3x3` — L62
-- [ ] `f5x5` — L84
-- [ ] `deq22` — L92
-- [ ] `zconv` — L111
+- [x] `conv` — L15
+- [x] `imgfir` — L40
+- [x] `f3x3` — L62
+- [x] `f5x5` — L84
+- [x] `deq22` — L92
+- [x] `zconv` — L111
 
 ### `src/vdsp/convert.zig`
 
@@ -157,13 +157,13 @@
 
 ### `src/vdsp/matrix.zig`
 
-- [ ] `mmul` — L25
-- [ ] `mtrans` — L50
-- [ ] `zmma` — L73
-- [ ] `zmms` — L96
-- [ ] `zmsm` — L119
-- [ ] `zmmul` — L141
-- [ ] `zvmmaa` — L157
+- [x] `mmul` — L25
+- [x] `mtrans` — L50
+- [x] `zmma` — L73
+- [x] `zmms` — L96
+- [x] `zmsm` — L119
+- [x] `zmmul` — L141
+- [x] `zvmmaa` — L157
 
 ### `src/vdsp/ramp.zig`
 
