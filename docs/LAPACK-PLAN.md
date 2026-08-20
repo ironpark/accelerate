@@ -3,9 +3,9 @@
 Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
 computational routines complete; the T3 orthogonal factorizations and least
 squares drivers complete. The T4 symmetric eigenvalue drivers and the two main
-T6 SVD drivers complete. Expert drivers, iterative refinement, the
-`_aa`/`_rk`/`_rook` variants, and the T5/T7 nonsymmetric and generalized
-eigenproblems outstanding.
+T6 SVD drivers complete. The T5/T7 nonsymmetric and generalized eigenproblems
+complete. Expert drivers, iterative refinement, the `_aa`/`_rk`/`_rook`
+variants, RFP storage and the CS decomposition outstanding.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -626,9 +626,9 @@ prefix is two characters, not one — a naming trap for the generator.
 
 - [ ] `gebak` <sub>cdsz</sub>
 - [ ] `gebal` <sub>cdsz</sub>
-- [ ] `gees` <sub>cdsz</sub>
+- [x] `gees` <sub>cdsz</sub>
 - [ ] `geesx` <sub>cdsz</sub>
-- [ ] `geev` <sub>cdsz</sub>
+- [x] `geev` <sub>cdsz</sub>
 - [ ] `geevx` <sub>cdsz</sub>
 - [ ] `gehd2` <sub>cdsz</sub>
 - [ ] `gehrd` <sub>cdsz</sub>
@@ -639,7 +639,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `trexc` <sub>cdsz</sub>
 - [ ] `trsen` <sub>cdsz</sub>
 - [ ] `trsna` <sub>cdsz</sub>
-- [ ] `trsyl` <sub>cdsz</sub>
+- [x] `trsyl` <sub>cdsz</sub>
 - [ ] `trsyl3` <sub>cdsz</sub>
 
 ### T6 Singular value decomposition
@@ -675,7 +675,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `gges` <sub>cdsz</sub>
 - [ ] `gges3` <sub>cdsz</sub>
 - [ ] `ggesx` <sub>cdsz</sub>
-- [ ] `ggev` <sub>cdsz</sub>
+- [x] `ggev` <sub>cdsz</sub>
 - [ ] `ggev3` <sub>cdsz</sub>
 - [ ] `ggevx` <sub>cdsz</sub>
 - [ ] `gghd3` <sub>cdsz</sub>
