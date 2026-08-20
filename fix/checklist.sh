@@ -84,7 +84,7 @@ fi
 
 if [ "${1:-}" = "check" ]; then
     shift
-    CHECKLIST="$SCRIPT_DIR/../CHECKLIST.md"
+    CHECKLIST="$SCRIPT_DIR/CHECKLIST.md"
     target_file=""
     case $# in
         1)
