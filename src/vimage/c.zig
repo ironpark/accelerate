@@ -153,7 +153,6 @@ pub extern fn vImageTentConvolve_ARGB8888(src: *const vImage_Buffer, dest: *cons
 // Conversion
 // ============================================================================
 
-
 // -- Clip --
 
 pub extern fn vImageClip_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, maxFloat: Pixel_F, minFloat: Pixel_F, flags: vImage_Flags) vImage_Error;

@@ -247,8 +247,8 @@ test "f3x3 matches imgfir at the same 3x3 kernel size" {
         100, 200, 300, 400, 500,
     };
     const kernel = [_]f32{
-        1, 0, -2,
-        0, 3, 0,
+        1,  0, -2,
+        0,  3, 0,
         -1, 0, 1,
     };
     var out_f3x3: [15]f32 = undefined;

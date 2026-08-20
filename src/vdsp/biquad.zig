@@ -401,7 +401,7 @@ test "Biquadm setCoefficientsDouble: section-major partial update layout" {
     // (start_sec=1, start_chn=0, nsec=1, nchn=2) with a 2-block array giving
     // channel 0 and channel 1 DIFFERENT poles, confirming the partial-update
     // array is section-major: [sec1_ch0, sec1_ch1], matching `init`'s layout.
-    const identity = [_]f64{1.0, 0.0, 0.0, 0.0, 0.0} ** 4;
+    const identity = [_]f64{ 1.0, 0.0, 0.0, 0.0, 0.0 } ** 4;
     var filter = try Biquadm(f64).init(&identity, 2, 2);
     defer filter.deinit();
 
@@ -555,7 +555,7 @@ test "Biquadm setTargetsDouble/Single: runtime-confirmed to take effect immediat
     defer fd.deinit();
     fd.setTargetsDouble(&targets_d, 0.05, 0.0, 0, 0, 1, 1);
 
-    var fs = try Biquadm(f32).init(&[_]f64{1.0, 0.0, 0.0, 0.0, 0.0}, 1, 1);
+    var fs = try Biquadm(f32).init(&[_]f64{ 1.0, 0.0, 0.0, 0.0, 0.0 }, 1, 1);
     defer fs.deinit();
     fs.setTargetsSingle(&targets_s, 0.05, 0.0, 0, 0, 1, 1);
 

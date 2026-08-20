@@ -225,4 +225,3 @@ pub const DoubleComplex = extern struct { real: f64, imag: f64 };
 // C[i] = cos(x[i]) + i*sin(x[i])
 pub extern fn vvcosisinf(c_out: [*]FloatComplex, x: [*]const f32, n: *const c_int) void;
 pub extern fn vvcosisin(c_out: [*]DoubleComplex, x: [*]const f64, n: *const c_int) void;
-
