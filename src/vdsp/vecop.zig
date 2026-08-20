@@ -553,6 +553,25 @@ test "vdiv i32" {
     try std.testing.expectEqual(@as(i32, -6), out[2]);
 }
 
+test "vmul" {
+    const a = [_]f32{ 2.0, 3.0, 4.0 };
+    const b = [_]f32{ 5.0, 6.0, 7.0 };
+    var out: [3]f32 = undefined;
+    vmul(f32, &a, &b, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 18.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 28.0), out[2], 0.001);
+}
+
+test "vsdiv" {
+    const a = [_]f32{ 10.0, 20.0, 33.0 };
+    var out: [3]f32 = undefined;
+    vsdiv(f32, &a, 2.0, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 16.5), out[2], 0.001);
+}
+
 test "vsmul" {
     const a = [_]f32{ 1.0, 2.0, 3.0 };
     var out: [3]f32 = undefined;

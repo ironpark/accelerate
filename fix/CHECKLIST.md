@@ -54,10 +54,10 @@
 
 ### `src/vdsp/convert.zig`
 
-- [ ] `vdpsp` — L13
-- [ ] `vspdp` — L17
+- [x] `vdpsp` — L13
+- [x] `vspdp` — L17
 - [ ] `vflt8` — L27
-- [ ] `vflt16` — L38
+- [x] `vflt16` — L38
 - [ ] `vflt32` — L49
 - [ ] `vfltu8` — L60
 - [ ] `vfltu16` — L71
@@ -258,12 +258,12 @@
 - [ ] `vfill` — L14
 - [ ] `vadd` — L31
 - [x] `vsub` — L46
-- [ ] `vmul` — L60
+- [x] `vmul` — L60
 - [x] `vdiv` — L74
 - [ ] `veqvi` — L89
-- [ ] `vsmul` — L103
+- [x] `vsmul` — L103
 - [ ] `vsadd` — L116
-- [ ] `vsdiv` — L130
+- [x] `vsdiv` — L130
 - [ ] `svdiv` — L141
 - [ ] `vma` — L158
 - [ ] `vmsa` — L170

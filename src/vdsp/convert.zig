@@ -11,10 +11,12 @@ const UInt24 = types.UInt24;
 
 /// Vector double-precision to single-precision conversion.
 pub fn vdpsp(a: []const f64, out: []f32) void {
+    std.debug.assert(out.len >= a.len);
     c.vDSP_vdpsp(a.ptr, 1, out.ptr, 1, a.len);
 }
 /// Vector single-precision to double-precision conversion.
 pub fn vspdp(a: []const f32, out: []f64) void {
+    std.debug.assert(out.len >= a.len);
     c.vDSP_vspdp(a.ptr, 1, out.ptr, 1, a.len);
 }
 
@@ -36,6 +38,7 @@ pub fn vflt8(comptime T: type, a: []const i8, out: []T) void {
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = A[n];
 pub fn vflt16(comptime T: type, a: []const i16, out: []T) void {
+    std.debug.assert(out.len >= a.len);
     switch (T) {
         f32 => c.vDSP_vflt16(a.ptr, 1, out.ptr, 1, a.len),
         f64 => c.vDSP_vflt16D(a.ptr, 1, out.ptr, 1, a.len),
@@ -366,4 +369,35 @@ pub fn rect(comptime T: type, polar_pairs: []const T, out: []T) void {
         f64 => c.vDSP_rectD(polar_pairs.ptr, 2, out.ptr, 2, polar_pairs.len / 2),
         else => @compileError("rect requires f32 or f64"),
     }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+test "vdpsp" {
+    const a = [_]f64{ 1.5, -2.25, 3.0 };
+    var out: [3]f32 = undefined;
+    vdpsp(&a, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.5), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -2.25), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.0), out[2], 0.001);
+}
+
+test "vspdp" {
+    const a = [_]f32{ 1.5, -2.25, 3.0 };
+    var out: [3]f64 = undefined;
+    vspdp(&a, &out);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), out[0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, -2.25), out[1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.0), out[2], 1e-9);
+}
+
+test "vflt16" {
+    const a = [_]i16{ -32768, 0, 12345 };
+    var out: [3]f32 = undefined;
+    vflt16(f32, &a, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, -32768.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 12345.0), out[2], 0.001);
 }
