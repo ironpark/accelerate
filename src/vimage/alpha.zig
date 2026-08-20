@@ -223,8 +223,12 @@ pub fn premultiplyDataRGBA16F(src: *const vImage_Buffer, dest: *const vImage_Buf
 /// Divide a planar color channel by its corresponding alpha channel to recover
 /// non-premultiplied values.
 ///
-///     u8:  destColor = (src * 255 + alpha/2) / alpha  (0 if alpha == 0)
-///     f32: destColor = src / alpha                     (0 if alpha == 0)
+/// Per Alpha.h:1356-1360 (vImageUnpremultiplyData_Planar8), the u8 formula clamps
+/// src to alpha to avoid modulo overflow when src > alpha (which can happen with
+/// slightly-off-premultiplied input):
+///
+///     u8:  destColor = (min(src, alpha) * 255 + alpha/2) / alpha  (0 if alpha == 0)
+///     f32: destColor = src / alpha                                 (0 if alpha == 0)
 pub fn unpremultiplyDataPlanar(comptime T: type, src: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error {
     return switch (T) {
         u8 => c.vImageUnpremultiplyData_Planar8(src, alpha, dest, flags),
