@@ -106,15 +106,15 @@
 
 ### `src/vdsp/dotp.zig`
 
-- [ ] `dotpr` — L8
-- [ ] `dotpr2` — L35
-- [ ] `zdotpr` — L46
-- [ ] `zidotpr` — L56
-- [ ] `zrdotpr` — L66
-- [ ] `dotpr_s1_15` — L92
-- [ ] `dotpr2_s1_15` — L119
-- [ ] `dotpr_s8_24` — L142
-- [ ] `dotpr2_s8_24` — L169
+- [x] `dotpr` — L8
+- [x] `dotpr2` — L35
+- [x] `zdotpr` — L46
+- [x] `zidotpr` — L56
+- [x] `zrdotpr` — L66
+- [x] `dotpr_s1_15` — L92
+- [x] `dotpr2_s1_15` — L119
+- [x] `dotpr_s8_24` — L142
+- [x] `dotpr2_s8_24` — L169
 
 ### `src/vdsp/fft.zig`
 
@@ -167,18 +167,18 @@
 
 ### `src/vdsp/ramp.zig`
 
-- [ ] `vrampmul` — L48
-- [ ] `vrampmuladd` — L103
-- [ ] `vrampmul2` — L167
-- [ ] `vrampmuladd2` — L231
-- [ ] `vrampmul_s1_15` — L288
-- [ ] `vrampmuladd_s1_15` — L339
-- [ ] `vrampmul2_s1_15` — L398
-- [ ] `vrampmuladd2_s1_15` — L458
-- [ ] `vrampmul_s8_24` — L511
-- [ ] `vrampmuladd_s8_24` — L562
-- [ ] `vrampmul2_s8_24` — L621
-- [ ] `vrampmuladd2_s8_24` — L681
+- [x] `vrampmul` — L48
+- [x] `vrampmuladd` — L103
+- [x] `vrampmul2` — L167
+- [x] `vrampmuladd2` — L231
+- [x] `vrampmul_s1_15` — L288
+- [x] `vrampmuladd_s1_15` — L339
+- [x] `vrampmul2_s1_15` — L398
+- [x] `vrampmuladd2_s1_15` — L458
+- [x] `vrampmul_s8_24` — L511
+- [x] `vrampmuladd_s8_24` — L562
+- [x] `vrampmul2_s8_24` — L621
+- [x] `vrampmuladd2_s8_24` — L681
 
 ### `src/vdsp/reduction.zig`
 
