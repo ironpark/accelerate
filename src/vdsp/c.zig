@@ -500,6 +500,12 @@ pub extern fn vDSP_fft_zropD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA:
 pub extern fn vDSP_fft_zropt(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, C: *const SplitComplex, IC: Stride, Buffer: *const SplitComplex, Log2N: Length, Direction: c_int) void;
 pub extern fn vDSP_fft_zroptD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, C: *const DoubleSplitComplex, IC: Stride, Buffer: *const DoubleSplitComplex, Log2N: Length, Direction: c_int) void;
 
+// -- Non-power-of-two out-of-place complex (radix 3 and 5) --
+pub extern fn vDSP_fft3_zop(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, C: *const SplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+pub extern fn vDSP_fft3_zopD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, C: *const DoubleSplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+pub extern fn vDSP_fft5_zop(Setup: FFTSetup, A: *const SplitComplex, IA: Stride, C: *const SplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+pub extern fn vDSP_fft5_zopD(Setup: FFTSetupD, A: *const DoubleSplitComplex, IA: Stride, C: *const DoubleSplitComplex, IC: Stride, Log2N: Length, Direction: c_int) void;
+
 // -- 2D complex-to-complex, in-place --
 pub extern fn vDSP_fft2d_zip(Setup: FFTSetup, C: *const SplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;
 pub extern fn vDSP_fft2d_zipD(Setup: FFTSetupD, C: *const DoubleSplitComplex, IC0: Stride, IC1: Stride, Log2N0: Length, Log2N1: Length, Direction: c_int) void;

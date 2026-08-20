@@ -177,6 +177,15 @@ pub const cblas_dtrsm = @extern(*const fn (Order, Side, Uplo, Transpose, Diag, I
 pub const cblas_ctrsm = @extern(*const fn (Order, Side, Uplo, Transpose, Diag, Int, Int, *const Complex(f32), ?[*]const Complex(f32), Int, ?[*]Complex(f32), Int) callconv(.c) void, .{ .name = "cblas_ctrsm" ++ types.alias_suffix });
 pub const cblas_ztrsm = @extern(*const fn (Order, Side, Uplo, Transpose, Diag, Int, Int, *const Complex(f64), ?[*]const Complex(f64), Int, ?[*]Complex(f64), Int) callconv(.c) void, .{ .name = "cblas_ztrsm" ++ types.alias_suffix });
 
+// -- Threading control (`vecLib/thread_api.h`) --
+//
+// These two are not part of CBLAS and carry no `$NEWLAPACK` suffix: they are
+// plain C symbols in vecLib, and the `.tbd` exports them as `_BLASSetThreading`
+// / `_BLASGetThreading`. They govern BLAS *and* LAPACK, and the setting is
+// per-thread. macOS 15.0 / iOS 18.0 and later.
+pub const BLASSetThreading = @extern(*const fn (c_uint) callconv(.c) c_int, .{ .name = "BLASSetThreading" });
+pub const BLASGetThreading = @extern(*const fn () callconv(.c) c_uint, .{ .name = "BLASGetThreading" });
+
 // Zig resolves container declarations lazily, so an `@extern` nobody
 // references is never checked and a misspelled symbol would link fine right up
 // until the first caller. Referencing every one of them here forces resolution

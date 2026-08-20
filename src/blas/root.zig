@@ -47,6 +47,7 @@ pub const types = @import("types.zig");
 pub const level1 = @import("level1.zig");
 pub const level2 = @import("level2.zig");
 pub const level3 = @import("level3.zig");
+pub const threading = @import("threading.zig");
 
 // -- Types --
 pub const Complex = types.Complex;
@@ -138,6 +139,11 @@ pub const her2k = level3.her2k;
 pub const trmm = level3.trmm;
 pub const trsm = level3.trsm;
 pub const geadd = level3.geadd;
+
+// -- Threading control (governs LAPACK too) --
+pub const Threading = threading.Threading;
+pub const setThreading = threading.setThreading;
+pub const getThreading = threading.getThreading;
 
 test {
     std.testing.refAllDecls(@This());

@@ -335,6 +335,72 @@ pub fn FFT(comptime T: type) type {
             }
         }
 
+        // -- 1D complex, non-power-of-two --
+
+        /// Length of the transform `zop3` performs: `3 * (1 << log2n)`.
+        pub fn length3(self: Self) usize {
+            return 3 * (@as(usize, 1) << @intCast(self.log2n));
+        }
+
+        /// Length of the transform `zop5` performs: `5 * (1 << log2n)`.
+        pub fn length5(self: Self) usize {
+            return 5 * (@as(usize, 1) << @intCast(self.log2n));
+        }
+
+        /// Out-of-place complex DFT of length `3 * (1 << log2n)`.
+        ///
+        /// **The setup must have been created with `.radix3`.** A radix-2
+        /// setup does not carry the twiddle factors this needs; passing one
+        /// is undefined behaviour, not a checked error.
+        ///
+        /// Like the rest of the family this is unnormalized in both
+        /// directions, so a round trip multiplies by `3 * (1 << log2n)`, not
+        /// by `roundTripScale()` - see `roundTripScale3`.
+        ///
+        /// Apple deprecated this in macOS 10.11 in favour of the DFT
+        /// routines, which handle the same lengths (and more) without a
+        /// radix-specific setup. It is bound for completeness; prefer
+        /// `vdsp.dft`.
+        pub fn zop3(self: Self, input: SS(T), output: SS(T), direction: Direction) void {
+            const n_elems = self.length3();
+            std.debug.assert(input.len() >= n_elems);
+            std.debug.assert(output.len() >= n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            switch (T) {
+                f32 => c.vDSP_fft3_zop(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft3_zopD(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
+                else => unreachable,
+            }
+        }
+
+        /// Out-of-place complex DFT of length `5 * (1 << log2n)`.
+        ///
+        /// **The setup must have been created with `.radix5`.** See `zop3`
+        /// for the rest of the caveats; they apply identically here.
+        pub fn zop5(self: Self, input: SS(T), output: SS(T), direction: Direction) void {
+            const n_elems = self.length5();
+            std.debug.assert(input.len() >= n_elems);
+            std.debug.assert(output.len() >= n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            switch (T) {
+                f32 => c.vDSP_fft5_zop(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft5_zopD(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
+                else => unreachable,
+            }
+        }
+
+        /// Factor a `zop3` round trip multiplies the signal by.
+        pub fn roundTripScale3(self: Self) T {
+            return @floatFromInt(self.length3());
+        }
+
+        /// Factor a `zop5` round trip multiplies the signal by.
+        pub fn roundTripScale5(self: Self) T {
+            return @floatFromInt(self.length5());
+        }
+
         // -- 1D real --
 
         /// In-place real-to-complex Discrete Fourier Transform routine.
@@ -2113,5 +2179,141 @@ test "one setup drives every smaller size, bit-identically" {
         // Exact equality, not approximate: these must be the same computation.
         try std.testing.expectEqualSlices(f32, a_re[0..n], b_re[0..n]);
         try std.testing.expectEqualSlices(f32, a_im[0..n], b_im[0..n]);
+    }
+}
+
+/// Naive 1D DFT from the definition, used to pin the non-power-of-two
+/// transforms to something that is not itself vDSP.
+fn refDft1d(in_re: []const f32, in_im: []const f32, out_re: []f32, out_im: []f32, direction: Direction) void {
+    const n = in_re.len;
+    const sign: f32 = switch (direction) {
+        .forward => -1.0,
+        .inverse => 1.0,
+    };
+    for (0..n) |k| {
+        var acc_re: f32 = 0;
+        var acc_im: f32 = 0;
+        for (0..n) |j| {
+            const phase = sign * 2.0 * std.math.pi *
+                @as(f32, @floatFromInt(j * k)) / @as(f32, @floatFromInt(n));
+            const cr = @cos(phase);
+            const ci = @sin(phase);
+            acc_re += in_re[j] * cr - in_im[j] * ci;
+            acc_im += in_re[j] * ci + in_im[j] * cr;
+        }
+        out_re[k] = acc_re;
+        out_im[k] = acc_im;
+    }
+}
+
+test "zop3 transforms 3 * (1 << log2n) points, matching a naive DFT" {
+    // The length is the whole question here: vDSP.h documents these two only
+    // as "non-power-of-two", never spelling out how Log2N maps to N. Comparing
+    // against a closed-form DFT of length 3 << log2n both fixes the answer and
+    // proves the transform itself, since a wrong length cannot accidentally
+    // agree with the right one.
+    const log2n: Length = 2;
+    const n: usize = 12; // 3 * 4
+
+    const fft = try FFT(f32).init(log2n, .radix3);
+    defer fft.deinit();
+    try std.testing.expectEqual(n, fft.length3());
+
+    var in_re: [n]f32 = undefined;
+    var in_im: [n]f32 = undefined;
+    for (0..n) |i| {
+        const f: f32 = @floatFromInt(i);
+        in_re[i] = f * 0.5 - 2.0;
+        in_im[i] = 3.0 - f * 0.25;
+    }
+
+    var a_re = in_re;
+    var a_im = in_im;
+    var out_re: [n]f32 = undefined;
+    var out_im: [n]f32 = undefined;
+    fft.zop3(SS(f32).init(&a_re, &a_im), SS(f32).init(&out_re, &out_im), .forward);
+
+    var want_re: [n]f32 = undefined;
+    var want_im: [n]f32 = undefined;
+    refDft1d(&in_re, &in_im, &want_re, &want_im, .forward);
+
+    for (0..n) |i| {
+        try std.testing.expectApproxEqAbs(want_re[i], out_re[i], 0.01);
+        try std.testing.expectApproxEqAbs(want_im[i], out_im[i], 0.01);
+    }
+}
+
+test "zop5 transforms 5 * (1 << log2n) points, matching a naive DFT" {
+    const log2n: Length = 1;
+    const n: usize = 10; // 5 * 2
+
+    const fft = try FFT(f64).init(log2n, .radix5);
+    defer fft.deinit();
+    try std.testing.expectEqual(n, fft.length5());
+
+    var in_re32: [n]f32 = undefined;
+    var in_im32: [n]f32 = undefined;
+    var in_re: [n]f64 = undefined;
+    var in_im: [n]f64 = undefined;
+    for (0..n) |i| {
+        const f: f32 = @floatFromInt(i);
+        in_re32[i] = 1.0 + f * f * 0.125;
+        in_im32[i] = f * 0.5 - 1.5;
+        in_re[i] = in_re32[i];
+        in_im[i] = in_im32[i];
+    }
+
+    var a_re = in_re;
+    var a_im = in_im;
+    var out_re: [n]f64 = undefined;
+    var out_im: [n]f64 = undefined;
+    fft.zop5(SS(f64).init(&a_re, &a_im), SS(f64).init(&out_re, &out_im), .forward);
+
+    var want_re: [n]f32 = undefined;
+    var want_im: [n]f32 = undefined;
+    refDft1d(&in_re32, &in_im32, &want_re, &want_im, .forward);
+
+    for (0..n) |i| {
+        try std.testing.expectApproxEqAbs(@as(f64, want_re[i]), out_re[i], 0.01);
+        try std.testing.expectApproxEqAbs(@as(f64, want_im[i]), out_im[i], 0.01);
+    }
+}
+
+test "zop3 / zop5 round trips are unnormalized, scaling by N" {
+    // Same convention as the power-of-two family: neither leg normalizes, so
+    // a round trip multiplies by N. roundTripScale3/5 are what divides it out.
+    {
+        const n: usize = 24; // 3 * 8
+        const fft = try FFT(f32).init(3, .radix3);
+        defer fft.deinit();
+        try std.testing.expectEqual(@as(f32, 24.0), fft.roundTripScale3());
+
+        var re = [_]f32{0} ** n;
+        var im = [_]f32{0} ** n;
+        re[0] = 1.0; // impulse: the flattest possible test of the scale
+        var tmp_re: [n]f32 = undefined;
+        var tmp_im: [n]f32 = undefined;
+        fft.zop3(SS(f32).init(&re, &im), SS(f32).init(&tmp_re, &tmp_im), .forward);
+        fft.zop3(SS(f32).init(&tmp_re, &tmp_im), SS(f32).init(&re, &im), .inverse);
+
+        try std.testing.expectApproxEqAbs(fft.roundTripScale3(), re[0], 0.01);
+        for (1..n) |i| try std.testing.expectApproxEqAbs(@as(f32, 0), re[i], 0.01);
+    }
+    {
+        const n: usize = 20; // 5 * 4
+        const fft = try FFT(f32).init(2, .radix5);
+        defer fft.deinit();
+        try std.testing.expectEqual(@as(f32, 20.0), fft.roundTripScale5());
+
+        var re = [_]f32{0} ** n;
+        var im = [_]f32{0} ** n;
+        re[0] = 1.0;
+        var tmp_re: [n]f32 = undefined;
+        var tmp_im: [n]f32 = undefined;
+        fft.zop5(SS(f32).init(&re, &im), SS(f32).init(&tmp_re, &tmp_im), .forward);
+        fft.zop5(SS(f32).init(&tmp_re, &tmp_im), SS(f32).init(&re, &im), .inverse);
+
+        try std.testing.expectApproxEqAbs(fft.roundTripScale5(), re[0], 0.01);
+        for (1..n) |i| try std.testing.expectApproxEqAbs(@as(f32, 0), re[i], 0.01);
     }
 }

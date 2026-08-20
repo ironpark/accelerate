@@ -119,6 +119,8 @@ pub extern fn vImageConvolve_Planar8(src: *const vImage_Buffer, dest: *const vIm
 pub extern fn vImageConvolve_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, backgroundColor: f32, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageConvolve_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const i16, kernel_height: u32, kernel_width: u32, divisor: i32, backgroundColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageConvolve_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, backgroundColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvolve_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, backgroundColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvolve_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, backgroundColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
 
 // -- Convolution with Bias --
 
@@ -126,6 +128,27 @@ pub extern fn vImageConvolveWithBias_Planar8(src: *const vImage_Buffer, dest: *c
 pub extern fn vImageConvolveWithBias_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, bias: f32, backgroundColor: f32, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageConvolveWithBias_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const i16, kernel_height: u32, kernel_width: u32, divisor: i32, bias: i32, backgroundColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageConvolveWithBias_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, bias: f32, backgroundColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvolveWithBias_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, bias: f32, backgroundColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvolveWithBias_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernel_height: u32, kernel_width: u32, bias: f32, backgroundColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+
+// ARGB8888 pixels convolved against a *float* kernel, with a float bias. The
+// integer-kernel `vImageConvolveWithBias_ARGB8888` above divides by an integer
+// divisor; this one has no divisor because the kernel already carries the
+// scale. It is the only member of the ARGB8888 family that does.
+pub extern fn vImageConvolveFloatKernel_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernel: [*]const f32, kernelHeight: u32, kernelWidth: u32, bias: f32, backgroundColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+
+// -- Separable Convolution --
+//
+// Two 1D kernels applied along rows and columns instead of one 2D kernel:
+// O(kx + ky) work per pixel rather than O(kx * ky). Note that Planar8's
+// `backgroundColor` is `Pixel_16U`, not `Pixel_8` - that is the header's
+// signature, not a transcription slip.
+pub extern fn vImageSepConvolve_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernelX: [*]const f32, kernelX_width: u32, kernelY: [*]const f32, kernelY_width: u32, bias: f32, backgroundColor: Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageSepConvolve_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernelX: [*]const f32, kernelX_width: u32, kernelY: [*]const f32, kernelY_width: u32, bias: f32, backgroundColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageSepConvolve_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernelX: [*]const f32, kernelX_width: u32, kernelY: [*]const f32, kernelY_width: u32, bias: f32, backgroundColor: Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageSepConvolve_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernelX: [*]const f32, kernelX_width: u32, kernelY: [*]const f32, kernelY_width: u32, bias: f32, backgroundColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageSepConvolve_Planar8to16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernelX: [*]const f32, kernelX_width: u32, kernelY: [*]const f32, kernelY_width: u32, scale: f32, bias: f32, backgroundColor: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageSepConvolve_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, kernelX: [*]const f32, kernelX_width: u32, kernelY: [*]const f32, kernelY_width: u32, bias: f32, backgroundColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
 
 // -- Multi-Kernel Convolution --
 
