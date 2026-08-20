@@ -7,14 +7,14 @@ const types = @import("types.zig");
 
 // -- Re-exported types from types.zig --
 
-pub const vImage_Buffer = vImage_Buffer;
-pub const vImagePixelCount = vImagePixelCount;
-pub const vImage_Flags = vImage_Flags;
-pub const vImage_Error = vImage_Error;
+pub const vImage_Buffer = types.vImage_Buffer;
+pub const vImagePixelCount = types.vImagePixelCount;
+pub const vImage_Flags = types.vImage_Flags;
+pub const vImage_Error = types.vImage_Error;
 pub const Pixel_8 = types.Pixel_8;
 pub const Pixel_F = types.Pixel_F;
-pub const Pixel_8888 = Pixel_8888;
-pub const Pixel_FFFF = Pixel_FFFF;
+pub const Pixel_8888 = types.Pixel_8888;
+pub const Pixel_FFFF = types.Pixel_FFFF;
 pub const Pixel_16U = types.Pixel_16U;
 pub const Pixel_16S = types.Pixel_16S;
 pub const Pixel_16Q12 = types.Pixel_16Q12;
