@@ -492,38 +492,38 @@
 
 ### `src/vimage/histogram.zig`
 
-- [ ] `histogramCalculation_Planar8` — L25
-- [ ] `histogramCalculation_PlanarF` — L37
-- [ ] `histogramCalculation_ARGB8888` — L51
-- [ ] `histogramCalculation_ARGBFFFF` — L63
-- [ ] `histogramCalculation` — L78
-- [ ] `equalization_Planar8` — L119
-- [ ] `equalization_PlanarF` — L131
-- [ ] `equalization_ARGB8888` — L144
-- [ ] `equalization_ARGBFFFF` — L153
-- [ ] `equalization` — L166
-- [ ] `histogramSpecification_Planar8` — L212
-- [ ] `histogramSpecification_PlanarF` — L222
-- [ ] `histogramSpecification_ARGB8888` — L239
-- [ ] `histogramSpecification_ARGBFFFF` — L249
-- [ ] `histogramSpecification` — L263
-- [ ] `contrastStretch_Planar8` — L310
-- [ ] `contrastStretch_PlanarF` — L319
-- [ ] `contrastStretch_ARGB8888` — L332
-- [ ] `contrastStretch_ARGBFFFF` — L341
-- [ ] `contrastStretch` — L354
-- [ ] `endsInContrastStretch_Planar8` — L400
-- [ ] `endsInContrastStretch_PlanarF` — L411
-- [ ] `endsInContrastStretch_ARGB8888` — L428
-- [ ] `endsInContrastStretch_ARGBFFFF` — L439
-- [ ] `endsInContrastStretch` — L454
+- [x] `histogramCalculation_Planar8` — L25
+- [x] `histogramCalculation_PlanarF` — L37
+- [x] `histogramCalculation_ARGB8888` — L51
+- [x] `histogramCalculation_ARGBFFFF` — L63
+- [x] `histogramCalculation` — L78
+- [x] `equalization_Planar8` — L119
+- [x] `equalization_PlanarF` — L131
+- [x] `equalization_ARGB8888` — L144
+- [x] `equalization_ARGBFFFF` — L153
+- [x] `equalization` — L166
+- [x] `histogramSpecification_Planar8` — L212
+- [x] `histogramSpecification_PlanarF` — L222
+- [x] `histogramSpecification_ARGB8888` — L239
+- [x] `histogramSpecification_ARGBFFFF` — L249
+- [x] `histogramSpecification` — L263
+- [x] `contrastStretch_Planar8` — L310
+- [x] `contrastStretch_PlanarF` — L319
+- [x] `contrastStretch_ARGB8888` — L332
+- [x] `contrastStretch_ARGBFFFF` — L341
+- [x] `contrastStretch` — L354
+- [x] `endsInContrastStretch_Planar8` — L400
+- [x] `endsInContrastStretch_PlanarF` — L411
+- [x] `endsInContrastStretch_ARGB8888` — L428
+- [x] `endsInContrastStretch_ARGBFFFF` — L439
+- [x] `endsInContrastStretch` — L454
 
 ### `src/vimage/morphology.zig`
 
-- [ ] `dilate` — L32
-- [ ] `erode` — L63
-- [ ] `max` — L95
-- [ ] `min` — L127
+- [x] `dilate` — L32
+- [x] `erode` — L63
+- [x] `max` — L95
+- [x] `min` — L127
 
 ### `src/vimage/transform.zig`
 
