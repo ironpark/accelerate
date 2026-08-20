@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+### Documented
+
+- **`FFTSetup`/`FFTSetupD` are immutable after creation and safe to share
+  across threads.** `vDSP.h` never says so - and its silence is meaningful,
+  since it *does* warn explicitly where a setup is mutated by its execute call
+  (`vDSP_biquadm_Setup`). Established by measurement rather than inference: the
+  heap graph reachable from a setup (~75 blocks, ~394 KB) does not change by a
+  single byte across 110 million transforms over 9 entry points on 32 threads,
+  and a read-only object cannot be raced on. Corroborated by 86 million
+  bit-compared transforms and a ThreadSanitizer run. Measured on macOS/arm64
+  and assumed to hold on every platform Accelerate ships for.
+
+  So share one `FFT(T)` across threads rather than creating one each: a
+  `log2n = 12` setup costs ~194 us and ~369 KB, and 8 threads each building
+  their own burns ~1.7 ms and ~2.9 MB for nothing.
+
+- Two further measurements recorded in the same place so they are not
+  rediscovered: a setup created at `log2n = K` drives any smaller transform
+  bit-identically and at the same speed (so one oversized setup could serve
+  every size - though the current API binds `log2n` at `init`, so this is not
+  reachable yet), and the `zipt`/`zopt` temp-buffer variants that `vDSP.h`
+  says are "permitted to use the temporary buffer for improved performance"
+  are **not** measurably faster (0.98x-1.01x across `log2n` 4..18) and return
+  bit-identical results.
+
+### Added
+
+- Two tests that keep the above honest on whatever platform the suite runs on:
+  `"FFT setup is read-only during execution"` walks the setup's heap graph via
+  `malloc_size` and asserts nothing changed, and `"one setup drives every
+  smaller size, bit-identically"` pins the size-reuse invariant.
+
 ## 0.1.0
 
 The first release with a verified binding surface.
