@@ -257,7 +257,7 @@
 
 - [ ] `vfill` — L14
 - [ ] `vadd` — L31
-- [ ] `vsub` — L46
+- [x] `vsub` — L46
 - [ ] `vmul` — L60
 - [ ] `vdiv` — L74
 - [ ] `veqvi` — L89

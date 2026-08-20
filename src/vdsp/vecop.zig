@@ -47,8 +47,12 @@ pub fn vsub(comptime T: type, a: []const T, b: []const T, out: []T) void {
     std.debug.assert(b.len >= a.len);
     std.debug.assert(out.len >= a.len);
     switch (T) {
-        f32 => c.vDSP_vsub(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
-        f64 => c.vDSP_vsubD(a.ptr, 1, b.ptr, 1, out.ptr, 1, a.len),
+        // vDSP_vsub's first two arguments are the *subtrahend* (labeled __B in
+        // the Apple header) then the *minuend* (__A); the header explicitly
+        // warns "Caution: A and B are swapped!". Pass b then a so vsub(a, b,
+        // out) computes a - b as its name promises.
+        f32 => c.vDSP_vsub(b.ptr, 1, a.ptr, 1, out.ptr, 1, a.len),
+        f64 => c.vDSP_vsubD(b.ptr, 1, a.ptr, 1, out.ptr, 1, a.len),
         else => @compileError("vsub requires f32 or f64"),
     }
 }
@@ -493,6 +497,28 @@ test "vadd" {
     try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 7.0), out[1], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 9.0), out[2], 0.001);
+}
+
+test "vsub" {
+    // Asymmetric inputs: a symmetric test (e.g. a=[1,2,3], b=[1,2,3]) can't
+    // catch an argument-order bug because a-b == b-a when a==b.
+    const a = [_]f32{ 1.0, 2.0, 3.0 };
+    const b = [_]f32{ 10.0, 20.0, 30.0 };
+    var out: [3]f32 = undefined;
+    vsub(f32, &a, &b, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, -9.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -18.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -27.0), out[2], 0.001);
+}
+
+test "vsub f64" {
+    const a = [_]f64{ 1.0, 2.0, 3.0 };
+    const b = [_]f64{ 10.0, 20.0, 30.0 };
+    var out: [3]f64 = undefined;
+    vsub(f64, &a, &b, &out);
+    try std.testing.expectApproxEqAbs(@as(f64, -9.0), out[0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, -18.0), out[1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, -27.0), out[2], 1e-9);
 }
 
 test "vsmul" {
