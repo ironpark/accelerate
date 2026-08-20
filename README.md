@@ -11,6 +11,7 @@ Zig bindings for Apple's [Accelerate framework](https://developer.apple.com/docu
 | `vforce` | Vectorized math functions — exp, log, trig, hyperbolic, power, rounding, and more on large arrays |
 | `sparse` | Sparse solvers — direct (Cholesky, LDL^T, QR) and iterative (CG, GMRES, LSMR), subfactors, preconditioners |
 | `quadrature` | Numerical integration — QNG, QAG and QAGS, including infinite intervals |
+| `blas` | Dense linear algebra — the full CBLAS Levels 1, 2 and 3, real and complex |
 
 ## Installation
 
@@ -39,6 +40,7 @@ const vforce = accelerate.vforce;
 const vimage = accelerate.vimage;
 const sparse = accelerate.sparse;
 const quadrature = accelerate.quadrature;
+const blas = accelerate.blas;
 ```
 
 ### vDSP
@@ -131,6 +133,27 @@ _ = try sparse.Iterative(f64).conjugateGradientOperator(
     *Grid, &grid, applyStencil,
     sparse.Dense(f64).fromSlice(&b), sparse.Dense(f64).fromSlice(&x), .{}, null,
 );
+```
+
+### BLAS
+
+```zig
+// C := A * B for 2x2 row-major matrices
+const a = [_]f64{ 1, 2, 3, 4 };
+const b = [_]f64{ 5, 6, 7, 8 };
+var c = [_]f64{ 0, 0, 0, 0 };
+blas.gemm(f64, .row_major, .no_trans, .no_trans, 2, 2, 2, 1, &a, 2, &b, 2, 0, &c, 2);
+// c = { 19, 22, 43, 50 }
+
+// Level 1 has a unit-stride form and a full strided form
+const n = blas.nrm2(f64, &.{ 3, 4 });           // 5
+blas.axpy(f64, 2.0, &x, &y);                    // y := 2x + y
+blas.axpyStrided(f64, 3, 2.0, &x, 1, &y, 2);    // every other element of y
+
+// Complex works the same way, via the element type
+const Z = blas.Complex(f64);
+const z = [_]Z{ .init(1, 2), .init(3, -1) };
+const inner = blas.dotc(Z, &z, &z);             // real, = ||z||^2
 ```
 
 ### Quadrature
@@ -255,6 +278,24 @@ bounds)
 
 Failing to reach the requested tolerance is reported through `Result.status`,
 not as an error, so a partial estimate and its error bound stay available.
+
+### blas
+
+**Level 1:** `asum`, `nrm2`, `iamax`, `dot`, `dotu`, `dotc`, `sdsdot`,
+`dsdot`, `axpy`, `axpby`, `copy`, `swap`, `scal`, `scalReal`, `set`, `rot`,
+`rotg`, `rotm`, `rotmg` — each with a `...Strided` form taking explicit `n`
+and increments (negative increments included)
+
+**Level 2:** `gemv`, `gbmv`, `ger`, `geru`, `gerc`, `symv`/`hemv`,
+`sbmv`/`hbmv`, `spmv`/`hpmv`, `syr`/`her`, `syr2`/`her2`, `spr`/`hpr`,
+`spr2`/`hpr2`, `trmv`, `trsv`, `tbmv`, `tbsv`, `tpmv`, `tpsv`
+
+**Level 3:** `gemm`, `symm`, `hemm`, `syrk`, `herk`, `syr2k`, `her2k`, `trmm`,
+`trsm`, plus Apple's `geadd` extension
+
+Element types are `f32`, `f64`, `Complex(f32)` and `Complex(f64)`. Uses the
+current (`$NEWLAPACK`) interface with ILP64 indices where Accelerate provides
+them — `cblas.h`'s unsuffixed symbols have been deprecated since macOS 13.3.
 
 ## Requirements
 

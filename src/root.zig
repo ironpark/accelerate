@@ -3,6 +3,7 @@ pub const vimage = @import("vimage/root.zig");
 pub const vforce = @import("vforce/root.zig");
 pub const sparse = @import("sparse/root.zig");
 pub const quadrature = @import("quadrature/root.zig");
+pub const blas = @import("blas/root.zig");
 
 test {
     const std = @import("std");
