@@ -7,12 +7,15 @@ Zig bindings for Apple's [Accelerate framework](https://developer.apple.com/docu
 | Module | Description |
 |--------|-------------|
 | `vdsp` | Digital signal processing — vector arithmetic, FFT/DFT/DCT, convolution, biquad filters, reductions, complex operations, type conversions |
-| `vimage` | Image processing — alpha compositing, format conversion, convolution, geometric transforms, histograms, morphology |
+| `vimage` | Image processing — alpha compositing, format conversion, convolution (including separable), geometric transforms up to perspective warp, histograms, morphology |
 | `vforce` | Vectorized math functions — exp, log, trig, hyperbolic, power, rounding, and more on large arrays |
-| `sparse` | Sparse solvers — direct (Cholesky, LDL^T, QR) and iterative (CG, GMRES, LSMR), subfactors, preconditioners |
+| `sparse` | Sparse solvers — direct (Cholesky, LDL^T, QR, LU) and iterative (CG, GMRES, LSMR), subfactors, preconditioners, real and complex |
 | `quadrature` | Numerical integration — QNG, QAG and QAGS, including infinite intervals |
-| `blas` | Dense linear algebra — the full CBLAS Levels 1, 2 and 3, real and complex |
+| `blas` | Dense linear algebra — the full CBLAS Levels 1, 2 and 3, real and complex, plus threading control |
 | `lapack` | Linear systems, factorizations, least squares, eigenvalues, SVD and the CS decomposition, in full, band, tridiagonal, packed and RFP storage — all 2032 symbols bound, typed wrappers for the whole user-facing surface |
+
+See [`docs/COVERAGE.md`](docs/COVERAGE.md) for exactly which Accelerate entry
+points are bound, which are not, and why.
 
 ## Installation
 

@@ -4,6 +4,32 @@
 
 ### Added
 
+- **Accelerate coverage sweep.** A symbol-level diff of every public header in
+  `Accelerate.framework` against this package's `extern` declarations, and the
+  work to close what it found. `docs/COVERAGE.md` records the result, the
+  re-measuring recipe, and what is deliberately left out.
+
+  Closed: `vDSP_fft3_zop`/`vDSP_fft5_zop` (+`D`), the last unbound vDSP entry
+  points, as `zop3`/`zop5` - vDSP.h never states how `Log2N` maps to `N`, so
+  the tests fix it at `3 << log2n` and `5 << log2n` against a closed-form DFT.
+  `BLASSetThreading`/`BLASGetThreading` from `thread_api.h`, vecLib's
+  per-thread switch governing BLAS *and* LAPACK, as `blas.Threading` +
+  `setThreading`/`getThreading`. All six `vImageSepConvolve_*`, which left
+  separable filtering - the standard path for a Gaussian blur - unreachable,
+  plus the 16F convolution variants and `vImageConvolveFloatKernel_ARGB8888`.
+  The whole remaining vImage Geometry surface: 75 entry points covering
+  perspective warp, the double-precision `*ShearD` family, caller-supplied
+  resampling kernels, and the 16F/CbCr/XRGB2101010W formats.
+
+  Sparse gained `Complex(f32)`/`Complex(f64)` element types, Hermitian
+  factorization, and LU in all four pivoting modes with `updateLu`.
+
+  Not closed, and now documented rather than silently absent: vImage
+  Conversion (172), vImage Utilities/CVUtilities (47, blocked on a
+  CoreGraphics/CoreVideo scope decision) and BNNS (~148). Also documented:
+  vImage Alpha's twelve "missing" entry points are `#define` aliases onto the
+  opposite channel order, not symbols, so there is nothing there to bind.
+
 - **`lapack` module.** The complete 2032-symbol extern surface in
   `src/lapack/c.zig`, generated from `lapack.h` by `tools/gen_lapack.py`, plus
   shared types, `info` translation and workspace sizing. Typed wrappers are
