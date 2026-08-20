@@ -106,15 +106,15 @@
 
 ### `src/vdsp/dotp.zig`
 
-- [ ] `dotpr` — L8
-- [ ] `dotpr2` — L35
+- [x] `dotpr` — L8
+- [x] `dotpr2` — L35
 - [ ] `zdotpr` — L46
 - [ ] `zidotpr` — L56
 - [ ] `zrdotpr` — L66
-- [ ] `dotpr_s1_15` — L92
-- [ ] `dotpr2_s1_15` — L119
-- [ ] `dotpr_s8_24` — L142
-- [ ] `dotpr2_s8_24` — L169
+- [x] `dotpr_s1_15` — L92
+- [x] `dotpr2_s1_15` — L119
+- [x] `dotpr_s8_24` — L142
+- [x] `dotpr2_s8_24` — L169
 
 ### `src/vdsp/fft.zig`
 
