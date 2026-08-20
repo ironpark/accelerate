@@ -463,17 +463,17 @@
 
 ### `src/vimage/convolution.zig`
 
-- [ ] `convolvePlanar` — L25
-- [ ] `convolveInterleaved` — L53
-- [ ] `convolveWithBiasPlanar` — L85
-- [ ] `convolveWithBiasInterleaved` — L110
-- [ ] `convolveMultiKernelInterleaved` — L142
-- [ ] `richardsonLucyDeConvolvePlanar` — L177
-- [ ] `richardsonLucyDeConvolveInterleaved` — L205
-- [ ] `boxConvolvePlanar8` — L241
-- [ ] `boxConvolveARGB8888` — L256
-- [ ] `tentConvolvePlanar8` — L281
-- [ ] `tentConvolveARGB8888` — L296
+- [x] `convolvePlanar` — L25
+- [x] `convolveInterleaved` — L53
+- [x] `convolveWithBiasPlanar` — L85
+- [x] `convolveWithBiasInterleaved` — L110
+- [x] `convolveMultiKernelInterleaved` — L142
+- [x] `richardsonLucyDeConvolvePlanar` — L177
+- [x] `richardsonLucyDeConvolveInterleaved` — L205
+- [x] `boxConvolvePlanar8` — L241
+- [x] `boxConvolveARGB8888` — L256
+- [x] `tentConvolvePlanar8` — L281
+- [x] `tentConvolveARGB8888` — L296
 
 ### `src/vimage/geometry.zig`
 
