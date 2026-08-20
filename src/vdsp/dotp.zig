@@ -4,6 +4,7 @@ const Length = types.Length;
 const c = @import("c.zig");
 
 const SC = types.SplitComplex;
+const Complex = types.Complex;
 
 /// vDSP_dotpr/vDSP_dotprD, vector dot product.
 ///
@@ -53,34 +54,86 @@ pub fn dotpr2(comptime T: type, a0: []const T, a1: []const T, b: []const T) [2]T
     return .{ c0, c1 };
 }
 
-pub fn zdotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) SC(T) {
-    var result: SC(T) = undefined;
+/// vDSP_zdotpr/vDSP_zdotprD, complex-split dot product (no conjugation).
+///
+/// This routine calculates the complex dot product of A with B; A is not
+/// conjugated (contrast with `zidotpr`, which conjugates A).
+///
+/// In pseudocode, the operation is:
+///
+///     C[0] = sum(A[n] * B[n], 0 <= n < N);
+///
+/// where `*` is complex multiplication.
+///
+/// Returns a `Complex(T)` *value* (not a `SplitComplex`/`SC(T)`), because the
+/// C API's `C` output parameter is a single complex scalar written through
+/// `C->realp[0]`/`C->imagp[0]`: a `SplitComplex` return would need caller-
+/// owned backing storage for those pointers, which this function has no way
+/// to provide once it returns. The previous version of this wrapper returned
+/// `SC(T)` built from `var result: SC(T) = undefined` - `result.realp` and
+/// `result.imagp` were never pointed at real storage, so the C function wrote
+/// through garbage pointers. This was not a theoretical concern: calling it
+/// deterministically hung the process (confirmed by isolating it with
+/// `--test-filter`, where execution stopped partway through the `zdotpr`
+/// test and the test binary sat in a CPU-spinning run state indefinitely).
+pub fn zdotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) Complex(T) {
+    var real_buf = [1]T{0};
+    var imag_buf = [1]T{0};
+    var result = SC(T){ .realp = &real_buf, .imagp = &imag_buf };
     switch (T) {
         f32 => c.vDSP_zdotpr(a, 1, b, 1, &result, n),
         f64 => c.vDSP_zdotprD(a, 1, b, 1, &result, n),
         else => @compileError("zdotpr requires f32 or f64"),
     }
-    return result;
+    return .{ .real = real_buf[0], .imag = imag_buf[0] };
 }
 
-pub fn zidotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) SC(T) {
-    var result: SC(T) = undefined;
+/// vDSP_zidotpr/vDSP_zidotprD, complex-split inner (conjugate) dot product.
+///
+/// This routine calculates the complex dot product of conj(A) with B.
+///
+/// In pseudocode, the operation is:
+///
+///     C[0] = sum(conj(A[n]) * B[n], 0 <= n < N);
+///
+/// Returns a `Complex(T)` value rather than `SC(T)` for the same reason as
+/// `zdotpr` - see its doc comment for the runtime-confirmed hang this avoids.
+pub fn zidotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) Complex(T) {
+    var real_buf = [1]T{0};
+    var imag_buf = [1]T{0};
+    var result = SC(T){ .realp = &real_buf, .imagp = &imag_buf };
     switch (T) {
         f32 => c.vDSP_zidotpr(a, 1, b, 1, &result, n),
         f64 => c.vDSP_zidotprD(a, 1, b, 1, &result, n),
         else => @compileError("zidotpr requires f32 or f64"),
     }
-    return result;
+    return .{ .real = real_buf[0], .imag = imag_buf[0] };
 }
 
-pub fn zrdotpr(comptime T: type, a: *const SC(T), b: []const T, n: Length) SC(T) {
-    var result: SC(T) = undefined;
+/// vDSP_zrdotpr/vDSP_zrdotprD, complex-real dot product.
+///
+/// This routine calculates the dot product of complex A with real B (A is
+/// not conjugated).
+///
+/// In pseudocode, the operation is:
+///
+///     C[0] = sum(A[n] * B[n], 0 <= n < N);
+///
+/// where `A[n]` is complex and `B[n]` is real.
+///
+/// Returns a `Complex(T)` value rather than `SC(T)` for the same reason as
+/// `zdotpr` - see its doc comment for the runtime-confirmed hang this avoids.
+pub fn zrdotpr(comptime T: type, a: *const SC(T), b: []const T, n: Length) Complex(T) {
+    std.debug.assert(b.len >= n);
+    var real_buf = [1]T{0};
+    var imag_buf = [1]T{0};
+    var result = SC(T){ .realp = &real_buf, .imagp = &imag_buf };
     switch (T) {
         f32 => c.vDSP_zrdotpr(a, 1, b.ptr, 1, &result, n),
         f64 => c.vDSP_zrdotprD(a, 1, b.ptr, 1, &result, n),
         else => @compileError("zrdotpr requires f32 or f64"),
     }
-    return result;
+    return .{ .real = real_buf[0], .imag = imag_buf[0] };
 }
 
 /// vDSP_dotpr_s1_15, vector integer 1.15 format dot product.
@@ -215,6 +268,51 @@ test "dotpr2 uses independent A0/A1 dotted with shared B" {
     // sum0 = 1*1+2*2+3*3 = 14; sum1 = 4*1+5*2+6*3 = 32
     try std.testing.expectEqual(@as(f32, 14.0), result[0]);
     try std.testing.expectEqual(@as(f32, 32.0), result[1]);
+}
+
+test "zdotpr computes complex dot product without conjugation" {
+    // a = (1+2i), (3+4i); b = (5+6i), (7+8i)
+    // (1+2i)(5+6i) = (5-12) + (6+10)i = -7+16i
+    // (3+4i)(7+8i) = (21-32) + (24+28)i = -11+52i
+    // sum = -18 + 68i
+    var ar = [_]f32{ 1, 3 };
+    var ai = [_]f32{ 2, 4 };
+    var br = [_]f32{ 5, 7 };
+    var bi = [_]f32{ 6, 8 };
+    const a = SC(f32){ .realp = &ar, .imagp = &ai };
+    const b = SC(f32){ .realp = &br, .imagp = &bi };
+    const result = zdotpr(f32, &a, &b, 2);
+    try std.testing.expectEqual(@as(f32, -18), result.real);
+    try std.testing.expectEqual(@as(f32, 68), result.imag);
+}
+
+test "zidotpr conjugates A before dotting with B" {
+    // conj(a) = (1-2i), (3-4i); b = (5+6i), (7+8i)
+    // (1-2i)(5+6i) = (5+12) + (6-10)i = 17-4i
+    // (3-4i)(7+8i) = (21+32) + (24-28)i = 53-4i
+    // sum = 70 - 8i (differs from zdotpr's -18+68i, so a missing conj() call
+    // would be caught by this test).
+    var ar = [_]f32{ 1, 3 };
+    var ai = [_]f32{ 2, 4 };
+    var br = [_]f32{ 5, 7 };
+    var bi = [_]f32{ 6, 8 };
+    const a = SC(f32){ .realp = &ar, .imagp = &ai };
+    const b = SC(f32){ .realp = &br, .imagp = &bi };
+    const result = zidotpr(f32, &a, &b, 2);
+    try std.testing.expectEqual(@as(f32, 70), result.real);
+    try std.testing.expectEqual(@as(f32, -8), result.imag);
+}
+
+test "zrdotpr computes complex-times-real dot product" {
+    // a = (1+2i), (3+4i); b (real) = 5, 7
+    // (1+2i)*5 = 5+10i; (3+4i)*7 = 21+28i; sum = 26+38i
+    var ar = [_]f32{ 1, 3 };
+    var ai = [_]f32{ 2, 4 };
+    const a = SC(f32){ .realp = &ar, .imagp = &ai };
+    const b = [_]f32{ 5, 7 };
+    const result = zrdotpr(f32, &a, &b, 2);
+    try std.testing.expectEqual(@as(f32, 26), result.real);
+    try std.testing.expectEqual(@as(f32, 38), result.imag);
 }
 
 // -- Fixed-point regression tests --

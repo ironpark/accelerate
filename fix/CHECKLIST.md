@@ -108,9 +108,9 @@
 
 - [x] `dotpr` — L8
 - [x] `dotpr2` — L35
-- [ ] `zdotpr` — L46
-- [ ] `zidotpr` — L56
-- [ ] `zrdotpr` — L66
+- [x] `zdotpr` — L46
+- [x] `zidotpr` — L56
+- [x] `zrdotpr` — L66
 - [x] `dotpr_s1_15` — L92
 - [x] `dotpr2_s1_15` — L119
 - [x] `dotpr_s8_24` — L142
