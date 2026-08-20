@@ -4,6 +4,8 @@ const vImage_Buffer = types.vImage_Buffer;
 const vImagePixelCount = types.vImagePixelCount;
 const vImage_Flags = types.vImage_Flags;
 const vImage_Error = types.vImage_Error;
+const VImageError = types.VImageError;
+const check = types.check;
 const vImage_AffineTransform = types.vImage_AffineTransform;
 const vImage_AffineTransform_Double = types.vImage_AffineTransform_Double;
 const vImage_CGAffineTransform = types.vImage_CGAffineTransform;
@@ -54,8 +56,8 @@ pub fn rotate(
     angleInRadians: f32,
     backColor: BackColor(T),
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageRotate_Planar8(src, dest, tempBuffer, angleInRadians, backColor, flags),
         Pixel_F => c.vImageRotate_PlanarF(src, dest, tempBuffer, angleInRadians, backColor, flags),
         Pixel_8888 => c.vImageRotate_ARGB8888(src, dest, tempBuffer, angleInRadians, backColor, flags),
@@ -63,7 +65,7 @@ pub fn rotate(
         Pixel_ARGB_16U => c.vImageRotate_ARGB16U(src, dest, tempBuffer, angleInRadians, backColor, flags),
         Pixel_ARGB_16S => c.vImageRotate_ARGB16S(src, dest, tempBuffer, angleInRadians, backColor, flags),
         else => @compileError("rotate requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 // ============================================================================
@@ -86,8 +88,8 @@ pub fn scale(
     dest: *const vImage_Buffer,
     tempBuffer: ?*anyopaque,
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageScale_Planar8(src, dest, tempBuffer, flags),
         Pixel_F => c.vImageScale_PlanarF(src, dest, tempBuffer, flags),
         Pixel_8888 => c.vImageScale_ARGB8888(src, dest, tempBuffer, flags),
@@ -97,7 +99,7 @@ pub fn scale(
         Pixel_16U => c.vImageScale_Planar16U(src, dest, tempBuffer, flags),
         Pixel_16S => c.vImageScale_Planar16S(src, dest, tempBuffer, flags),
         else => @compileError("scale requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, Pixel_ARGB_16S, Pixel_16U, or Pixel_16S"),
-    };
+    });
 }
 
 // ============================================================================
@@ -115,8 +117,8 @@ pub fn horizontalReflect(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageHorizontalReflect_Planar8(src, dest, flags),
         Pixel_F => c.vImageHorizontalReflect_PlanarF(src, dest, flags),
         Pixel_8888 => c.vImageHorizontalReflect_ARGB8888(src, dest, flags),
@@ -124,7 +126,7 @@ pub fn horizontalReflect(
         Pixel_ARGB_16U => c.vImageHorizontalReflect_ARGB16U(src, dest, flags),
         Pixel_ARGB_16S => c.vImageHorizontalReflect_ARGB16S(src, dest, flags),
         else => @compileError("horizontalReflect requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 /// Reflect an image vertically (top-bottom mirror).
@@ -138,8 +140,8 @@ pub fn verticalReflect(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageVerticalReflect_Planar8(src, dest, flags),
         Pixel_F => c.vImageVerticalReflect_PlanarF(src, dest, flags),
         Pixel_8888 => c.vImageVerticalReflect_ARGB8888(src, dest, flags),
@@ -147,7 +149,7 @@ pub fn verticalReflect(
         Pixel_ARGB_16U => c.vImageVerticalReflect_ARGB16U(src, dest, flags),
         Pixel_ARGB_16S => c.vImageVerticalReflect_ARGB16S(src, dest, flags),
         else => @compileError("verticalReflect requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 // ============================================================================
@@ -183,9 +185,9 @@ pub fn rotate90(
     rotationConstant: RotationConstant,
     backColor: BackColor(T),
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     const rc = @intFromEnum(rotationConstant);
-    return switch (T) {
+    return check(switch (T) {
         Pixel_8 => c.vImageRotate90_Planar8(src, dest, rc, backColor, flags),
         Pixel_F => c.vImageRotate90_PlanarF(src, dest, rc, backColor, flags),
         Pixel_8888 => c.vImageRotate90_ARGB8888(src, dest, rc, backColor, flags),
@@ -193,7 +195,7 @@ pub fn rotate90(
         Pixel_ARGB_16U => c.vImageRotate90_ARGB16U(src, dest, rc, backColor, flags),
         Pixel_ARGB_16S => c.vImageRotate90_ARGB16S(src, dest, rc, backColor, flags),
         else => @compileError("rotate90 requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 // ============================================================================
@@ -222,8 +224,8 @@ pub fn affineWarp(
     transform: *const vImage_AffineTransform,
     backColor: BackColor(T),
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageAffineWarp_Planar8(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_F => c.vImageAffineWarp_PlanarF(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_8888 => c.vImageAffineWarp_ARGB8888(src, dest, tempBuffer, transform, backColor, flags),
@@ -231,7 +233,7 @@ pub fn affineWarp(
         Pixel_ARGB_16U => c.vImageAffineWarp_ARGB16U(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_ARGB_16S => c.vImageAffineWarp_ARGB16S(src, dest, tempBuffer, transform, backColor, flags),
         else => @compileError("affineWarp requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 /// Apply a double-precision affine transform to an image.
@@ -251,8 +253,8 @@ pub fn affineWarpD(
     transform: *const vImage_AffineTransform_Double,
     backColor: BackColor(T),
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageAffineWarpD_Planar8(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_F => c.vImageAffineWarpD_PlanarF(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_8888 => c.vImageAffineWarpD_ARGB8888(src, dest, tempBuffer, transform, backColor, flags),
@@ -260,7 +262,7 @@ pub fn affineWarpD(
         Pixel_ARGB_16U => c.vImageAffineWarpD_ARGB16U(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_ARGB_16S => c.vImageAffineWarpD_ARGB16S(src, dest, tempBuffer, transform, backColor, flags),
         else => @compileError("affineWarpD requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 /// Apply a CGAffineTransform-based affine warp to an image.
@@ -280,8 +282,8 @@ pub fn affineWarpCG(
     transform: *const vImage_CGAffineTransform,
     backColor: BackColor(T),
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageAffineWarpCG_Planar8(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_F => c.vImageAffineWarpCG_PlanarF(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_8888 => c.vImageAffineWarpCG_ARGB8888(src, dest, tempBuffer, transform, backColor, flags),
@@ -289,7 +291,7 @@ pub fn affineWarpCG(
         Pixel_ARGB_16U => c.vImageAffineWarpCG_ARGB16U(src, dest, tempBuffer, transform, backColor, flags),
         Pixel_ARGB_16S => c.vImageAffineWarpCG_ARGB16S(src, dest, tempBuffer, transform, backColor, flags),
         else => @compileError("affineWarpCG requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 // ============================================================================
@@ -317,8 +319,8 @@ pub fn horizontalShear(
     filter: ResamplingFilter,
     backColor: BackColor(T),
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageHorizontalShear_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
         Pixel_F => c.vImageHorizontalShear_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
         Pixel_8888 => c.vImageHorizontalShear_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
@@ -326,7 +328,7 @@ pub fn horizontalShear(
         Pixel_ARGB_16U => c.vImageHorizontalShear_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
         Pixel_ARGB_16S => c.vImageHorizontalShear_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
         else => @compileError("horizontalShear requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 /// Apply a vertical shear, rescale, and translate to an image.
@@ -350,8 +352,8 @@ pub fn verticalShear(
     filter: ResamplingFilter,
     backColor: BackColor(T),
     flags: vImage_Flags,
-) vImage_Error {
-    return switch (T) {
+) VImageError!usize {
+    return check(switch (T) {
         Pixel_8 => c.vImageVerticalShear_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
         Pixel_F => c.vImageVerticalShear_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
         Pixel_8888 => c.vImageVerticalShear_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
@@ -359,7 +361,7 @@ pub fn verticalShear(
         Pixel_ARGB_16U => c.vImageVerticalShear_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
         Pixel_ARGB_16S => c.vImageVerticalShear_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
         else => @compileError("verticalShear requires Pixel_8, Pixel_F, Pixel_8888, Pixel_FFFF, Pixel_ARGB_16U, or Pixel_ARGB_16S"),
-    };
+    });
 }
 
 // ============================================================================
@@ -448,7 +450,7 @@ test "horizontalReflect_Planar8: mirrors columns (x), not rows" {
     defer allocator.free(dest.mem);
 
     const err = horizontalReflect(Pixel_8, &src.buf, &dest.buf, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 0), marker.y);
     try std.testing.expectEqual(@as(usize, 3), marker.x);
@@ -466,7 +468,7 @@ test "verticalReflect_Planar8: mirrors rows (y), not columns" {
     defer allocator.free(dest.mem);
 
     const err = verticalReflect(Pixel_8, &src.buf, &dest.buf, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 3), marker.y);
     try std.testing.expectEqual(@as(usize, 0), marker.x);
@@ -506,7 +508,7 @@ test "rotate90: RotationConstant values match Geometry.h's kRotate*DegreesClockw
         var dest = try makePlanar8Buffer(allocator, case.dest_h, case.dest_w, 2);
         defer allocator.free(dest.mem);
         const err = rotate90(Pixel_8, &src.buf, &dest.buf, case.rc, 0, Flags.kvImageNoFlags);
-        try std.testing.expectEqual(@as(vImage_Error, 0), err);
+        try std.testing.expectEqual(@as(usize, 0), try err);
         const marker = findMarker(dest.buf);
         try std.testing.expectEqual(case.exp_y, marker.y);
         try std.testing.expectEqual(case.exp_x, marker.x);
@@ -533,7 +535,7 @@ test "affineWarp: pure translation (a=1,b=0,c=0,d=1) shifts by exactly (tx,ty) p
 
     const transform = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
     const err = affineWarp(Pixel_8, &src.buf, &dest.buf, null, &transform, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(u8, 200), marker.v);
     // Runtime-confirmed: tx=1 moved the marker from col=2 to col=3 (row
@@ -546,7 +548,7 @@ test "affineWarp: pure translation (a=1,b=0,c=0,d=1) shifts by exactly (tx,ty) p
     defer allocator.free(dest2.mem);
     const transform2 = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 0, .ty = 1 };
     const err2 = affineWarp(Pixel_8, &src.buf, &dest2.buf, null, &transform2, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err2);
+    try std.testing.expectEqual(@as(usize, 0), try err2);
     const marker2 = findMarker(dest2.buf);
     try std.testing.expectEqual(@as(u8, 200), marker2.v);
     // Runtime-confirmed: ty=1 moved the marker from row=2 to row=1 (col
@@ -569,13 +571,13 @@ test "affineWarpD: matches affineWarp for an equivalent single/double-precision 
     defer allocator.free(dest_f.mem);
     const tf = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
     const err_f = affineWarp(Pixel_8, &src.buf, &dest_f.buf, null, &tf, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err_f);
+    try std.testing.expectEqual(@as(usize, 0), try err_f);
 
     var dest_d = try makePlanar8Buffer(allocator, 5, 5, 3);
     defer allocator.free(dest_d.mem);
     const td = vImage_AffineTransform_Double{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
     const err_d = affineWarpD(Pixel_8, &src.buf, &dest_d.buf, null, &td, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err_d);
+    try std.testing.expectEqual(@as(usize, 0), try err_d);
 
     const marker_f = findMarker(dest_f.buf);
     const marker_d = findMarker(dest_d.buf);
@@ -594,13 +596,13 @@ test "affineWarpCG: matches affineWarp for an equivalent transform (vImage_CGAff
     defer allocator.free(dest_f.mem);
     const tf = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
     const err_f = affineWarp(Pixel_8, &src.buf, &dest_f.buf, null, &tf, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err_f);
+    try std.testing.expectEqual(@as(usize, 0), try err_f);
 
     var dest_cg = try makePlanar8Buffer(allocator, 5, 5, 3);
     defer allocator.free(dest_cg.mem);
     const tcg = vImage_CGAffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
     const err_cg = affineWarpCG(Pixel_8, &src.buf, &dest_cg.buf, null, &tcg, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err_cg);
+    try std.testing.expectEqual(@as(usize, 0), try err_cg);
 
     const marker_f = findMarker(dest_f.buf);
     const marker_cg = findMarker(dest_cg.buf);
@@ -638,7 +640,7 @@ test "rotate: positive angleInRadians is a standard mathematical CCW rotation (r
     defer allocator.free(dest.mem);
 
     const err = rotate(Pixel_8, &src.buf, &dest.buf, null, std.math.pi / 6.0, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 3), marker.y);
     try std.testing.expectEqual(@as(usize, 6), marker.x);
@@ -656,7 +658,7 @@ test "scale: resizes to the destination buffer's dimensions" {
     defer allocator.free(dest.mem);
 
     const err = scale(Pixel_8, &src.buf, &dest.buf, null, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     // Uniform input -> uniform (approximately, resampled) output; the key
     // check is that the call succeeds and writes into the *dest*-sized
     // buffer (2x2) using dest's own rowBytes, not src's.
@@ -681,7 +683,7 @@ test "newResamplingFilter/destroyResamplingFilter: create-use-destroy lifecycle,
     var dest_h = try makePlanar8Buffer(allocator, 5, 5, 1);
     defer allocator.free(dest_h.mem);
     const err_h = horizontalShear(Pixel_8, &src.buf, &dest_h.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err_h);
+    try std.testing.expectEqual(@as(usize, 0), try err_h);
     const marker_h = findMarker(dest_h.buf);
     // Runtime-confirmed: col 2 -> 3 (row unchanged), matching affineWarp's
     // tx=+1 result above -- xTranslate moves the same direction as +tx.
@@ -692,7 +694,7 @@ test "newResamplingFilter/destroyResamplingFilter: create-use-destroy lifecycle,
     var dest_v = try makePlanar8Buffer(allocator, 5, 5, 3);
     defer allocator.free(dest_v.mem);
     const err_v = verticalShear(Pixel_8, &src.buf, &dest_v.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err_v);
+    try std.testing.expectEqual(@as(usize, 0), try err_v);
     const marker_v = findMarker(dest_v.buf);
     // Runtime-confirmed: row 2 -> 1 (col unchanged), matching affineWarp's
     // ty=+1 result (+y-up == decreasing row index) -- yTranslate moves the

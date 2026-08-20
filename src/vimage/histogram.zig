@@ -4,6 +4,8 @@ const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
+const VImageError = types.VImageError;
+const check = types.check;
 const vImage_Flags = types.vImage_Flags;
 const vImagePixelCount = types.vImagePixelCount;
 const Pixel_F = types.Pixel_F;
@@ -26,8 +28,8 @@ pub fn histogramCalculation_Planar8(
     src: *const vImage_Buffer,
     histogram: [*]vImagePixelCount,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramCalculation_Planar8(src, histogram, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramCalculation_Planar8(src, histogram, flags));
 }
 
 /// Calculates a histogram for a PlanarF source image.
@@ -41,8 +43,8 @@ pub fn histogramCalculation_PlanarF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramCalculation_PlanarF(src, histogram, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramCalculation_PlanarF(src, histogram, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Calculates per-channel histograms for an ARGB8888 source image.
@@ -52,8 +54,8 @@ pub fn histogramCalculation_ARGB8888(
     src: *const vImage_Buffer,
     histogram: *[4][*]vImagePixelCount,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramCalculation_ARGB8888(src, histogram, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramCalculation_ARGB8888(src, histogram, flags));
 }
 
 /// Calculates per-channel histograms for an ARGBFFFF source image.
@@ -67,8 +69,8 @@ pub fn histogramCalculation_ARGBFFFF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramCalculation_ARGBFFFF(src, histogram, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramCalculation_ARGBFFFF(src, histogram, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Type-dispatched histogram calculation.
@@ -102,13 +104,13 @@ pub fn histogramCalculation(comptime fmt: Format, args: switch (fmt) {
         maxVal: Pixel_F,
         flags: vImage_Flags = 0,
     },
-}) vImage_Error {
-    return switch (fmt) {
+}) VImageError!usize {
+    return check(switch (fmt) {
         .Planar8 => c.vImageHistogramCalculation_Planar8(args.src, args.histogram, args.flags),
         .PlanarF => c.vImageHistogramCalculation_PlanarF(args.src, args.histogram, args.histogram_entries, args.minVal, args.maxVal, args.flags),
         .ARGB8888 => c.vImageHistogramCalculation_ARGB8888(args.src, args.histogram, args.flags),
         .ARGBFFFF => c.vImageHistogramCalculation_ARGBFFFF(args.src, args.histogram, args.histogram_entries, args.minVal, args.maxVal, args.flags),
-    };
+    });
 }
 
 // ============================================================================
@@ -120,8 +122,8 @@ pub fn equalization_Planar8(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEqualization_Planar8(src, dest, flags);
+) VImageError!usize {
+    return check(c.vImageEqualization_Planar8(src, dest, flags));
 }
 
 /// Equalizes the histogram of a PlanarF image.
@@ -136,8 +138,8 @@ pub fn equalization_PlanarF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEqualization_PlanarF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageEqualization_PlanarF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Equalizes the histogram of an ARGB8888 image.
@@ -145,8 +147,8 @@ pub fn equalization_ARGB8888(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEqualization_ARGB8888(src, dest, flags);
+) VImageError!usize {
+    return check(c.vImageEqualization_ARGB8888(src, dest, flags));
 }
 
 /// Equalizes the histogram of an ARGBFFFF image.
@@ -158,8 +160,8 @@ pub fn equalization_ARGBFFFF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEqualization_ARGBFFFF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageEqualization_ARGBFFFF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Type-dispatched histogram equalization.
@@ -192,13 +194,13 @@ pub fn equalization(comptime fmt: Format, args: switch (fmt) {
         maxVal: Pixel_F,
         flags: vImage_Flags = 0,
     },
-}) vImage_Error {
-    return switch (fmt) {
+}) VImageError!usize {
+    return check(switch (fmt) {
         .Planar8 => c.vImageEqualization_Planar8(args.src, args.dest, args.flags),
         .PlanarF => c.vImageEqualization_PlanarF(args.src, args.dest, args.tempBuffer, args.histogram_entries, args.minVal, args.maxVal, args.flags),
         .ARGB8888 => c.vImageEqualization_ARGB8888(args.src, args.dest, args.flags),
         .ARGBFFFF => c.vImageEqualization_ARGBFFFF(args.src, args.dest, args.tempBuffer, args.histogram_entries, args.minVal, args.maxVal, args.flags),
-    };
+    });
 }
 
 // ============================================================================
@@ -214,8 +216,8 @@ pub fn histogramSpecification_Planar8(
     dest: *const vImage_Buffer,
     desired_histogram: [*]const vImagePixelCount,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramSpecification_Planar8(src, dest, desired_histogram, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramSpecification_Planar8(src, dest, desired_histogram, flags));
 }
 
 /// Performs histogram specification on a PlanarF image.
@@ -228,8 +230,8 @@ pub fn histogramSpecification_PlanarF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramSpecification_PlanarF(src, dest, tempBuffer, desired_histogram, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramSpecification_PlanarF(src, dest, tempBuffer, desired_histogram, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Performs histogram specification on an ARGB8888 image.
@@ -241,8 +243,8 @@ pub fn histogramSpecification_ARGB8888(
     dest: *const vImage_Buffer,
     desired_histogram: *const [4][*]const vImagePixelCount,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramSpecification_ARGB8888(src, dest, desired_histogram, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramSpecification_ARGB8888(src, dest, desired_histogram, flags));
 }
 
 /// Performs histogram specification on an ARGBFFFF image.
@@ -255,8 +257,8 @@ pub fn histogramSpecification_ARGBFFFF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageHistogramSpecification_ARGBFFFF(src, dest, tempBuffer, desired_histogram, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageHistogramSpecification_ARGBFFFF(src, dest, tempBuffer, desired_histogram, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Type-dispatched histogram specification.
@@ -293,13 +295,13 @@ pub fn histogramSpecification(comptime fmt: Format, args: switch (fmt) {
         maxVal: Pixel_F,
         flags: vImage_Flags = 0,
     },
-}) vImage_Error {
-    return switch (fmt) {
+}) VImageError!usize {
+    return check(switch (fmt) {
         .Planar8 => c.vImageHistogramSpecification_Planar8(args.src, args.dest, args.desired_histogram, args.flags),
         .PlanarF => c.vImageHistogramSpecification_PlanarF(args.src, args.dest, args.tempBuffer, args.desired_histogram, args.histogram_entries, args.minVal, args.maxVal, args.flags),
         .ARGB8888 => c.vImageHistogramSpecification_ARGB8888(args.src, args.dest, args.desired_histogram, args.flags),
         .ARGBFFFF => c.vImageHistogramSpecification_ARGBFFFF(args.src, args.dest, args.tempBuffer, args.desired_histogram, args.histogram_entries, args.minVal, args.maxVal, args.flags),
-    };
+    });
 }
 
 // ============================================================================
@@ -311,8 +313,8 @@ pub fn contrastStretch_Planar8(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageContrastStretch_Planar8(src, dest, flags);
+) VImageError!usize {
+    return check(c.vImageContrastStretch_Planar8(src, dest, flags));
 }
 
 /// Stretches the contrast of a PlanarF image.
@@ -324,8 +326,8 @@ pub fn contrastStretch_PlanarF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageContrastStretch_PlanarF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageContrastStretch_PlanarF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Stretches the contrast of an ARGB8888 image.
@@ -333,8 +335,8 @@ pub fn contrastStretch_ARGB8888(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageContrastStretch_ARGB8888(src, dest, flags);
+) VImageError!usize {
+    return check(c.vImageContrastStretch_ARGB8888(src, dest, flags));
 }
 
 /// Stretches the contrast of an ARGBFFFF image.
@@ -346,8 +348,8 @@ pub fn contrastStretch_ARGBFFFF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageContrastStretch_ARGBFFFF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageContrastStretch_ARGBFFFF(src, dest, tempBuffer, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Type-dispatched contrast stretch.
@@ -380,13 +382,13 @@ pub fn contrastStretch(comptime fmt: Format, args: switch (fmt) {
         maxVal: Pixel_F,
         flags: vImage_Flags = 0,
     },
-}) vImage_Error {
-    return switch (fmt) {
+}) VImageError!usize {
+    return check(switch (fmt) {
         .Planar8 => c.vImageContrastStretch_Planar8(args.src, args.dest, args.flags),
         .PlanarF => c.vImageContrastStretch_PlanarF(args.src, args.dest, args.tempBuffer, args.histogram_entries, args.minVal, args.maxVal, args.flags),
         .ARGB8888 => c.vImageContrastStretch_ARGB8888(args.src, args.dest, args.flags),
         .ARGBFFFF => c.vImageContrastStretch_ARGBFFFF(args.src, args.dest, args.tempBuffer, args.histogram_entries, args.minVal, args.maxVal, args.flags),
-    };
+    });
 }
 
 // ============================================================================
@@ -403,8 +405,8 @@ pub fn endsInContrastStretch_Planar8(
     percent_low: u32,
     percent_high: u32,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEndsInContrastStretch_Planar8(src, dest, percent_low, percent_high, flags);
+) VImageError!usize {
+    return check(c.vImageEndsInContrastStretch_Planar8(src, dest, percent_low, percent_high, flags));
 }
 
 /// Performs an ends-in contrast stretch on a PlanarF image.
@@ -418,8 +420,8 @@ pub fn endsInContrastStretch_PlanarF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEndsInContrastStretch_PlanarF(src, dest, tempBuffer, percent_low, percent_high, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageEndsInContrastStretch_PlanarF(src, dest, tempBuffer, percent_low, percent_high, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Performs an ends-in contrast stretch on an ARGB8888 image.
@@ -431,8 +433,8 @@ pub fn endsInContrastStretch_ARGB8888(
     percent_low: *const [4]c_uint,
     percent_high: *const [4]c_uint,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEndsInContrastStretch_ARGB8888(src, dest, percent_low, percent_high, flags);
+) VImageError!usize {
+    return check(c.vImageEndsInContrastStretch_ARGB8888(src, dest, percent_low, percent_high, flags));
 }
 
 /// Performs an ends-in contrast stretch on an ARGBFFFF image.
@@ -446,8 +448,8 @@ pub fn endsInContrastStretch_ARGBFFFF(
     minVal: Pixel_F,
     maxVal: Pixel_F,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageEndsInContrastStretch_ARGBFFFF(src, dest, tempBuffer, percent_low, percent_high, histogram_entries, minVal, maxVal, flags);
+) VImageError!usize {
+    return check(c.vImageEndsInContrastStretch_ARGBFFFF(src, dest, tempBuffer, percent_low, percent_high, histogram_entries, minVal, maxVal, flags));
 }
 
 /// Type-dispatched ends-in contrast stretch.
@@ -488,13 +490,13 @@ pub fn endsInContrastStretch(comptime fmt: Format, args: switch (fmt) {
         maxVal: Pixel_F,
         flags: vImage_Flags = 0,
     },
-}) vImage_Error {
-    return switch (fmt) {
+}) VImageError!usize {
+    return check(switch (fmt) {
         .Planar8 => c.vImageEndsInContrastStretch_Planar8(args.src, args.dest, args.percent_low, args.percent_high, args.flags),
         .PlanarF => c.vImageEndsInContrastStretch_PlanarF(args.src, args.dest, args.tempBuffer, args.percent_low, args.percent_high, args.histogram_entries, args.minVal, args.maxVal, args.flags),
         .ARGB8888 => c.vImageEndsInContrastStretch_ARGB8888(args.src, args.dest, args.percent_low, args.percent_high, args.flags),
         .ARGBFFFF => c.vImageEndsInContrastStretch_ARGBFFFF(args.src, args.dest, args.tempBuffer, args.percent_low, args.percent_high, args.histogram_entries, args.minVal, args.maxVal, args.flags),
-    };
+    });
 }
 
 // ============================================================================
@@ -515,7 +517,7 @@ test "histogramCalculation_Planar8 bins a known pixel-value distribution" {
     const b_src = bufFromBytes(&src, h, w, w);
 
     const err = histogramCalculation_Planar8(&b_src, &histogram, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(vImagePixelCount, 4), histogram[0]);
     try std.testing.expectEqual(@as(vImagePixelCount, 3), histogram[10]);
     try std.testing.expectEqual(@as(vImagePixelCount, 1), histogram[200]);
@@ -536,7 +538,7 @@ test "histogramCalculation_PlanarF bins pixel values into histogram_entries bins
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, w * @sizeOf(f32));
 
     const err = histogramCalculation_PlanarF(&b_src, &histogram, 10, 0.0, 100.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(vImagePixelCount, 1), histogram[0]);
     try std.testing.expectEqual(@as(vImagePixelCount, 1), histogram[5]);
     try std.testing.expectEqual(@as(vImagePixelCount, 2), histogram[9]); // 95 and clamped 200
@@ -556,7 +558,7 @@ test "histogramCalculation_ARGB8888 bins each channel independently, alpha-first
     const b_src = bufFromBytes(&src, h, w, row_bytes);
 
     const err = histogramCalculation_ARGB8888(&b_src, &histogram, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     // A channel (index 0 in memory) has both pixels at value 10.
     try std.testing.expectEqual(@as(vImagePixelCount, 2), hist_a[10]);
     // R channel (index 1) has one pixel each at 20 and 21 -- confirms the
@@ -579,7 +581,7 @@ test "histogramCalculation_ARGBFFFF bins each channel independently over [minVal
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, 4 * @sizeOf(f32));
 
     const err = histogramCalculation_ARGBFFFF(&b_src, &histogram, 10, 0.0, 100.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(vImagePixelCount, 1), hist_a[0]); // 1.0 -> bin 0
     try std.testing.expectEqual(@as(vImagePixelCount, 1), hist_r[5]); // 51.0 -> bin 5
     try std.testing.expectEqual(@as(vImagePixelCount, 1), hist_g[7]); // 76.0 -> bin 7
@@ -594,8 +596,8 @@ test "histogramCalculation dispatch wrapper matches direct Planar8/PlanarF calls
     var hist_dispatch: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
     const b1 = bufFromBytes(&src8, h, w, w);
     const b2 = bufFromBytes(&src8, h, w, w);
-    _ = histogramCalculation_Planar8(&b1, &hist_direct, 0);
-    _ = histogramCalculation(.Planar8, .{ .src = &b2, .histogram = &hist_dispatch });
+    _ = try histogramCalculation_Planar8(&b1, &hist_direct, 0);
+    _ = try histogramCalculation(.Planar8, .{ .src = &b2, .histogram = &hist_dispatch });
     try std.testing.expectEqualSlices(vImagePixelCount, &hist_direct, &hist_dispatch);
 
     var srcf = [_]f32{ 5.0, 95.0, 50.0, 200.0 };
@@ -603,12 +605,17 @@ test "histogramCalculation dispatch wrapper matches direct Planar8/PlanarF calls
     var hist_dispatch_f: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
     const bf1 = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, w * @sizeOf(f32));
     const bf2 = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, w * @sizeOf(f32));
-    _ = histogramCalculation_PlanarF(&bf1, &hist_direct_f, 10, 0.0, 100.0, 0);
-    _ = histogramCalculation(.PlanarF, .{ .src = &bf2, .histogram = &hist_dispatch_f, .histogram_entries = 10, .minVal = 0.0, .maxVal = 100.0 });
+    _ = try histogramCalculation_PlanarF(&bf1, &hist_direct_f, 10, 0.0, 100.0, 0);
+    _ = try histogramCalculation(.PlanarF, .{ .src = &bf2, .histogram = &hist_dispatch_f, .histogram_entries = 10, .minVal = 0.0, .maxVal = 100.0 });
     try std.testing.expectEqualSlices(vImagePixelCount, &hist_direct_f, &hist_dispatch_f);
 }
 
 test "equalization_Planar8 preserves relative order (monotonic transform)" {
+    // [characterization] This test pins behavior that Apple does not document
+    // and that was determined by running the real framework, not derived from
+    // a header. It asserts what macOS does today. If a future OS version
+    // changes it, this failing is the intended signal to re-verify and update
+    // the doc comment - it is NOT evidence that this binding regressed.
     // Equalization is a monotonic remapping of pixel values derived from the
     // cumulative histogram: a strictly larger input value can never map to a
     // strictly smaller output value. Build an image with 4 distinct ascending
@@ -621,7 +628,7 @@ test "equalization_Planar8 preserves relative order (monotonic transform)" {
     const b_dest = bufFromBytes(&dest, h, w, w);
 
     const err = equalization_Planar8(&b_src, &b_dest, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expect(dest[0] <= dest[1]);
     try std.testing.expect(dest[1] <= dest[2]);
     try std.testing.expect(dest[2] <= dest[3]);
@@ -646,7 +653,7 @@ test "equalization_PlanarF preserves relative order over an explicit range" {
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
 
     const err = equalization_PlanarF(&b_src, &b_dest, null, 256, 0.0, 100.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expect(dest[0] <= dest[1]);
     try std.testing.expect(dest[1] <= dest[2]);
     try std.testing.expect(dest[2] <= dest[3]);
@@ -669,7 +676,7 @@ test "equalization_ARGB8888 processes each channel independently, alpha-first" {
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
 
     const err = equalization_ARGB8888(&b_src, &b_dest, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     // Alpha channel (offset 0) should be monotonically increasing since its
     // input values are.
     try std.testing.expect(dest[0 * 4 + 0] <= dest[1 * 4 + 0]);
@@ -694,7 +701,7 @@ test "equalization_ARGBFFFF processes each channel independently" {
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, row_bytes);
 
     const err = equalization_ARGBFFFF(&b_src, &b_dest, null, 256, 0.0, 100.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expect(dest[0 * 4 + 0] <= dest[1 * 4 + 0]);
     try std.testing.expect(dest[1 * 4 + 0] <= dest[2 * 4 + 0]);
     try std.testing.expect(dest[2 * 4 + 0] <= dest[3 * 4 + 0]);
@@ -708,10 +715,10 @@ test "equalization dispatch wrapper matches direct Planar8/PlanarF calls" {
     var dest_dispatch = [_]u8{0} ** 4;
     const b1s = bufFromBytes(&src8, h, w, w);
     const b1d = bufFromBytes(&dest_direct, h, w, w);
-    _ = equalization_Planar8(&b1s, &b1d, 0);
+    _ = try equalization_Planar8(&b1s, &b1d, 0);
     const b2s = bufFromBytes(&src8, h, w, w);
     const b2d = bufFromBytes(&dest_dispatch, h, w, w);
-    _ = equalization(.Planar8, .{ .src = &b2s, .dest = &b2d });
+    _ = try equalization(.Planar8, .{ .src = &b2s, .dest = &b2d });
     try std.testing.expectEqualSlices(u8, &dest_direct, &dest_dispatch);
 }
 
@@ -731,7 +738,7 @@ test "histogramSpecification_Planar8 succeeds and preserves ordering with an asc
     const b_dest = bufFromBytes(&dest, h, w, w);
 
     const err = histogramSpecification_Planar8(&b_src, &b_dest, &desired, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expect(dest[0] <= dest[1]);
     try std.testing.expect(dest[1] <= dest[2]);
     try std.testing.expect(dest[2] <= dest[3]);
@@ -749,7 +756,7 @@ test "histogramSpecification_PlanarF succeeds and preserves ordering" {
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
 
     const err = histogramSpecification_PlanarF(&b_src, &b_dest, null, &desired, 256, 0.0, 100.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expect(dest[0] <= dest[1]);
     try std.testing.expect(dest[1] <= dest[2]);
     try std.testing.expect(dest[2] <= dest[3]);
@@ -768,7 +775,7 @@ test "histogramSpecification_ARGB8888/ARGBFFFF succeed with per-channel desired 
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
 
     const err = histogramSpecification_ARGB8888(&b_src, &b_dest, &per_channel, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     // Alpha channel: pixel0 A=10 < pixel1 A=200, ordering must be preserved.
     try std.testing.expect(dest[0] <= dest[4]);
 
@@ -778,7 +785,7 @@ test "histogramSpecification_ARGB8888/ARGBFFFF succeed with per-channel desired 
     const b_srcf = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, rbf);
     const b_destf = bufFromBytes(std.mem.sliceAsBytes(&destf), h, w, rbf);
     const errf = histogramSpecification_ARGBFFFF(&b_srcf, &b_destf, null, &per_channel, 256, 0.0, 100.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), errf);
+    try std.testing.expectEqual(@as(usize, 0), try errf);
     try std.testing.expect(destf[0] <= destf[4]);
 }
 
@@ -793,10 +800,10 @@ test "histogramSpecification dispatch wrapper matches direct Planar8 call" {
 
     const b1s = bufFromBytes(&src, h, w, w);
     const b1d = bufFromBytes(&dest_direct, h, w, w);
-    _ = histogramSpecification_Planar8(&b1s, &b1d, &desired, 0);
+    _ = try histogramSpecification_Planar8(&b1s, &b1d, &desired, 0);
     const b2s = bufFromBytes(&src, h, w, w);
     const b2d = bufFromBytes(&dest_dispatch, h, w, w);
-    _ = histogramSpecification(.Planar8, .{ .src = &b2s, .dest = &b2d, .desired_histogram = &desired });
+    _ = try histogramSpecification(.Planar8, .{ .src = &b2s, .dest = &b2d, .desired_histogram = &desired });
     try std.testing.expectEqualSlices(u8, &dest_direct, &dest_dispatch);
 }
 
@@ -809,7 +816,7 @@ test "contrastStretch_Planar8 widens a narrow input range toward [0,255]" {
     const b_dest = bufFromBytes(&dest, h, w, w);
 
     const err = contrastStretch_Planar8(&b_src, &b_dest, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     // Min input maps near 0, max input maps near 255; ordering preserved.
     try std.testing.expect(dest[0] < 20);
     try std.testing.expect(dest[3] > 235);
@@ -826,7 +833,7 @@ test "contrastStretch_PlanarF widens a narrow input range toward [minVal,maxVal]
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
 
     const err = contrastStretch_PlanarF(&b_src, &b_dest, null, 256, 0.0, 100.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expect(dest[0] < 10.0);
     try std.testing.expect(dest[3] > 90.0);
 }
@@ -847,7 +854,7 @@ test "contrastStretch_ARGB8888/ARGBFFFF widen per-channel, alpha-first" {
     const b_src = bufFromBytes(&src, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
     const err = contrastStretch_ARGB8888(&b_src, &b_dest, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expect(dest[0 * 4 + 0] < 20);
     try std.testing.expect(dest[3 * 4 + 0] > 235);
 }
@@ -860,14 +867,19 @@ test "contrastStretch dispatch wrapper matches direct Planar8 call" {
     var dest_dispatch = [_]u8{0} ** 4;
     const b1s = bufFromBytes(&src, h, w, w);
     const b1d = bufFromBytes(&dest_direct, h, w, w);
-    _ = contrastStretch_Planar8(&b1s, &b1d, 0);
+    _ = try contrastStretch_Planar8(&b1s, &b1d, 0);
     const b2s = bufFromBytes(&src, h, w, w);
     const b2d = bufFromBytes(&dest_dispatch, h, w, w);
-    _ = contrastStretch(.Planar8, .{ .src = &b2s, .dest = &b2d });
+    _ = try contrastStretch(.Planar8, .{ .src = &b2s, .dest = &b2d });
     try std.testing.expectEqualSlices(u8, &dest_direct, &dest_dispatch);
 }
 
 test "endsInContrastStretch_Planar8 with nonzero clipping percentage widens the range" {
+    // [characterization] This test pins behavior that Apple does not document
+    // and that was determined by running the real framework, not derived from
+    // a header. It asserts what macOS does today. If a future OS version
+    // changes it, this failing is the intended signal to re-verify and update
+    // the doc comment - it is NOT evidence that this binding regressed.
     // Runtime-verified: with only 4 distinct pixel values (too sparse for the
     // percentile-based algorithm) and percent_low=percent_high=0, the output is
     // NOT a full contrast stretch -- it is left unchanged. A 10-pixel sample
@@ -883,12 +895,17 @@ test "endsInContrastStretch_Planar8 with nonzero clipping percentage widens the 
     const b_dest = bufFromBytes(&dest, h, w, w);
 
     const err = endsInContrastStretch_Planar8(&b_src, &b_dest, 10, 10, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     const expected = [_]u8{ 0, 28, 56, 85, 113, 141, 170, 198, 226, 255 };
     try std.testing.expectEqualSlices(u8, &expected, &dest);
 }
 
 test "endsInContrastStretch_PlanarF with nonzero clipping percentage widens the range" {
+    // [characterization] This test pins behavior that Apple does not document
+    // and that was determined by running the real framework, not derived from
+    // a header. It asserts what macOS does today. If a future OS version
+    // changes it, this failing is the intended signal to re-verify and update
+    // the doc comment - it is NOT evidence that this binding regressed.
     const h = 1;
     const w = 10;
     var src = [_]f32{ 100, 105, 110, 115, 120, 125, 130, 135, 140, 145 };
@@ -898,7 +915,7 @@ test "endsInContrastStretch_PlanarF with nonzero clipping percentage widens the 
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
 
     const err = endsInContrastStretch_PlanarF(&b_src, &b_dest, null, 10, 10, 256, 0.0, 255.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     for (0..9) |i| try std.testing.expect(dest[i] <= dest[i + 1]);
     // Runtime-verified: for the PlanarF variant, the result lands in a
     // normalized [0,1] range regardless of the requested [minVal,maxVal]
@@ -928,7 +945,7 @@ test "endsInContrastStretch_ARGB8888/ARGBFFFF accept per-channel percent arrays"
     const percent_low: [4]c_uint = .{ 10, 0, 0, 0 };
     const percent_high: [4]c_uint = .{ 10, 0, 0, 0 };
     const err = endsInContrastStretch_ARGB8888(&b_src, &b_dest, &percent_low, &percent_high, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     // Alpha channel (offset 0), stretched with the same 10% inputs verified
     // above, must land on the same LUT.
     const expected = [_]u8{ 0, 28, 56, 85, 113, 141, 170, 198, 226, 255 };
@@ -949,7 +966,7 @@ test "endsInContrastStretch_ARGB8888/ARGBFFFF accept per-channel percent arrays"
     const b_srcf = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, rbf);
     const b_destf = bufFromBytes(std.mem.sliceAsBytes(&destf), h, w, rbf);
     const errf = endsInContrastStretch_ARGBFFFF(&b_srcf, &b_destf, null, &percent_low, &percent_high, 256, 0.0, 255.0, 0);
-    try std.testing.expectEqual(@as(vImage_Error, 0), errf);
+    try std.testing.expectEqual(@as(usize, 0), try errf);
     try std.testing.expect(destf[0 * 4 + 0] <= destf[9 * 4 + 0]);
 }
 
@@ -961,9 +978,9 @@ test "endsInContrastStretch dispatch wrapper matches direct Planar8 call" {
     var dest_dispatch = [_]u8{0} ** 4;
     const b1s = bufFromBytes(&src, h, w, w);
     const b1d = bufFromBytes(&dest_direct, h, w, w);
-    _ = endsInContrastStretch_Planar8(&b1s, &b1d, 0, 0, 0);
+    _ = try endsInContrastStretch_Planar8(&b1s, &b1d, 0, 0, 0);
     const b2s = bufFromBytes(&src, h, w, w);
     const b2d = bufFromBytes(&dest_dispatch, h, w, w);
-    _ = endsInContrastStretch(.Planar8, .{ .src = &b2s, .dest = &b2d, .percent_low = 0, .percent_high = 0 });
+    _ = try endsInContrastStretch(.Planar8, .{ .src = &b2s, .dest = &b2d, .percent_low = 0, .percent_high = 0 });
     try std.testing.expectEqualSlices(u8, &dest_direct, &dest_dispatch);
 }

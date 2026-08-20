@@ -6,7 +6,11 @@ pub const vImagePixelCount = types.vImagePixelCount;
 pub const vImage_Flags = types.vImage_Flags;
 pub const vImage_Error = types.vImage_Error;
 pub const Flags = types.Flags;
+pub const Options = types.Options;
+pub const Connectivity = types.Connectivity;
 pub const Error = types.Error;
+pub const VImageError = types.VImageError;
+pub const check = types.check;
 
 // -- Pixel types --
 pub const Pixel_8 = types.Pixel_8;

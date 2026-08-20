@@ -183,6 +183,50 @@ pub const vImage_MDTableUsageHint = enum(u32) {
 // Flags
 // ============================================================================
 
+/// vImage option flags as a bitfield you can compose by field name.
+///
+/// The C type is a bare `uint32_t`, so any integer at all type-checks - a
+/// typo'd or out-of-range value reaches vImage as an unrecognised bit rather
+/// than a compile error. `Options` makes each documented flag a named `bool`
+/// so the compiler rejects anything vImage does not define:
+///
+///     const flags = Options.of(.{ .edge_extend = true, .do_not_tile = true });
+///
+/// The bit positions match `vImage_Types.h`'s `kvImage*` constants exactly.
+pub const Options = packed struct(u32) {
+    leave_alpha_unchanged: bool = false, // kvImageLeaveAlphaUnchanged, 1 << 0
+    copy_in_place: bool = false, // kvImageCopyInPlace,          1 << 1
+    background_color_fill: bool = false, // kvImageBackgroundColorFill,  1 << 2
+    edge_extend: bool = false, // kvImageEdgeExtend,           1 << 3
+    do_not_tile: bool = false, // kvImageDoNotTile,            1 << 4
+    high_quality_resampling: bool = false, // kvImageHighQualityResampling,1 << 5
+    truncate_kernel: bool = false, // kvImageTruncateKernel,       1 << 6
+    get_temp_buffer_size: bool = false, // kvImageGetTempBufferSize,    1 << 7
+    print_diagnostics_to_console: bool = false, // kvImagePrintDiagnostics..., 1 << 8
+    do_not_allocate: bool = false, // kvImageNoAllocate,           1 << 9
+    hdr_content: bool = false, // kvImageHDRContent,           1 << 10
+    do_not_clamp: bool = false, // kvImageDoNotClamp,           1 << 11
+    use_fp16_accumulator: bool = false, // kvImageUseFP16Accumulator,   1 << 12
+    _padding: u19 = 0,
+
+    /// The raw `vImage_Flags` value to hand to a wrapper.
+    pub fn bits(self: Options) vImage_Flags {
+        return @bitCast(self);
+    }
+
+    /// Shorthand: `Options.of(.{ .edge_extend = true })` -> `vImage_Flags`.
+    pub fn of(opts: Options) vImage_Flags {
+        return opts.bits();
+    }
+
+    pub fn from(raw: vImage_Flags) Options {
+        return @bitCast(raw);
+    }
+};
+
+/// The raw `kvImage*` constants, kept for direct correspondence with
+/// `vImage_Types.h` and for callers holding flags as plain integers. Prefer
+/// `Options` in new code - it cannot express a bit vImage does not define.
 pub const Flags = struct {
     pub const kvImageNoFlags: vImage_Flags = 0;
     pub const kvImageLeaveAlphaUnchanged: vImage_Flags = 1;
@@ -198,6 +242,38 @@ pub const Flags = struct {
     pub const kvImageHDRContent: vImage_Flags = 1024;
     pub const kvImageDoNotClamp: vImage_Flags = 2048;
     pub const kvImageUseFP16Accumulator: vImage_Flags = 4096;
+};
+
+test "Options bit positions match the kvImage* constants exactly" {
+    const std = @import("std");
+    try std.testing.expectEqual(Flags.kvImageNoFlags, Options.of(.{}));
+    try std.testing.expectEqual(Flags.kvImageLeaveAlphaUnchanged, Options.of(.{ .leave_alpha_unchanged = true }));
+    try std.testing.expectEqual(Flags.kvImageCopyInPlace, Options.of(.{ .copy_in_place = true }));
+    try std.testing.expectEqual(Flags.kvImageBackgroundColorFill, Options.of(.{ .background_color_fill = true }));
+    try std.testing.expectEqual(Flags.kvImageEdgeExtend, Options.of(.{ .edge_extend = true }));
+    try std.testing.expectEqual(Flags.kvImageDoNotTile, Options.of(.{ .do_not_tile = true }));
+    try std.testing.expectEqual(Flags.kvImageHighQualityResampling, Options.of(.{ .high_quality_resampling = true }));
+    try std.testing.expectEqual(Flags.kvImageTruncateKernel, Options.of(.{ .truncate_kernel = true }));
+    try std.testing.expectEqual(Flags.kvImageGetTempBufferSize, Options.of(.{ .get_temp_buffer_size = true }));
+    try std.testing.expectEqual(Flags.kvImagePrintDiagnosticsToConsole, Options.of(.{ .print_diagnostics_to_console = true }));
+    try std.testing.expectEqual(Flags.kvImageNoAllocate, Options.of(.{ .do_not_allocate = true }));
+    try std.testing.expectEqual(Flags.kvImageHDRContent, Options.of(.{ .hdr_content = true }));
+    try std.testing.expectEqual(Flags.kvImageDoNotClamp, Options.of(.{ .do_not_clamp = true }));
+    try std.testing.expectEqual(Flags.kvImageUseFP16Accumulator, Options.of(.{ .use_fp16_accumulator = true }));
+
+    // Composition is a plain OR, and the round trip is lossless.
+    const combo = Options{ .edge_extend = true, .do_not_tile = true };
+    try std.testing.expectEqual(Flags.kvImageEdgeExtend | Flags.kvImageDoNotTile, combo.bits());
+    try std.testing.expectEqual(combo, Options.from(combo.bits()));
+}
+
+/// Neighbourhood connectivity for flood fill: only 4 and 8 are valid
+/// (Transform.h:1671-1690). The C parameter is a bare `int`.
+pub const Connectivity = enum(c_int) {
+    /// Orthogonal neighbours only (N/S/E/W).
+    four = 4,
+    /// Orthogonal plus diagonal neighbours.
+    eight = 8,
 };
 
 // ============================================================================
@@ -226,3 +302,105 @@ pub const Error = struct {
     pub const kvImageUnsupportedConversion: vImage_Error = -21783;
     pub const kvImageCoreVideoIsAbsent: vImage_Error = -21784;
 };
+
+// ============================================================================
+// Zig-native error handling
+// ============================================================================
+
+/// vImage's error codes as a Zig error set.
+///
+/// The C API reports failure through the `vImage_Error` (`ssize_t`) return
+/// value, which is easy to drop on the floor: ignoring it is silent and legal.
+/// Wrappers in this binding return `VImageError!usize` instead, so an
+/// unhandled failure is a compile error.
+pub const VImageError = error{
+    RoiLargerThanInputBuffer,
+    InvalidKernelSize,
+    InvalidEdgeStyle,
+    InvalidOffset_X,
+    InvalidOffset_Y,
+    MemoryAllocationError,
+    NullPointerArgument,
+    InvalidParameter,
+    BufferSizeMismatch,
+    UnknownFlagsBit,
+    InternalError,
+    InvalidRowBytes,
+    InvalidImageFormat,
+    ColorSyncIsAbsent,
+    OutOfPlaceOperationRequired,
+    InvalidImageObject,
+    InvalidCVImageFormat,
+    UnsupportedConversion,
+    CoreVideoIsAbsent,
+    /// A negative code vImage returned that is not in the documented set.
+    Unknown,
+};
+
+/// Converts a raw `vImage_Error` into a Zig error union.
+///
+/// The success test is `>= 0`, NOT `== 0`. When a function is called with
+/// `Flags.kvImageGetTempBufferSize`, vImage returns the required temp-buffer
+/// size **through the same return slot** as a positive value - so an
+/// `== 0`-based check would misreport a successful size query as a failure.
+/// Only negative values are errors.
+///
+/// The returned `usize` is therefore 0 for an ordinary successful call, and
+/// the required temp-buffer size in bytes for a `kvImageGetTempBufferSize`
+/// query.
+pub fn check(e: vImage_Error) VImageError!usize {
+    if (e >= 0) return @intCast(e);
+    return switch (e) {
+        Error.kvImageRoiLargerThanInputBuffer => VImageError.RoiLargerThanInputBuffer,
+        Error.kvImageInvalidKernelSize => VImageError.InvalidKernelSize,
+        Error.kvImageInvalidEdgeStyle => VImageError.InvalidEdgeStyle,
+        Error.kvImageInvalidOffset_X => VImageError.InvalidOffset_X,
+        Error.kvImageInvalidOffset_Y => VImageError.InvalidOffset_Y,
+        Error.kvImageMemoryAllocationError => VImageError.MemoryAllocationError,
+        Error.kvImageNullPointerArgument => VImageError.NullPointerArgument,
+        Error.kvImageInvalidParameter => VImageError.InvalidParameter,
+        Error.kvImageBufferSizeMismatch => VImageError.BufferSizeMismatch,
+        Error.kvImageUnknownFlagsBit => VImageError.UnknownFlagsBit,
+        Error.kvImageInternalError => VImageError.InternalError,
+        Error.kvImageInvalidRowBytes => VImageError.InvalidRowBytes,
+        Error.kvImageInvalidImageFormat => VImageError.InvalidImageFormat,
+        Error.kvImageColorSyncIsAbsent => VImageError.ColorSyncIsAbsent,
+        Error.kvImageOutOfPlaceOperationRequired => VImageError.OutOfPlaceOperationRequired,
+        Error.kvImageInvalidImageObject => VImageError.InvalidImageObject,
+        Error.kvImageInvalidCVImageFormat => VImageError.InvalidCVImageFormat,
+        Error.kvImageUnsupportedConversion => VImageError.UnsupportedConversion,
+        Error.kvImageCoreVideoIsAbsent => VImageError.CoreVideoIsAbsent,
+        else => VImageError.Unknown,
+    };
+}
+
+test "check maps negative codes to errors and treats >= 0 as success" {
+    const std = @import("std");
+    try std.testing.expectEqual(@as(usize, 0), try check(0));
+    // kvImageGetTempBufferSize makes vImage return a SIZE through the error
+    // slot. An `== 0` success test would report this as a failure.
+    try std.testing.expectEqual(@as(usize, 4096), try check(4096));
+    try std.testing.expectError(VImageError.BufferSizeMismatch, check(-21774));
+    try std.testing.expectError(VImageError.NullPointerArgument, check(-21772));
+    try std.testing.expectError(VImageError.Unknown, check(-1));
+}
+
+test "a real vImage failure surfaces as a Zig error, not a dropped return value" {
+    const std = @import("std");
+    const alpha = @import("alpha.zig");
+
+    // A source buffer smaller than the destination ROI: vImage rejects this
+    // with kvImageRoiLargerThanInputBuffer (-21766). Before wrappers returned
+    // an error union, this code was silently legal - the caller could ignore
+    // the return value entirely and go on to read a dest buffer vImage never
+    // touched.
+    var top = [_]u8{0} ** 4;
+    var bottom = [_]u8{0} ** 16;
+    var dest = [_]u8{0} ** 16;
+    const b_top = vImage_Buffer{ .data = &top, .height = 1, .width = 1, .rowBytes = 4 };
+    const b_bottom = vImage_Buffer{ .data = &bottom, .height = 2, .width = 2, .rowBytes = 8 };
+    const b_dest = vImage_Buffer{ .data = &dest, .height = 2, .width = 2, .rowBytes = 8 };
+
+    const result = alpha.alphaBlendARGB(u8, &b_top, &b_bottom, &b_dest, Flags.kvImageNoFlags);
+    try std.testing.expectError(VImageError.RoiLargerThanInputBuffer, result);
+}

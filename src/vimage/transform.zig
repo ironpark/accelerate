@@ -1,9 +1,12 @@
 const std = @import("std");
 const types = @import("types.zig");
+const Connectivity = types.Connectivity;
 const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
+const VImageError = types.VImageError;
+const check = types.check;
 const vImage_Flags = types.vImage_Flags;
 const vImagePixelCount = types.vImagePixelCount;
 const GammaFunction = types.GammaFunction;
@@ -34,11 +37,11 @@ pub fn matrixMultiplyPlanar(
     pre_bias: ?[*]const if (T == f32) f32 else i16,
     post_bias: ?[*]const if (T == f32) f32 else i32,
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     const src_planes: u32 = @intCast(srcs.len);
     const dest_planes: u32 = @intCast(dests.len);
     switch (T) {
-        f32 => return c.vImageMatrixMultiply_PlanarF(
+        f32 => return check(c.vImageMatrixMultiply_PlanarF(
             srcs.ptr,
             dests.ptr,
             src_planes,
@@ -47,8 +50,8 @@ pub fn matrixMultiplyPlanar(
             pre_bias,
             post_bias,
             flags,
-        ),
-        i16 => return c.vImageMatrixMultiply_Planar8(
+        )),
+        i16 => return check(c.vImageMatrixMultiply_Planar8(
             srcs.ptr,
             dests.ptr,
             src_planes,
@@ -58,7 +61,7 @@ pub fn matrixMultiplyPlanar(
             pre_bias,
             post_bias,
             flags,
-        ),
+        )),
         else => @compileError("matrixMultiplyPlanar requires f32 (PlanarF) or i16 (Planar8) matrix element type"),
     }
 }
@@ -72,8 +75,8 @@ pub fn matrixMultiplyPlanar16S(
     pre_bias: ?[*]const i16,
     post_bias: ?[*]const i32,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageMatrixMultiply_Planar16S(
+) VImageError!usize {
+    return check(c.vImageMatrixMultiply_Planar16S(
         srcs.ptr,
         dests.ptr,
         @intCast(srcs.len),
@@ -83,7 +86,7 @@ pub fn matrixMultiplyPlanar16S(
         pre_bias,
         post_bias,
         flags,
-    );
+    ));
 }
 
 // ============================================================================
@@ -103,10 +106,10 @@ pub fn matrixMultiplyARGB(
     pre_bias: if (T == f32) ?*const [4]f32 else ?*const [4]i16,
     post_bias: if (T == f32) ?*const [4]f32 else ?*const [4]i32,
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     switch (T) {
-        f32 => return c.vImageMatrixMultiply_ARGBFFFF(src, dest, matrix, pre_bias, post_bias, flags),
-        i16 => return c.vImageMatrixMultiply_ARGB8888(src, dest, matrix, divisor, pre_bias, post_bias, flags),
+        f32 => return check(c.vImageMatrixMultiply_ARGBFFFF(src, dest, matrix, pre_bias, post_bias, flags)),
+        i16 => return check(c.vImageMatrixMultiply_ARGB8888(src, dest, matrix, divisor, pre_bias, post_bias, flags)),
         else => @compileError("matrixMultiplyARGB requires f32 (ARGBFFFF) or i16 (ARGB8888) matrix element type"),
     }
 }
@@ -124,10 +127,10 @@ pub fn matrixMultiplyARGBToPlanar(
     pre_bias: if (T == f32) ?*const [4]f32 else ?*const [4]i16,
     post_bias: if (T == f32) f32 else i32,
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     switch (T) {
-        f32 => return c.vImageMatrixMultiply_ARGBFFFFToPlanarF(src, dest, matrix, pre_bias, post_bias, flags),
-        i16 => return c.vImageMatrixMultiply_ARGB8888ToPlanar8(src, dest, matrix, divisor, pre_bias, post_bias, flags),
+        f32 => return check(c.vImageMatrixMultiply_ARGBFFFFToPlanarF(src, dest, matrix, pre_bias, post_bias, flags)),
+        i16 => return check(c.vImageMatrixMultiply_ARGB8888ToPlanar8(src, dest, matrix, divisor, pre_bias, post_bias, flags)),
         else => @compileError("matrixMultiplyARGBToPlanar requires f32 or i16 matrix element type"),
     }
 }
@@ -163,18 +166,18 @@ pub fn destroyGammaFunction(f: GammaFunction) void {
 }
 
 /// Apply a gamma curve to a PlanarF image.
-pub fn gammaPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, gamma: GammaFunction, flags: vImage_Flags) vImage_Error {
-    return c.vImageGamma_PlanarF(src, dest, gamma, flags);
+pub fn gammaPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, gamma: GammaFunction, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageGamma_PlanarF(src, dest, gamma, flags));
 }
 
 /// Apply a gamma curve converting Planar8 to PlanarF.
-pub fn gammaPlanar8toPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, gamma: GammaFunction, flags: vImage_Flags) vImage_Error {
-    return c.vImageGamma_Planar8toPlanarF(src, dest, gamma, flags);
+pub fn gammaPlanar8toPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, gamma: GammaFunction, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageGamma_Planar8toPlanarF(src, dest, gamma, flags));
 }
 
 /// Apply a gamma curve converting PlanarF to Planar8.
-pub fn gammaPlanarFtoPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, gamma: GammaFunction, flags: vImage_Flags) vImage_Error {
-    return c.vImageGamma_PlanarFtoPlanar8(src, dest, gamma, flags);
+pub fn gammaPlanarFtoPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, gamma: GammaFunction, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageGamma_PlanarFtoPlanar8(src, dest, gamma, flags));
 }
 
 // ============================================================================
@@ -195,21 +198,21 @@ pub fn piecewiseGamma(
     linear_coeffs: *const [2]f32,
     boundary: if (Src == f32) f32 else if (Src == Pixel_16S) Pixel_16S else Pixel_8,
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     if (Src == f32 and Dst == f32) {
-        return c.vImagePiecewiseGamma_PlanarF(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags);
+        return check(c.vImagePiecewiseGamma_PlanarF(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags));
     } else if (Src == f32 and Dst == u8) {
-        return c.vImagePiecewiseGamma_PlanarFtoPlanar8(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags);
+        return check(c.vImagePiecewiseGamma_PlanarFtoPlanar8(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags));
     } else if (Src == u8 and Dst == u8) {
-        return c.vImagePiecewiseGamma_Planar8(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags);
+        return check(c.vImagePiecewiseGamma_Planar8(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags));
     } else if (Src == u8 and Dst == f32) {
-        return c.vImagePiecewiseGamma_Planar8toPlanarF(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags);
+        return check(c.vImagePiecewiseGamma_Planar8toPlanarF(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags));
     } else if (Src == u8 and Dst == Pixel_16S) {
-        return c.vImagePiecewiseGamma_Planar8toPlanar16Q12(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags);
+        return check(c.vImagePiecewiseGamma_Planar8toPlanar16Q12(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags));
     } else if (Src == Pixel_16S and Dst == Pixel_16S) {
-        return c.vImagePiecewiseGamma_Planar16Q12(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags);
+        return check(c.vImagePiecewiseGamma_Planar16Q12(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags));
     } else if (Src == Pixel_16S and Dst == u8) {
-        return c.vImagePiecewiseGamma_Planar16Q12toPlanar8(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags);
+        return check(c.vImagePiecewiseGamma_Planar16Q12toPlanar8(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags));
     } else {
         @compileError("piecewiseGamma: unsupported Src/Dst combination");
     }
@@ -225,10 +228,10 @@ pub fn symmetricPiecewiseGamma(
     linear_coeffs: *const [2]f32,
     boundary: if (T == f32) f32 else Pixel_16S,
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     switch (T) {
-        f32 => return c.vImageSymmetricPiecewiseGamma_PlanarF(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags),
-        Pixel_16S => return c.vImageSymmetricPiecewiseGamma_Planar16Q12(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags),
+        f32 => return check(c.vImageSymmetricPiecewiseGamma_PlanarF(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags)),
+        Pixel_16S => return check(c.vImageSymmetricPiecewiseGamma_Planar16Q12(src, dest, exponential_coeffs, gamma, linear_coeffs, boundary, flags)),
         else => @compileError("symmetricPiecewiseGamma requires f32 (PlanarF) or i16 (Planar16Q12)"),
     }
 }
@@ -251,13 +254,13 @@ pub fn piecewisePolynomial(
     order: u32,
     log2segments: u32,
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     if (Src == f32 and Dst == f32) {
-        return c.vImagePiecewisePolynomial_PlanarF(src, dest, coefficients, boundaries, order, log2segments, flags);
+        return check(c.vImagePiecewisePolynomial_PlanarF(src, dest, coefficients, boundaries, order, log2segments, flags));
     } else if (Src == u8 and Dst == f32) {
-        return c.vImagePiecewisePolynomial_Planar8toPlanarF(src, dest, coefficients, boundaries, order, log2segments, flags);
+        return check(c.vImagePiecewisePolynomial_Planar8toPlanarF(src, dest, coefficients, boundaries, order, log2segments, flags));
     } else if (Src == f32 and Dst == u8) {
-        return c.vImagePiecewisePolynomial_PlanarFtoPlanar8(src, dest, coefficients, boundaries, order, log2segments, flags);
+        return check(c.vImagePiecewisePolynomial_PlanarFtoPlanar8(src, dest, coefficients, boundaries, order, log2segments, flags));
     } else {
         @compileError("piecewisePolynomial: unsupported Src/Dst combination (use f32/f32, u8/f32, or f32/u8)");
     }
@@ -273,8 +276,8 @@ pub fn symmetricPiecewisePolynomial(
     order: u32,
     log2segments: u32,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageSymmetricPiecewisePolynomial_PlanarF(src, dest, coefficients, boundaries, order, log2segments, flags);
+) VImageError!usize {
+    return check(c.vImageSymmetricPiecewisePolynomial_PlanarF(src, dest, coefficients, boundaries, order, log2segments, flags));
 }
 
 /// Evaluate piecewise rational expressions on PlanarF data.
@@ -290,8 +293,8 @@ pub fn piecewiseRational(
     bottom_order: u32,
     log2segments: u32,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImagePiecewiseRational_PlanarF(src, dest, top_coefficients, bottom_coefficients, boundaries, top_order, bottom_order, log2segments, flags);
+) VImageError!usize {
+    return check(c.vImagePiecewiseRational_PlanarF(src, dest, top_coefficients, bottom_coefficients, boundaries, top_order, bottom_order, log2segments, flags));
 }
 
 // ============================================================================
@@ -299,48 +302,48 @@ pub fn piecewiseRational(
 // ============================================================================
 
 /// Simple 8-bit to 16-bit lookup table.
-pub fn lookupTable_Planar8toPlanar16(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_16U, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_Planar8toPlanar16(src, dest, table, flags);
+pub fn lookupTable_Planar8toPlanar16(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_16U, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_Planar8toPlanar16(src, dest, table, flags));
 }
 
 /// 8-bit to 24-bit (3-channel 8-bit) lookup table.
-pub fn lookupTable_Planar8toPlanar24(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]u32, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_Planar8toPlanar24(src, dest, table, flags);
+pub fn lookupTable_Planar8toPlanar24(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]u32, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_Planar8toPlanar24(src, dest, table, flags));
 }
 
 /// 8-bit to 48-bit (3-channel 16-bit) lookup table.
-pub fn lookupTable_Planar8toPlanar48(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]u64, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_Planar8toPlanar48(src, dest, table, flags);
+pub fn lookupTable_Planar8toPlanar48(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]u64, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_Planar8toPlanar48(src, dest, table, flags));
 }
 
 /// 8-bit to 96-bit (3-channel float) lookup table. Each entry is [4]f32; only the last 3 channels are written.
-pub fn lookupTable_Planar8toPlanar96(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_FFFF, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_Planar8toPlanar96(src, dest, table, flags);
+pub fn lookupTable_Planar8toPlanar96(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_FFFF, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_Planar8toPlanar96(src, dest, table, flags));
 }
 
 /// 8-bit to 128-bit (4-channel float) lookup table.
-pub fn lookupTable_Planar8toPlanar128(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_FFFF, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_Planar8toPlanar128(src, dest, table, flags);
+pub fn lookupTable_Planar8toPlanar128(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_FFFF, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_Planar8toPlanar128(src, dest, table, flags));
 }
 
 /// 8-bit to float lookup table.
-pub fn lookupTable_Planar8toPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_F, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_Planar8toPlanarF(src, dest, table, flags);
+pub fn lookupTable_Planar8toPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_F, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_Planar8toPlanarF(src, dest, table, flags));
 }
 
 /// Float to 8-bit lookup table. Input floats in [0,1] are quantised to 4096 entries.
-pub fn lookupTable_PlanarFtoPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [4096]Pixel_8, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_PlanarFtoPlanar8(src, dest, table, flags);
+pub fn lookupTable_PlanarFtoPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [4096]Pixel_8, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_PlanarFtoPlanar8(src, dest, table, flags));
 }
 
 /// 8-bit to 64-bit unsigned lookup table.
-pub fn lookupTable_8to64U(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]u64, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_8to64U(src, dest, table, flags);
+pub fn lookupTable_8to64U(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]u64, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_8to64U(src, dest, table, flags));
 }
 
 /// 16-bit to 16-bit lookup table (65536 entries).
-pub fn lookupTable_Planar16(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [0x10000]Pixel_16U, flags: vImage_Flags) vImage_Error {
-    return c.vImageLookupTable_Planar16(src, dest, table, flags);
+pub fn lookupTable_Planar16(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [0x10000]Pixel_16U, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageLookupTable_Planar16(src, dest, table, flags));
 }
 
 /// Interpolated float lookup table. The table spans [minFloat, maxFloat] with linear interpolation
@@ -353,8 +356,8 @@ pub fn interpolatedLookupTable_PlanarF(
     max_float: f32,
     min_float: f32,
     flags: vImage_Flags,
-) vImage_Error {
-    return c.vImageInterpolatedLookupTable_PlanarF(src, dest, table, table_entries, max_float, min_float, flags);
+) VImageError!usize {
+    return check(c.vImageInterpolatedLookupTable_PlanarF(src, dest, table, table_entries, max_float, min_float, flags));
 }
 
 // ============================================================================
@@ -391,13 +394,13 @@ pub fn multidimensionalTableCreate(
 }
 
 /// Increment the retain count of a multidimensional table.
-pub fn multidimensionalTableRetain(table: vImage_MultidimensionalTable) vImage_Error {
-    return c.vImageMultidimensionalTable_Retain(table);
+pub fn multidimensionalTableRetain(table: vImage_MultidimensionalTable) VImageError!usize {
+    return check(c.vImageMultidimensionalTable_Retain(table));
 }
 
 /// Decrement the retain count; the table is freed when the count reaches 0.
-pub fn multidimensionalTableRelease(table: vImage_MultidimensionalTable) vImage_Error {
-    return c.vImageMultidimensionalTable_Release(table);
+pub fn multidimensionalTableRelease(table: vImage_MultidimensionalTable) VImageError!usize {
+    return check(c.vImageMultidimensionalTable_Release(table));
 }
 
 /// Apply a multidimensional interpolated lookup table.
@@ -409,10 +412,10 @@ pub fn multiDimensionalInterpolatedLookupTable(
     table: vImage_MultidimensionalTable,
     method: InterpolationMethod,
     flags: vImage_Flags,
-) vImage_Error {
+) VImageError!usize {
     switch (T) {
-        f32 => return c.vImageMultiDimensionalInterpolatedLookupTable_PlanarF(srcs.ptr, dests.ptr, temp_buffer, table, @intFromEnum(method), flags),
-        Pixel_16S => return c.vImageMultiDimensionalInterpolatedLookupTable_Planar16Q12(srcs.ptr, dests.ptr, temp_buffer, table, @intFromEnum(method), flags),
+        f32 => return check(c.vImageMultiDimensionalInterpolatedLookupTable_PlanarF(srcs.ptr, dests.ptr, temp_buffer, table, @intFromEnum(method), flags)),
+        Pixel_16S => return check(c.vImageMultiDimensionalInterpolatedLookupTable_Planar16Q12(srcs.ptr, dests.ptr, temp_buffer, table, @intFromEnum(method), flags)),
         else => @compileError("multiDimensionalInterpolatedLookupTable requires f32 (PlanarF) or i16 (Planar16Q12)"),
     }
 }
@@ -422,23 +425,23 @@ pub fn multiDimensionalInterpolatedLookupTable(
 // ============================================================================
 
 /// Fill a connected component of a Planar8 image with a new value.
-pub fn floodFill_Planar8(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_8, connectivity: c_int, flags: vImage_Flags) vImage_Error {
-    return c.vImageFloodFill_Planar8(src_dest, null, seed_x, seed_y, new_value, connectivity, flags);
+pub fn floodFill_Planar8(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_8, connectivity: Connectivity, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageFloodFill_Planar8(src_dest, null, seed_x, seed_y, new_value, @intFromEnum(connectivity), flags));
 }
 
 /// Fill a connected component of a Planar16U image with a new value.
-pub fn floodFill_Planar16U(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error {
-    return c.vImageFloodFill_Planar16U(src_dest, null, seed_x, seed_y, new_value, connectivity, flags);
+pub fn floodFill_Planar16U(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_16U, connectivity: Connectivity, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageFloodFill_Planar16U(src_dest, null, seed_x, seed_y, new_value, @intFromEnum(connectivity), flags));
 }
 
 /// Fill a connected component of an ARGB8888 image with a new value.
-pub fn floodFill_ARGB8888(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_8888, connectivity: c_int, flags: vImage_Flags) vImage_Error {
-    return c.vImageFloodFill_ARGB8888(src_dest, null, seed_x, seed_y, &new_value, connectivity, flags);
+pub fn floodFill_ARGB8888(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_8888, connectivity: Connectivity, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageFloodFill_ARGB8888(src_dest, null, seed_x, seed_y, &new_value, @intFromEnum(connectivity), flags));
 }
 
 /// Fill a connected component of an ARGB16U image with a new value.
-pub fn floodFill_ARGB16U(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_ARGB_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error {
-    return c.vImageFloodFill_ARGB16U(src_dest, null, seed_x, seed_y, &new_value, connectivity, flags);
+pub fn floodFill_ARGB16U(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_ARGB_16U, connectivity: Connectivity, flags: vImage_Flags) VImageError!usize {
+    return check(c.vImageFloodFill_ARGB16U(src_dest, null, seed_x, seed_y, &new_value, @intFromEnum(connectivity), flags));
 }
 
 // ============================================================================
@@ -498,7 +501,7 @@ test "matrixMultiplyPlanar f32: matrix is row-major [src_planes][dest_planes], p
     const dests = [_]*const vImage_Buffer{ &dest0.buf, &dest1.buf, &dest2.buf };
     const matrix = [_]f32{ 1, 2, 3, 0, 0, 1 };
     const err = matrixMultiplyPlanar(f32, &srcs, &dests, &matrix, {}, null, null, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 10), readPlanarF(dest0.buf, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(f32, 20), readPlanarF(dest1.buf, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(f32, 130), readPlanarF(dest2.buf, 0, 0), 1e-4);
@@ -518,7 +521,7 @@ test "matrixMultiplyPlanar i16 (Planar8): applies divisor and matrix row-major l
     // dest0 = (srcA*3 + srcB*1) / divisor = (30+20)/5 = 10
     const matrix = [_]i16{ 3, 1 };
     const err = matrixMultiplyPlanar(i16, &srcs, &dests, &matrix, 5, null, null, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 10), readPlanar8(dest0.buf, 0, 0));
 }
 
@@ -546,7 +549,7 @@ test "matrixMultiplyPlanar16S: smoke test with divisor, i16 Planar16S pixel form
     const dests = [_]*const vImage_Buffer{&dest_buf};
     const matrix = [_]i16{ 3, 1 }; // dest = (A*3 + B*1) / divisor = (30+20)/5 = 10
     const err = matrixMultiplyPlanar16S(&srcs, &dests, &matrix, 5, null, null, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(i16, 10), @as(*i16, @ptrCast(@alignCast(dest_mem.ptr))).*);
 }
 
@@ -575,7 +578,7 @@ test "matrixMultiplyARGB i16 (ARGB8888): row-major [srcChannel][destChannel], A/
         0, 0, 0, 1, // srcB row -> destB
     };
     const err = matrixMultiplyARGB(i16, &src_buf, &dest_buf, &matrix, 1, null, null, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 20, 10, 30, 40 }, dest_mem[0..4]);
 }
 
@@ -602,7 +605,7 @@ test "matrixMultiplyARGB f32 (ARGBFFFF): smoke test, identity matrix reproduces 
         0, 0, 0, 1,
     };
     const err = matrixMultiplyARGB(f32, &src_buf, &dest_buf, &identity, {}, null, null, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 1), dest_mem[0], 1e-5);
     try std.testing.expectApproxEqAbs(@as(f32, 2), dest_mem[1], 1e-5);
     try std.testing.expectApproxEqAbs(@as(f32, 3), dest_mem[2], 1e-5);
@@ -625,7 +628,7 @@ test "matrixMultiplyARGBToPlanar i16: 1x4 matrix picks out one channel, confirmi
     // matrix = [0,1,0,0] selects the R channel (row index 1).
     const matrix = [4]i16{ 0, 1, 0, 0 };
     const err = matrixMultiplyARGBToPlanar(i16, &src_buf, &dest.buf, &matrix, 1, null, 0, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 20), readPlanar8(dest.buf, 0, 0));
 }
 
@@ -646,7 +649,7 @@ test "createGammaFunction/gammaPlanarF: computes pow(x, gamma), not pow(x, 1/gam
     defer allocator.free(dest.mem);
 
     const err = gammaPlanarF(&src.buf, &dest.buf, gamma_fn, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 0.25), readPlanarF(dest.buf, 0, 0), 1e-3);
 }
 
@@ -661,14 +664,14 @@ test "gammaPlanar8toPlanarF / gammaPlanarFtoPlanar8: round trip is approximately
     var midF = try makePlanarFBuffer(allocator, 1, 1, 2, &[_]f32{0});
     defer allocator.free(midF.mem);
     const err1 = gammaPlanar8toPlanarF(&src8.buf, &midF.buf, gamma_fn, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err1);
+    try std.testing.expectEqual(@as(usize, 0), try err1);
     // Planar8's normalized value for 128 is 128/255.
     try std.testing.expectApproxEqAbs(@as(f32, 128.0 / 255.0), readPlanarF(midF.buf, 0, 0), 1e-3);
 
     var back8 = try makePlanar8Buffer(allocator, 1, 1, 3, &[_]u8{0});
     defer allocator.free(back8.mem);
     const err2 = gammaPlanarFtoPlanar8(&midF.buf, &back8.buf, gamma_fn, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err2);
+    try std.testing.expectEqual(@as(usize, 0), try err2);
     try std.testing.expectEqual(@as(u8, 128), readPlanar8(back8.buf, 0, 0));
 }
 
@@ -685,7 +688,7 @@ test "piecewiseGamma f32/f32: linear branch below boundary, exponential branch a
     const exp_coeffs = [3]f32{ 1, 0, 0 };
     const lin_coeffs = [2]f32{ 2, 1 };
     const err = piecewiseGamma(f32, f32, &src.buf, &dest.buf, &exp_coeffs, 2.0, &lin_coeffs, 0.5, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 1.2), readPlanarF(dest.buf, 0, 0), 1e-3);
     try std.testing.expectApproxEqAbs(@as(f32, 0.25), readPlanarF(dest.buf, 0, 1), 1e-3);
 }
@@ -699,7 +702,7 @@ test "symmetricPiecewiseGamma f32: symmetric about the origin, f(-x) == -f(x)" {
     const exp_coeffs = [3]f32{ 1, 0, 0 };
     const lin_coeffs = [2]f32{ 1, 0 };
     const err = symmetricPiecewiseGamma(f32, &src.buf, &dest.buf, &exp_coeffs, 2.0, &lin_coeffs, 0.5, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     const pos = readPlanarF(dest.buf, 0, 0);
     const neg = readPlanarF(dest.buf, 0, 1);
     try std.testing.expectApproxEqAbs(pos, -neg, 1e-3);
@@ -719,7 +722,7 @@ test "piecewisePolynomial PlanarF/PlanarF: order-1 (linear) polynomial reproduce
     const coeffs = [1][*]const f32{seg0[0..].ptr};
     const boundaries = [2]f32{ 0.0, 1.0 };
     const err = piecewisePolynomial(f32, f32, &src.buf, &dest.buf, coeffs[0..].ptr, boundaries[0..].ptr, 1, 0, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 3), readPlanarF(dest.buf, 0, 0), 1e-3); // p(0)=3
     try std.testing.expectApproxEqAbs(@as(f32, 8), readPlanarF(dest.buf, 0, 1), 1e-3); // p(1)=3+5=8
 }
@@ -736,7 +739,7 @@ test "symmetricPiecewisePolynomial: p(|x|)*sign(x), matching this file's own doc
     const coeffs = [1][*]const f32{seg0[0..].ptr};
     const boundaries = [2]f32{ 0.0, 1.0 };
     const err = symmetricPiecewisePolynomial(&src.buf, &dest.buf, coeffs[0..].ptr, boundaries[0..].ptr, 1, 0, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     const pos = readPlanarF(dest.buf, 0, 0);
     const neg = readPlanarF(dest.buf, 0, 1);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), pos, 1e-3);
@@ -756,7 +759,7 @@ test "piecewiseRational: (top polynomial)/(bottom polynomial), degenerate bottom
     const bottom_coeffs = [1][*]const f32{bottom_seg0[0..].ptr};
     const boundaries = [2]f32{ 0.0, 10.0 };
     const err = piecewiseRational(&src.buf, &dest.buf, top_coeffs[0..].ptr, bottom_coeffs[0..].ptr, boundaries[0..].ptr, 1, 0, 0, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 7.0), readPlanarF(dest.buf, 0, 0), 1e-3);
 }
 
@@ -772,7 +775,7 @@ test "lookupTable_Planar8toPlanar16: dest[i] = table[src[i]] (direct indexed loo
     var table: [256]u16 = [_]u16{0} ** 256;
     table[5] = 1234;
     const err = lookupTable_Planar8toPlanar16(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u16, 1234), dest_mem[0]);
 }
 
@@ -786,7 +789,7 @@ test "lookupTable_PlanarFtoPlanar8: smoke test, error == 0 and produces a plausi
     var table: [4096]u8 = [_]u8{0} ** 4096;
     table[2048] = 200; // roughly the middle entry, corresponding to input ~0.5
     const err = lookupTable_PlanarFtoPlanar8(&src.buf, &dest.buf, &table, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 200), readPlanar8(dest.buf, 0, 0));
 }
 
@@ -800,7 +803,7 @@ test "lookupTable_8to64U: dest[i] = table[src[i]]" {
     var table: [256]u64 = [_]u64{0} ** 256;
     table[9] = 0xDEADBEEF;
     const err = lookupTable_8to64U(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u64, 0xDEADBEEF), dest_mem[0]);
 }
 
@@ -819,7 +822,7 @@ test "lookupTable_Planar16: dest[i] = table[src[i]] for a 16-bit source" {
     @memset(table, 0);
     table[300] = 42;
     const err = lookupTable_Planar16(&src_buf, &dest_buf, table[0..0x10000], Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u16, 42), dest_mem[0]);
 }
 
@@ -833,29 +836,29 @@ test "lookupTable_Planar8toPlanar24/48/96/128/PlanarF: smoke tests, error == 0" 
         const dest_mem = try allocator.alloc(u32, 1);
         defer allocator.free(dest_mem);
         const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = @sizeOf(u32) };
-        try std.testing.expectEqual(@as(vImage_Error, 0), lookupTable_Planar8toPlanar24(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags));
+        _ = try lookupTable_Planar8toPlanar24(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     }
     {
         var table: [256]u64 = [_]u64{0} ** 256;
         const dest_mem = try allocator.alloc(u64, 1);
         defer allocator.free(dest_mem);
         const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = @sizeOf(u64) };
-        try std.testing.expectEqual(@as(vImage_Error, 0), lookupTable_Planar8toPlanar48(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags));
+        _ = try lookupTable_Planar8toPlanar48(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     }
     {
         var table: [256]Pixel_FFFF = [_]Pixel_FFFF{.{ 0, 0, 0, 0 }} ** 256;
         const dest_mem = try allocator.alloc(f32, 4);
         defer allocator.free(dest_mem);
         const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = 4 * @sizeOf(f32) };
-        try std.testing.expectEqual(@as(vImage_Error, 0), lookupTable_Planar8toPlanar96(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags));
-        try std.testing.expectEqual(@as(vImage_Error, 0), lookupTable_Planar8toPlanar128(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags));
+        _ = try lookupTable_Planar8toPlanar96(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
+        _ = try lookupTable_Planar8toPlanar128(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     }
     {
         var table: [256]f32 = [_]f32{0} ** 256;
         table[0] = 0.75;
         var dest = try makePlanarFBuffer(allocator, 1, 1, 1, &[_]f32{0});
         defer allocator.free(dest.mem);
-        try std.testing.expectEqual(@as(vImage_Error, 0), lookupTable_Planar8toPlanarF(&src.buf, &dest.buf, &table, Flags.kvImageNoFlags));
+        _ = try lookupTable_Planar8toPlanarF(&src.buf, &dest.buf, &table, Flags.kvImageNoFlags);
         try std.testing.expectApproxEqAbs(@as(f32, 0.75), readPlanarF(dest.buf, 0, 0), 1e-6);
     }
 }
@@ -872,7 +875,7 @@ test "interpolatedLookupTable_PlanarF: linear interpolation between adjacent tab
     defer allocator.free(dest.mem);
     const table = [4]f32{ 0, 10, 20, 30 };
     const err = interpolatedLookupTable_PlanarF(&src.buf, &dest.buf, table[0..].ptr, 3, 1.0, 0.0, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 5.0), readPlanarF(dest.buf, 0, 0), 1e-3);
 }
 
@@ -888,14 +891,14 @@ test "multidimensionalTableCreate/Retain/Release: retain count keeps the table v
     const entries_per_dim = [2]u8{ 2, 2 };
     var err1: vImage_Error = undefined;
     const table = multidimensionalTableCreate(table_data[0..].ptr, 2, 1, entries_per_dim[0..].ptr, .float, Flags.kvImageNoFlags, &err1);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err1);
+    try std.testing.expectEqual(@as(usize, 0), try types.check(err1));
     try std.testing.expect(table != null);
 
     const retain_err = multidimensionalTableRetain(table);
-    try std.testing.expectEqual(@as(vImage_Error, 0), retain_err);
+    try std.testing.expectEqual(@as(usize, 0), try retain_err);
 
     const release1_err = multidimensionalTableRelease(table);
-    try std.testing.expectEqual(@as(vImage_Error, 0), release1_err);
+    try std.testing.expectEqual(@as(usize, 0), try release1_err);
 
     // Retain count should still be 1 here (created=1, retained=2, released
     // once=1) -- confirm the table is still usable via an actual lookup call.
@@ -906,10 +909,10 @@ test "multidimensionalTableCreate/Retain/Release: retain count keeps the table v
     const srcs = [1]vImage_Buffer{src.buf};
     const dests = [1]vImage_Buffer{dest.buf};
     const lookup_err = multiDimensionalInterpolatedLookupTable(f32, &srcs, &dests, null, table, .full, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), lookup_err);
+    try std.testing.expectEqual(@as(usize, 0), try lookup_err);
 
     const release2_err = multidimensionalTableRelease(table);
-    try std.testing.expectEqual(@as(vImage_Error, 0), release2_err);
+    try std.testing.expectEqual(@as(usize, 0), try release2_err);
 }
 
 test "floodFill_Planar8: fills the connected component containing the seed, does not cross a differently-valued boundary" {
@@ -919,8 +922,8 @@ test "floodFill_Planar8: fills the connected component containing the seed, does
     defer allocator.free(img.mem);
     for (1..4) |y| for (1..4) |x| setPlanar8Local(img.buf, y, x, 10);
 
-    const err = floodFill_Planar8(&img.buf, 2, 2, 99, 4, Flags.kvImageNoFlags);
-    try std.testing.expectEqual(@as(vImage_Error, 0), err);
+    const err = floodFill_Planar8(&img.buf, 2, 2, 99, .four, Flags.kvImageNoFlags);
+    try std.testing.expectEqual(@as(usize, 0), try err);
     // Interior of the block is now 99.
     try std.testing.expectEqual(@as(u8, 99), readPlanar8(img.buf, 2, 2));
     try std.testing.expectEqual(@as(u8, 99), readPlanar8(img.buf, 1, 1));
@@ -942,8 +945,8 @@ test "floodFill_Planar16U/ARGB8888/ARGB16U: smoke tests, seed_x/seed_y order mat
         defer allocator.free(mem);
         @memset(mem, 7);
         const buf = vImage_Buffer{ .data = mem.ptr, .height = 2, .width = 2, .rowBytes = 2 * @sizeOf(u16) };
-        const err = floodFill_Planar16U(&buf, 0, 0, 55, 4, Flags.kvImageNoFlags);
-        try std.testing.expectEqual(@as(vImage_Error, 0), err);
+        const err = floodFill_Planar16U(&buf, 0, 0, 55, .four, Flags.kvImageNoFlags);
+        try std.testing.expectEqual(@as(usize, 0), try err);
         try std.testing.expectEqual(@as(u16, 55), mem[0]);
     }
     {
@@ -952,8 +955,8 @@ test "floodFill_Planar16U/ARGB8888/ARGB16U: smoke tests, seed_x/seed_y order mat
         @memset(mem, 3);
         const buf = vImage_Buffer{ .data = mem.ptr, .height = 2, .width = 2, .rowBytes = 2 * 4 };
         const new_value: Pixel_8888 = .{ 9, 9, 9, 9 };
-        const err = floodFill_ARGB8888(&buf, 0, 0, new_value, 4, Flags.kvImageNoFlags);
-        try std.testing.expectEqual(@as(vImage_Error, 0), err);
+        const err = floodFill_ARGB8888(&buf, 0, 0, new_value, .four, Flags.kvImageNoFlags);
+        try std.testing.expectEqual(@as(usize, 0), try err);
         try std.testing.expectEqualSlices(u8, &[_]u8{ 9, 9, 9, 9 }, mem[0..4]);
     }
     {
@@ -962,8 +965,8 @@ test "floodFill_Planar16U/ARGB8888/ARGB16U: smoke tests, seed_x/seed_y order mat
         @memset(mem, 3);
         const buf = vImage_Buffer{ .data = mem.ptr, .height = 2, .width = 2, .rowBytes = 2 * 4 * @sizeOf(u16) };
         const new_value: Pixel_ARGB_16U = .{ 9, 9, 9, 9 };
-        const err = floodFill_ARGB16U(&buf, 0, 0, new_value, 4, Flags.kvImageNoFlags);
-        try std.testing.expectEqual(@as(vImage_Error, 0), err);
+        const err = floodFill_ARGB16U(&buf, 0, 0, new_value, .four, Flags.kvImageNoFlags);
+        try std.testing.expectEqual(@as(usize, 0), try err);
         try std.testing.expectEqualSlices(u16, &[_]u16{ 9, 9, 9, 9 }, mem[0..4]);
     }
 }
