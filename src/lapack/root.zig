@@ -23,12 +23,13 @@
 //! - `factor.zig` - the computational routines behind them: LU, Cholesky,
 //!   Bunch-Kaufman and triangular solves, inverses, condition estimates and
 //!   equilibration, in full, packed and band storage.
+//! - `qr.zig` - the QR/LQ/QL/RQ factorizations, forming and applying `Q`,
+//!   column-pivoted QR, and the four least squares drivers.
 //! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
 //!
 //! Not yet wrapped: the *expert* drivers (`gesvx` and friends), the iterative
 //! refinement routines (`gerfs`, `porfs`, ...), the `_aa`/`_rk`/`_rook`
-//! factorization variants, RFP storage, and everything from least squares
-//! onwards.
+//! factorization variants, RFP storage, the eigenvalue problems and the SVD.
 //!
 //! Until a routine has a wrapper it is reachable through `c`, with the caveats
 //! documented there: every argument by pointer, no bounds checking, `info`
@@ -43,6 +44,7 @@ pub const work = @import("work.zig");
 pub const linear = @import("linear.zig");
 pub const norms = @import("norms.zig");
 pub const factor = @import("factor.zig");
+pub const qr = @import("qr.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -93,6 +95,21 @@ pub const hetrs = factor.hetrs;
 pub const trtrs = factor.trtrs;
 pub const trtri = factor.trtri;
 pub const trcon = factor.trcon;
+
+pub const geqrf = qr.geqrf;
+pub const gelqf = qr.gelqf;
+pub const geqp3 = qr.geqp3;
+pub const orgqr = qr.orgqr;
+pub const ungqr = qr.ungqr;
+pub const ormqr = qr.ormqr;
+pub const unmqr = qr.unmqr;
+pub const orglq = qr.orglq;
+pub const ormlq = qr.ormlq;
+pub const gels = qr.gels;
+pub const gelsd = qr.gelsd;
+pub const gelss = qr.gelss;
+pub const gelsy = qr.gelsy;
+pub const QTrans = qr.QTrans;
 
 pub const lange = norms.lange;
 pub const lansy = norms.lansy;

@@ -16,10 +16,13 @@
   `hpsv`, `dsgesv`, `dsposv`); the computational routines behind them in
   `factor.zig` (LU, Cholesky, Bunch-Kaufman and triangular factor/solve/invert,
   condition estimation and equilibration, in full, packed and band storage);
-  and the `lan*` norms plus `lacpy`/`laset` in `norms.zig`. Not yet wrapped:
-  the expert drivers (`gesvx` and friends), iterative refinement (`gerfs`,
-  `porfs`), the `_aa`/`_rk`/`_rook` variants, RFP storage, and everything from
-  least squares onwards. What the wrappers add:
+  the `lan*` norms plus `lacpy`/`laset` in `norms.zig`; and the orthogonal
+  factorizations and least squares drivers in `qr.zig` (`geqrf`, `gelqf`,
+  `geqlf`, `gerqf`, `geqp3`, `orgqr`/`ungqr`, `ormqr`/`unmqr` and the LQ/QL/RQ
+  equivalents, `gels`, `gelsd`, `gelss`, `gelsy`). Not yet wrapped: the expert
+  drivers (`gesvx` and friends), iterative refinement (`gerfs`, `porfs`), the
+  `_aa`/`_rk`/`_rook` variants, RFP storage, the eigenvalue problems and the
+  SVD. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -92,6 +95,28 @@
     symbol and fails to compile; only the selected `switch` prong is analysed.
     The same applies to the `@compileError` guards, which otherwise fire on
     every instantiation including the valid ones.
+
+  - `or*` and `un*` are exposed as one name. LAPACK calls the real routines
+    `orgqr`/`ormqr` and the complex ones `ungqr`/`unmqr`; here `orgqr` works for
+    all four element types and resolves to `zungqr` for `Complex(f64)`, with
+    the LAPACK spellings kept as aliases.
+  - `ormqr`'s transpose flag is a two-valued `QTrans` rather than a character.
+    LAPACK accepts `'T'` for real precisions and `'C'` for complex, and passing
+    `'T'` to `zunmqr` is an illegal-argument failure. `.transpose` means "the
+    adjoint" and emits the right one; applying the unconjugated transpose of a
+    complex `Q` is not an operation anyone wants, so nothing is lost.
+  - **`gels` barely checks its full-rank assumption, and `gelsy`'s documented
+    default makes it worse.** `gels` raises an error only on an *exactly* zero
+    pivot; on a 3x2 matrix of all ones it returns success and
+    `x = (-7.5e15, 7.5e15)`. `gelsy` with `rcond = -1` -- which LAPACK
+    documents as "use machine precision", and which reads like a safe default
+    -- reports that same matrix as full rank and returns the same nonsense,
+    because the threshold becomes a condition number of `1/eps`. Any explicit
+    `rcond` from `1e-16` up gives rank 1 and the correct minimum-norm
+    `x = (1, 1)`. `gelsd` is unaffected, since it compares singular values
+    rather than a condition estimate. All three behaviours are pinned by tests
+    and called out in the doc comments; the tests were written expecting the
+    opposite and were corrected to match what the routines actually do.
 
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
@@ -213,7 +238,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 292 tests covering the four modules above, including struct-layout
+- 310 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
