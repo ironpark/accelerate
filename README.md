@@ -12,6 +12,7 @@ Zig bindings for Apple's [Accelerate framework](https://developer.apple.com/docu
 | `sparse` | Sparse solvers — direct (Cholesky, LDL^T, QR) and iterative (CG, GMRES, LSMR), subfactors, preconditioners |
 | `quadrature` | Numerical integration — QNG, QAG and QAGS, including infinite intervals |
 | `blas` | Dense linear algebra — the full CBLAS Levels 1, 2 and 3, real and complex |
+| `lapack` | Solvers, factorizations, eigenvalues and SVD — 2032 symbols (foundation; typed wrappers in progress) |
 
 ## Installation
 

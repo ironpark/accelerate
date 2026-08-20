@@ -4,6 +4,44 @@
 
 ### Added
 
+- **`lapack` module - foundation.** The complete 2032-symbol extern surface in
+  `src/lapack/c.zig`, generated from `lapack.h` by `tools/gen_lapack.py`, plus
+  shared types, `info` translation and workspace sizing. Typed wrappers are
+  being added tier by tier; `docs/LAPACK-PLAN.md` is the checklist. Same symbol
+  story as `blas`: this binds `$NEWLAPACK[$ILP64]`, since the unsuffixed names
+  belong to the deprecated `clapack.h`.
+
+  Verifying the ABI before writing any of it turned up two things the header
+  does not tell you:
+
+  - **`__LAPACK_bool` is 8 bytes under ILP64, not 4.** `lapack_types.h`
+    comments the LP64 branch with "Because the fortran logical is 4 bytes" and
+    then the ILP64 branch silently widens it to `long`. 163 declarations take a
+    `bwork` array; a 4-byte definition reads every other element. There is a
+    test that fails under the wrong width - which took a second attempt, because
+    the obvious version (poison the array, check the tail) passes at either
+    stride. What discriminates is the *value* of the elements that were written.
+
+  - **`cladiv` and `zladiv` are declared wrongly.** The header types them as
+    writing through a leading `ret` out-parameter, and calling them that way
+    leaves `ret` untouched - reproduced from C as well as Zig. Disassembly shows
+    the shipping symbol is a thunk that drops its first argument and tail-calls
+    an implementation returning the quotient by value:
+
+    ```asm
+    cladiv$NEWLAPACK$ILP64:
+        mov  x0, x1
+        mov  x1, x2
+        b    <impl>
+    ```
+
+    All three pointers must still be passed - a two-argument call reads whatever
+    `x2` holds and crashes - but the result comes back in registers. The
+    generator carries these two as hand-written overrides, and *aborts* if it
+    ever meets a new routine with the same leading-`ret` shape rather than
+    trusting the header. `chla_transtype`, the only other routine with a leading
+    `ret`, is unaffected.
+
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
   type. 156 extern declarations, generated from `cblas_new.h` rather than
@@ -124,7 +162,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 202 tests covering the three modules above, including struct-layout
+- 223 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
