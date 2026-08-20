@@ -514,6 +514,32 @@ pub fn FFT(comptime T: type) type {
 // Tests
 // ============================================================================
 
+test "ctoz and ztoc round-trip" {
+    const input = [_]Complex(f32){
+        Complex(f32).init(1.0, 2.0),
+        Complex(f32).init(-3.0, 4.5),
+        Complex(f32).init(0.0, -1.0),
+    };
+    var re: [3]f32 = undefined;
+    var im: [3]f32 = undefined;
+    const z = SC(f32){ .realp = &re, .imagp = &im };
+
+    ctoz(f32, &input, &z, 3);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), im[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -3.0), re[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 4.5), im[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), re[2], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.0), im[2], 0.001);
+
+    var output: [3]Complex(f32) = undefined;
+    ztoc(f32, &z, &output, 3);
+    for (0..3) |i| {
+        try std.testing.expectApproxEqAbs(input[i].real, output[i].real, 0.001);
+        try std.testing.expectApproxEqAbs(input[i].imag, output[i].imag, 0.001);
+    }
+}
+
 test "zipt2d matches zip2d (fft2d_zipt header param-name anomaly check)" {
     // vDSP.h declares vDSP_fft2d_zipt's 3rd/4th params as (__IC1, __IC0),
     // reversed from vDSP_fft2d_zip/vDSP_fft2d_ziptD's (__IC0, __IC1). If that

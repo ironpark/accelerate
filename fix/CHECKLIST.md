@@ -118,8 +118,8 @@
 
 ### `src/vdsp/fft.zig`
 
-- [ ] `ctoz` — L38
-- [ ] `ztoc` — L54
+- [x] `ctoz` — L38
+- [x] `ztoc` — L54
 - [ ] `FFT` — L70
 - [ ] `FFT(T).init` — L84
 - [ ] `FFT(T).deinit` — L98
@@ -208,7 +208,7 @@
 
 ### `src/vdsp/types.zig`
 
-- [ ] `SplitComplex` — L6
+- [x] `SplitComplex` — L6
 - [ ] `Complex` — L13
 - [ ] `Complex(T).init` — L20
 - [ ] `Complex(T).fromStd` — L24
