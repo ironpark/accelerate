@@ -22,10 +22,12 @@
   equivalents, `gels`, `gelsd`, `gelss`, `gelsy`); the symmetric/Hermitian
   eigenvalue drivers in `eigen.zig` (`syev`, `syevd`, `syevr`, `spev`, `sbev`,
   `stev`, `sygv`, each with its `he*`/`hp*`/`hb*` complex counterpart); and
-  `gesvd`/`gesdd` in `svd.zig`. Not yet wrapped: the expert drivers (`gesvx`
-  and friends), iterative refinement (`gerfs`, `porfs`), the `_aa`/`_rk`/`_rook`
-  variants, RFP storage, the nonsymmetric and generalized eigenproblems, and
-  the remaining SVD drivers. What the wrappers add:
+  `gesvd`/`gesdd` in `svd.zig`; and the nonsymmetric and generalized
+  eigenproblems in `eigen_gen.zig` (`geev`, `gees`, `ggev`, `trsyl`). Not yet
+  wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
+  iterative refinement (`gerfs`, `porfs`), the `_aa`/`_rk`/`_rook` variants,
+  RFP storage, the CS decomposition, and the remaining SVD drivers. What the
+  wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -144,6 +146,31 @@
     signs and phases are arbitrary. One test specifically checks that `vt` is
     used as `V^H` rather than `V`, on an asymmetric matrix where the two
     differ.
+
+  - **Nonsymmetric eigenvalues are always `[]Complex(Real(T))`.** LAPACK's real
+    routines split them across `wr` and `wi`, with a conjugate pair in
+    consecutive entries; the complex ones return one array. These wrappers
+    gather the real pair internally, so a real matrix's complex eigenvalues are
+    in the type rather than in a comment.
+  - `unpackVectors` expands the packed real eigenvector layout. When
+    eigenvalues `j` and `j+1` are a conjugate pair, `geev` puts the *real part*
+    in column `j` and the *imaginary part* in column `j+1` - so reading column
+    `j+1` as an eigenvector in its own right gives a plausible wrong answer.
+    The eigenvector arrays are left in LAPACK's layout (copying them would be
+    wasteful) and this converts on request; the test verifies `A v = lambda v`
+    in genuine complex arithmetic afterwards.
+  - `gees`'s sorting predicate takes one complex number at any precision. The
+    raw LAPACK callback takes *two* pointers for real input and one for
+    complex; a threadlocal trampoline bridges them, which is safe because
+    LAPACK invokes the callback synchronously on the calling thread within the
+    call that installed it.
+  - `ggev` returns `alpha` and `beta` as a pair rather than their quotient,
+    with `value()` returning null when `beta` is zero. A singular `B` gives the
+    pencil genuinely infinite eigenvalues, and dividing without checking turns
+    a meaningful result into a NaN.
+  - `trsyl` reports `perturbed` rather than erroring when `A` and `-B` share an
+    eigenvalue: LAPACK solves a nearby problem and says so, which is a result
+    the caller needs but not a failure.
 
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
@@ -265,7 +292,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 335 tests covering the four modules above, including struct-layout
+- 348 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are

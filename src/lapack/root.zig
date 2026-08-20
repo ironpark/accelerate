@@ -27,13 +27,16 @@
 //!   column-pivoted QR, and the four least squares drivers.
 //! - `eigen.zig` - the symmetric/Hermitian eigenvalue drivers, dense, packed,
 //!   band, tridiagonal and generalized.
+//! - `eigen_gen.zig` - the nonsymmetric and generalized eigenproblems:
+//!   `geev`, `gees`, `ggev`, and the Sylvester solver `trsyl`.
 //! - `svd.zig` - `gesvd` and `gesdd`.
 //! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
 //!
 //! Not yet wrapped: the *expert* drivers (`gesvx` and friends), the iterative
 //! refinement routines (`gerfs`, `porfs`, ...), the `_aa`/`_rk`/`_rook`
-//! factorization variants, RFP storage, the nonsymmetric and generalized
-//! eigenproblems, and the remaining SVD drivers (`gesvdx`, `gejsv`, `gesvdq`).
+//! factorization variants, RFP storage, the expert eigenvalue drivers
+//! (`geevx`, `geesx`, `ggevx`, `ggesx`), the CS decomposition, and the
+//! remaining SVD drivers (`gesvdx`, `gejsv`, `gesvdq`).
 //!
 //! Until a routine has a wrapper it is reachable through `c`, with the caveats
 //! documented there: every argument by pointer, no bounds checking, `info`
@@ -51,6 +54,7 @@ pub const factor = @import("factor.zig");
 pub const qr = @import("qr.zig");
 pub const eigen = @import("eigen.zig");
 pub const svd = @import("svd.zig");
+pub const eigen_gen = @import("eigen_gen.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -135,6 +139,15 @@ pub const GeneralizedKind = eigen.GeneralizedKind;
 
 pub const gesvd = svd.gesvd;
 pub const gesdd = svd.gesdd;
+
+pub const geev = eigen_gen.geev;
+pub const gees = eigen_gen.gees;
+pub const ggev = eigen_gen.ggev;
+pub const trsyl = eigen_gen.trsyl;
+pub const unpackVectors = eigen_gen.unpackVectors;
+pub const Eigenvalue = eigen_gen.Eigenvalue;
+pub const GeneralizedEigenvalue = eigen_gen.GeneralizedEigenvalue;
+pub const SelectFn = eigen_gen.SelectFn;
 
 pub const lange = norms.lange;
 pub const lansy = norms.lansy;
