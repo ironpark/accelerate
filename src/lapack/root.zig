@@ -35,6 +35,8 @@
 //!   overflow-safe scaling, and the complex-symmetric routines CBLAS lacks.
 //! - `refine.zig` - iterative refinement and the forward/backward error bounds
 //!   that say how much of a computed solution to believe.
+//! - `expert.zig` - the expert drivers, which equilibrate, factor, solve,
+//!   estimate the condition number and bound the error in one call.
 //!
 //! Not yet wrapped: the *expert* drivers (`gesvx` and friends), the iterative
 //! refinement routines (`gerfs`, `porfs`, ...), the `_aa`/`_rk`/`_rook`
@@ -61,6 +63,7 @@ pub const svd = @import("svd.zig");
 pub const eigen_gen = @import("eigen_gen.zig");
 pub const util = @import("util.zig");
 pub const refine = @import("refine.zig");
+pub const expert = @import("expert.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -170,6 +173,11 @@ pub const porfs = refine.porfs;
 pub const syrfs = refine.syrfs;
 pub const herfs = refine.herfs;
 pub const trrfs = refine.trrfs;
+
+pub const gesvx = expert.gesvx;
+pub const posvx = expert.posvx;
+pub const sysvx = expert.sysvx;
+pub const ExpertResult = expert.ExpertResult;
 pub const MachineParam = util.MachineParam;
 pub const Distribution = util.Distribution;
 pub const Seed = util.Seed;

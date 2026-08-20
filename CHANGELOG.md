@@ -27,7 +27,8 @@
   utilities and complex-symmetric routines in `util.zig` (`lamch`, `ilaenv`,
   `larnv`, `lartg`, `lascl`, `lasrt`, `lacgv`, `ladiv`, `rscl`, `symv`, `syr`,
   `spmv`, `spr`); and iterative refinement with error bounds in `refine.zig`
-  (`gerfs`, `porfs`, `syrfs`, `herfs`, `trrfs`). Not yet wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
+  (`gerfs`, `porfs`, `syrfs`, `herfs`, `trrfs`); and the expert drivers in
+  `expert.zig` (`gesvx`, `posvx`, `sysvx`). Not yet wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
   iterative refinement (`gerfs`, `porfs`), the `_aa`/`_rk`/`_rook` variants,
   RFP storage, the CS decomposition, and the remaining SVD drivers. What the
   wrappers add:
@@ -212,6 +213,24 @@
     be copied (`norms.lacpy`) before factoring - the factor routines overwrite
     their input, and there would otherwise be nothing to refine against.
 
+  - **The expert drivers treat `info = n + 1` as a result, not a failure.** They
+    overload the positive `info`: `1..n` means the factorization hit an exactly
+    zero pivot and nothing was solved, but `n + 1` means the factorization
+    succeeded, `rcond` came out below machine precision, *and the system was
+    solved anyway*. `x`, `ferr` and `berr` are all valid; LAPACK is reporting
+    that the matrix is singular to working precision. Returning an error there
+    would discard both a computed answer and the diagnostic attached to it, so
+    it surfaces as `singular_to_working_precision` on the result instead.
+
+    Provoking that case for a test took measurement rather than guesswork - the
+    window is about one ULP wide. Perturbing the identity-like matrix by less
+    than an ULP rounds away and yields an exactly zero pivot; by a few ULPs
+    lifts `rcond` back above eps and the warning stops firing.
+  - `equed` is the only option character in this binding that LAPACK *writes*:
+    an input when reusing a supplied factorization, an output when asking the
+    routine to equilibrate. It is therefore a `*Equed` and cannot come from the
+    shared immutable byte table the other options use.
+
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
   type. 156 extern declarations, generated from `cblas_new.h` rather than
@@ -332,7 +351,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 374 tests covering the four modules above, including struct-layout
+- 384 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
