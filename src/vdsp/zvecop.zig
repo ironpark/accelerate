@@ -1,3 +1,4 @@
+const std = @import("std");
 const types = @import("types.zig");
 const Stride = types.Stride;
 const Length = types.Length;
@@ -339,4 +340,28 @@ pub fn zrdesamp(comptime T: type, a: *const SC(T), decimation_factor: Stride, fi
         f64 => c.vDSP_zrdesampD(a, decimation_factor, filter.ptr, out, n, filter.len),
         else => @compileError("zrdesamp requires f32 or f64"),
     }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+test "zvdiv" {
+    // a/b != b/a for these asymmetric operands, so an argument-order bug
+    // (dividing b/a instead of a/b) would fail this test.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+
+    zvdiv(f32, &a, &b, &out, 1);
+
+    // (1+2i)/(3+4i) = (1+2i)(3-4i)/25 = (11+2i)/25 = 0.44 + 0.08i
+    try std.testing.expectApproxEqAbs(@as(f32, 0.44), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.08), out_im[0], 0.001);
 }

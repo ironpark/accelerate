@@ -299,7 +299,7 @@
 - [ ] `zvsub` — L40
 - [ ] `zrvsub` — L52
 - [ ] `zrvmul` — L64
-- [ ] `zvdiv` — L76
+- [x] `zvdiv` — L76
 - [ ] `zrvdiv` — L88
 - [ ] `zvabs` — L100
 - [ ] `zvfill` — L112
