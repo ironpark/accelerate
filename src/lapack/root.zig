@@ -45,6 +45,9 @@
 //! - `reduce.zig` - the reductions to condensed form (`sytrd`, `gehrd`,
 //!   `gebrd`, `gbbrd`), the routines that build or apply their orthogonal
 //!   factors, and balancing.
+//! - `qz.zig` - the generalized eigenproblem taken apart: `ggbal`, `gghd3`,
+//!   `hgeqz`, `tgevc`, `tgexc`, `tgsen`, `tgsna`, `tgsyl`, the `gges`/`ggesx`
+//!   drivers and the generalized SVD (`ggsvd3`, `tgsja`).
 //! - `tridiag.zig` - the symmetric tridiagonal eigensolvers that run on what
 //!   `reduce.zig` produces: `sterf`, `steqr`, `pteqr`, `stedc`, `stemr` and the
 //!   `stebz`/`stein` bisection pair.
@@ -77,6 +80,7 @@ pub const refine = @import("refine.zig");
 pub const expert = @import("expert.zig");
 pub const reduce = @import("reduce.zig");
 pub const tridiag = @import("tridiag.zig");
+pub const qz = @import("qz.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -291,6 +295,31 @@ pub const stein = tridiag.stein;
 pub const Compz = tridiag.Compz;
 pub const EigenOrder = tridiag.EigenOrder;
 pub const BisectionResult = tridiag.BisectionResult;
+
+pub const ggbal = qz.ggbal;
+pub const ggbak = qz.ggbak;
+pub const gghrd = qz.gghrd;
+pub const gghd3 = qz.gghd3;
+pub const hgeqz = qz.hgeqz;
+pub const gges = qz.gges;
+pub const gges3 = qz.gges3;
+pub const ggesx = qz.ggesx;
+pub const ggev3 = qz.ggev3;
+pub const ggevx = qz.ggevx;
+pub const tgevc = qz.tgevc;
+pub const tgexc = qz.tgexc;
+pub const tgsen = qz.tgsen;
+pub const tgsna = qz.tgsna;
+pub const tgsyl = qz.tgsyl;
+pub const ggsvd3 = qz.ggsvd3;
+pub const tgsja = qz.tgsja;
+pub const TgsenJob = qz.TgsenJob;
+pub const GsvdResult = qz.GsvdResult;
+pub const GsvdVectors = qz.GsvdVectors;
+pub const ExpertGeneralizedSchur = qz.ExpertGeneralizedSchur;
+pub const ExpertGeneralizedEigen = qz.ExpertGeneralizedEigen;
+pub const GeneralizedReorder = qz.GeneralizedReorder;
+pub const GeneralizedSylvesterResult = qz.GeneralizedSylvesterResult;
 
 pub const lamch = util.lamch;
 pub const ilaenv = util.ilaenv;

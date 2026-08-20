@@ -72,10 +72,16 @@
   `lastInfo()` still carries the raw value, so `lastInfo() - n` is the leading
   minor of `B` that failed.
 
+  `eigen_gen.zig` also gains the Schur toolkit — `hseqr`, `hsein`, `trevc`,
+  `trevc3`, `trexc`, `trsen`, `trsna`, `trsyl3` — and `qz.zig` is the
+  generalized problem taken apart the same way: `ggbal`/`ggbak`,
+  `gghrd`/`gghd3`, `hgeqz`, `tgevc`, `tgexc`, `tgsen`, `tgsna`, `tgsyl`, the
+  `gges`/`gges3`/`ggesx`/`ggev3`/`ggevx` drivers, and the generalized SVD pair
+  `ggsvd3`/`tgsja`.
+
   Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
-  generalized expert drivers, the generalized Schur family, the CS
-  decomposition, the tall-skinny QR family and the remaining SVD drivers. What
-  the wrappers add:
+  CS decomposition, the tall-skinny QR family, the constrained least squares
+  routines and the remaining SVD drivers. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -104,6 +110,18 @@
     by a conjugation. The wrapper takes it uniformly and drops it for a real
     `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
     either precision.
+  - `tgsna`'s and `ggevx`'s condition numbers are **not** bounded by 1, where
+    `trsna`'s and `geevx`'s are. They are chordal distances against an
+    unnormalized pencil; measured, a diagonal pair with entries 2,3,4 and 1,2,3
+    gives 1.49, 0.72, 0.91. Both docstrings say so and the tests assert
+    finiteness rather than a bound.
+  - `tgexc` and `tgsen` take their "do you want the vectors" flags as Fortran
+    *logicals* rather than option characters — the only two routines in this
+    binding that do. They are `bool` here and converted at the boundary.
+  - `ggsvd3` takes its extents as `m, n, p` and `tgsja`, its own computational
+    half, takes them as `m, p, n`. The wrappers keep each routine's order rather
+    than imposing one, so the LAPACK documentation still reads across, and both
+    docstrings flag it.
   - `sytrd`, `gebrd` and `gbbrd` write their diagonals as `[]Real(T)`, not
     `[]T`. A Hermitian tridiagonal has a real diagonal and can be made to have
     a real off-diagonal, and a bidiagonal reduction is real by construction; the

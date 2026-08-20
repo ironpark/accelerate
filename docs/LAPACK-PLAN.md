@@ -1,17 +1,16 @@
 # LAPACK binding plan
 
-Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
-computational routines complete; the T3 orthogonal factorizations and least
-squares drivers complete. The T4 symmetric eigenvalue drivers and the two main
-T6 SVD drivers complete. The T5/T7 nonsymmetric and generalized eigenproblems
-complete, as are T8 and the iterative refinement routines. Every storage form —
-full, band, tridiagonal, packed and triangular-band — now has its condition
-estimator, equilibration, iterative refinement and expert driver.
+Status: **in progress**. T0 complete. Every driver and computational routine
+for the linear systems, least squares, symmetric and nonsymmetric eigenvalue,
+generalized eigenvalue and SVD problems is wrapped, in every storage form —
+full, band, tridiagonal, packed and triangular-band — along with the reductions
+to condensed form, the tridiagonal eigensolvers, the Schur and QZ toolkits, and
+the expert drivers with their condition estimates.
 
 Outstanding: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants, RFP
-storage, the generalized expert drivers (`ggevx`, `ggesx`), the generalized Schur
-family, the CS decomposition, the tall-skinny QR family and the remaining SVD
-drivers.
+storage, the CS decomposition, the tall-skinny QR family, the constrained least
+squares routines (`ggglm`, `gglse`, `ggqrf`, `ggrqf`) and the remaining SVD
+drivers (`gesvdx`, `gejsv`, `gesvdq`, `bdsqr`, `bdsdc`).
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -676,34 +675,34 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `drscl` <sub>z</sub>
 - [ ] `gegs` <sub>cdsz</sub>
 - [ ] `gegv` <sub>cdsz</sub>
-- [ ] `ggbak` <sub>cdsz</sub>
-- [ ] `ggbal` <sub>cdsz</sub>
-- [ ] `gges` <sub>cdsz</sub>
-- [ ] `gges3` <sub>cdsz</sub>
-- [ ] `ggesx` <sub>cdsz</sub>
+- [x] `ggbak` <sub>cdsz</sub>
+- [x] `ggbal` <sub>cdsz</sub>
+- [x] `gges` <sub>cdsz</sub>
+- [x] `gges3` <sub>cdsz</sub>
+- [x] `ggesx` <sub>cdsz</sub>
 - [x] `ggev` <sub>cdsz</sub>
-- [ ] `ggev3` <sub>cdsz</sub>
-- [ ] `ggevx` <sub>cdsz</sub>
-- [ ] `gghd3` <sub>cdsz</sub>
-- [ ] `gghrd` <sub>cdsz</sub>
+- [x] `ggev3` <sub>cdsz</sub>
+- [x] `ggevx` <sub>cdsz</sub>
+- [x] `gghd3` <sub>cdsz</sub>
+- [x] `gghrd` <sub>cdsz</sub>
 - [ ] `ggsvd` <sub>cdsz</sub>
-- [ ] `ggsvd3` <sub>cdsz</sub>
+- [x] `ggsvd3` <sub>cdsz</sub>
 - [ ] `ggsvp` <sub>cdsz</sub>
 - [ ] `ggsvp3` <sub>cdsz</sub>
 - [ ] `hfrk` <sub>cz</sub>
-- [ ] `hgeqz` <sub>cdsz</sub>
+- [x] `hgeqz` <sub>cdsz</sub>
 - [ ] `hla_transtype` <sub>c</sub>
 - [x] `rscl` <sub>ds</sub>
 - [ ] `sfrk` <sub>ds</sub>
 - [ ] `srscl` <sub>c</sub>
-- [ ] `tgevc` <sub>cdsz</sub>
+- [x] `tgevc` <sub>cdsz</sub>
 - [ ] `tgex2` <sub>cdsz</sub>
-- [ ] `tgexc` <sub>cdsz</sub>
-- [ ] `tgsen` <sub>cdsz</sub>
-- [ ] `tgsja` <sub>cdsz</sub>
-- [ ] `tgsna` <sub>cdsz</sub>
+- [x] `tgexc` <sub>cdsz</sub>
+- [x] `tgsen` <sub>cdsz</sub>
+- [x] `tgsja` <sub>cdsz</sub>
+- [x] `tgsna` <sub>cdsz</sub>
 - [ ] `tgsy2` <sub>cdsz</sub>
-- [ ] `tgsyl` <sub>cdsz</sub>
+- [x] `tgsyl` <sub>cdsz</sub>
 
 ### T8 Utility, auxiliary & complex-symmetric extensions
 
