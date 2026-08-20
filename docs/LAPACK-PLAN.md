@@ -638,15 +638,15 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `geevx` <sub>cdsz</sub>
 - [ ] `gehd2` <sub>cdsz</sub>
 - [x] `gehrd` <sub>cdsz</sub>
-- [ ] `hsein` <sub>cdsz</sub>
-- [ ] `hseqr` <sub>cdsz</sub>
-- [ ] `trevc` <sub>cdsz</sub>
-- [ ] `trevc3` <sub>cdsz</sub>
-- [ ] `trexc` <sub>cdsz</sub>
-- [ ] `trsen` <sub>cdsz</sub>
-- [ ] `trsna` <sub>cdsz</sub>
+- [x] `hsein` <sub>cdsz</sub>
+- [x] `hseqr` <sub>cdsz</sub>
+- [x] `trevc` <sub>cdsz</sub>
+- [x] `trevc3` <sub>cdsz</sub>
+- [x] `trexc` <sub>cdsz</sub>
+- [x] `trsen` <sub>cdsz</sub>
+- [x] `trsna` <sub>cdsz</sub>
 - [x] `trsyl` <sub>cdsz</sub>
-- [ ] `trsyl3` <sub>cdsz</sub>
+- [x] `trsyl3` <sub>cdsz</sub>
 
 ### T6 Singular value decomposition
 

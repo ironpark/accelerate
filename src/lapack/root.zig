@@ -29,8 +29,9 @@
 //!   band, tridiagonal and generalized, including the expert (`*evx`) and
 //!   divide-and-conquer (`*evd`) variants.
 //! - `eigen_gen.zig` - the nonsymmetric and generalized eigenproblems:
-//!   `geev`, `gees`, `ggev`, their expert forms `geevx` and `geesx`, and the
-//!   Sylvester solver `trsyl`.
+//!   `geev`, `gees`, `ggev`, their expert forms `geevx` and `geesx`, the Schur
+//!   toolkit (`hseqr`, `hsein`, `trevc3`, `trexc`, `trsen`, `trsna`) and the
+//!   Sylvester solvers `trsyl` and `trsyl3`.
 //! - `svd.zig` - `gesvd` and `gesdd`.
 //! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
 //! - `util.zig` - machine parameters, random matrices, plane rotations,
@@ -228,6 +229,21 @@ pub const geesx = eigen_gen.geesx;
 pub const Sense = eigen_gen.Sense;
 pub const ExpertEigenResult = eigen_gen.ExpertEigenResult;
 pub const ExpertSchurResult = eigen_gen.ExpertSchurResult;
+pub const hseqr = eigen_gen.hseqr;
+pub const hsein = eigen_gen.hsein;
+pub const trevc = eigen_gen.trevc;
+pub const trevc3 = eigen_gen.trevc3;
+pub const trexc = eigen_gen.trexc;
+pub const trsen = eigen_gen.trsen;
+pub const trsna = eigen_gen.trsna;
+pub const trsyl3 = eigen_gen.trsyl3;
+pub const SchurJob = eigen_gen.SchurJob;
+pub const SchurVectors = eigen_gen.SchurVectors;
+pub const HowMany = eigen_gen.HowMany;
+pub const EigenSource = eigen_gen.EigenSource;
+pub const InitialVectors = eigen_gen.InitialVectors;
+pub const ReorderResult = eigen_gen.ReorderResult;
+pub const ReorderedSchur = eigen_gen.ReorderedSchur;
 pub const unpackVectors = eigen_gen.unpackVectors;
 pub const Eigenvalue = eigen_gen.Eigenvalue;
 pub const GeneralizedEigenvalue = eigen_gen.GeneralizedEigenvalue;
