@@ -521,6 +521,38 @@ test "vsub f64" {
     try std.testing.expectApproxEqAbs(@as(f64, -27.0), out[2], 1e-9);
 }
 
+test "vdiv" {
+    // Asymmetric inputs so an argument-order bug (a/b vs b/a) would show up.
+    const a = [_]f32{ 10.0, 20.0, 30.0 };
+    const b = [_]f32{ 2.0, 4.0, 5.0 };
+    var out: [3]f32 = undefined;
+    vdiv(f32, &a, &b, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 6.0), out[2], 0.001);
+}
+
+test "vdiv f64" {
+    const a = [_]f64{ 10.0, 21.0, 30.0 };
+    const b = [_]f64{ 2.0, 4.0, 5.0 };
+    var out: [3]f64 = undefined;
+    vdiv(f64, &a, &b, &out);
+    // vDSP_vdivD is a fast reciprocal-refine implementation, not IEEE exact.
+    try std.testing.expectApproxEqRel(@as(f64, 5.0), out[0], 1e-12);
+    try std.testing.expectApproxEqRel(@as(f64, 5.25), out[1], 1e-12);
+    try std.testing.expectApproxEqRel(@as(f64, 6.0), out[2], 1e-12);
+}
+
+test "vdiv i32" {
+    const a = [_]i32{ 10, 21, -30 };
+    const b = [_]i32{ 2, 4, 5 };
+    var out: [3]i32 = undefined;
+    vdiv(i32, &a, &b, &out);
+    try std.testing.expectEqual(@as(i32, 5), out[0]);
+    try std.testing.expectEqual(@as(i32, 5), out[1]);
+    try std.testing.expectEqual(@as(i32, -6), out[2]);
+}
+
 test "vsmul" {
     const a = [_]f32{ 1.0, 2.0, 3.0 };
     var out: [3]f32 = undefined;

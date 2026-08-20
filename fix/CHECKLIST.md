@@ -259,7 +259,7 @@
 - [ ] `vadd` — L31
 - [x] `vsub` — L46
 - [ ] `vmul` — L60
-- [ ] `vdiv` — L74
+- [x] `vdiv` — L74
 - [ ] `veqvi` — L89
 - [ ] `vsmul` — L103
 - [ ] `vsadd` — L116
