@@ -23,8 +23,10 @@
   eigenvalue drivers in `eigen.zig` (`syev`, `syevd`, `syevr`, `spev`, `sbev`,
   `stev`, `sygv`, each with its `he*`/`hp*`/`hb*` complex counterpart); and
   `gesvd`/`gesdd` in `svd.zig`; and the nonsymmetric and generalized
-  eigenproblems in `eigen_gen.zig` (`geev`, `gees`, `ggev`, `trsyl`). Not yet
-  wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
+  eigenproblems in `eigen_gen.zig` (`geev`, `gees`, `ggev`, `trsyl`); and the
+  utilities and complex-symmetric routines in `util.zig` (`lamch`, `ilaenv`,
+  `larnv`, `lartg`, `lascl`, `lasrt`, `lacgv`, `ladiv`, `rscl`, `symv`, `syr`,
+  `spmv`, `spr`). Not yet wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
   iterative refinement (`gerfs`, `porfs`), the `_aa`/`_rk`/`_rook` variants,
   RFP storage, the CS decomposition, and the remaining SVD drivers. What the
   wrappers add:
@@ -172,6 +174,30 @@
     eigenvalue: LAPACK solves a nearby problem and says so, which is a result
     the caller needs but not a failure.
 
+  - **`symv`, `syr`, `spmv`, `spr` are complex *symmetric*, and CBLAS has no
+    equivalent.** CBLAS offers `hemv`/`her` for complex and `symv`/`syr` only
+    for real, so a complex symmetric matrix (`A = A^T`, not `A = A^H`) has
+    nowhere else to go: `hemv` conjugates when it reflects the stored triangle
+    and silently returns a different answer. A test runs the same stored
+    triangle through both and pins that they differ. `syr` also takes a complex
+    `alpha`, where `blas.her` requires a real one - the Hermitian constraint
+    does not apply to the symmetric update.
+  - `lamch` exists because LAPACK's epsilon is **half** of Zig's
+    `std.math.floatEps`: LAPACK defines it as the rounding unit, Zig as the gap
+    to the next representable number. A tolerance built from the wrong one is
+    off by a factor of two, which is enough for a routine not to behave as
+    documented. Pinned by a test.
+  - `larnv`'s seed carries a constraint LAPACK does not check: four values in
+    `[0, 4095]` with the **last odd**, or the generator's period collapses.
+    `Seed.init` enforces it for any input.
+  - `lascl` and `rscl` scale without the intermediate overflow a direct ratio
+    would cause - `1e300 / 1e-300` is not representable even though the scaled
+    matrix is. Both have tests that overflow the naive computation first to
+    show the difference is real.
+  - `rscl`'s complex symbols are `csrscl` and `zdrscl`, with *two* precision
+    letters (complex vector, real scalar), so the one-letter prefix lookup used
+    everywhere else does not reach them.
+
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
   type. 156 extern declarations, generated from `cblas_new.h` rather than
@@ -292,7 +318,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 348 tests covering the four modules above, including struct-layout
+- 366 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
