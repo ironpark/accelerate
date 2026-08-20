@@ -15,11 +15,20 @@
 //! types, `info` translation and workspace sizing. Typed wrappers are being
 //! added tier by tier - `docs/LAPACK-PLAN.md` is the checklist.
 //!
-//! Wrapped so far: the simple linear-system drivers in `linear.zig` (`gesv`,
-//! `gbsv`, `gtsv`, `posv`, `ppsv`, `pbsv`, `ptsv`, `sysv`, `spsv`, `hesv`,
-//! `hpsv`) and the mixed-precision iterative-refinement pair. The *expert*
-//! drivers (`gesvx` and friends, which also equilibrate and estimate condition
-//! numbers) are not wrapped yet.
+//! Wrapped so far:
+//!
+//! - `linear.zig` - the simple drivers `gesv`, `gbsv`, `gtsv`, `posv`, `ppsv`,
+//!   `pbsv`, `ptsv`, `sysv`, `spsv`, `hesv`, `hpsv`, plus the mixed-precision
+//!   iterative-refinement pair.
+//! - `factor.zig` - the computational routines behind them: LU, Cholesky,
+//!   Bunch-Kaufman and triangular solves, inverses, condition estimates and
+//!   equilibration, in full, packed and band storage.
+//! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
+//!
+//! Not yet wrapped: the *expert* drivers (`gesvx` and friends), the iterative
+//! refinement routines (`gerfs`, `porfs`, ...), the `_aa`/`_rk`/`_rook`
+//! factorization variants, RFP storage, and everything from least squares
+//! onwards.
 //!
 //! Until a routine has a wrapper it is reachable through `c`, with the caveats
 //! documented there: every argument by pointer, no bounds checking, `info`
@@ -32,6 +41,8 @@ pub const types = @import("types.zig");
 pub const info = @import("info.zig");
 pub const work = @import("work.zig");
 pub const linear = @import("linear.zig");
+pub const norms = @import("norms.zig");
+pub const factor = @import("factor.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -66,6 +77,29 @@ pub const sysv = linear.sysv;
 pub const spsv = linear.spsv;
 pub const hesv = linear.hesv;
 pub const hpsv = linear.hpsv;
+
+pub const getrf = factor.getrf;
+pub const getrs = factor.getrs;
+pub const getri = factor.getri;
+pub const gecon = factor.gecon;
+pub const potrf = factor.potrf;
+pub const potrs = factor.potrs;
+pub const potri = factor.potri;
+pub const pocon = factor.pocon;
+pub const sytrf = factor.sytrf;
+pub const sytrs = factor.sytrs;
+pub const hetrf = factor.hetrf;
+pub const hetrs = factor.hetrs;
+pub const trtrs = factor.trtrs;
+pub const trtri = factor.trtri;
+pub const trcon = factor.trcon;
+
+pub const lange = norms.lange;
+pub const lansy = norms.lansy;
+pub const lanhe = norms.lanhe;
+pub const lantr = norms.lantr;
+pub const lacpy = norms.lacpy;
+pub const laset = norms.laset;
 
 test {
     std.testing.refAllDecls(@This());

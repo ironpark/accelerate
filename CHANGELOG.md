@@ -11,10 +11,15 @@
   story as `blas`: this binds `$NEWLAPACK[$ILP64]`, since the unsuffixed names
   belong to the deprecated `clapack.h`.
 
-  Wrapped so far, in `linear.zig`: the simple linear-system drivers `gesv`,
+  Wrapped so far: the simple linear-system drivers in `linear.zig` (`gesv`,
   `gbsv`, `gtsv`, `posv`, `ppsv`, `pbsv`, `ptsv`, `sysv`, `spsv`, `hesv`,
-  `hpsv`, and the mixed-precision `dsgesv`/`dsposv`. The expert drivers
-  (`gesvx` and friends) are not wrapped yet. What the wrappers add:
+  `hpsv`, `dsgesv`, `dsposv`); the computational routines behind them in
+  `factor.zig` (LU, Cholesky, Bunch-Kaufman and triangular factor/solve/invert,
+  condition estimation and equilibration, in full, packed and band storage);
+  and the `lan*` norms plus `lacpy`/`laset` in `norms.zig`. Not yet wrapped:
+  the expert drivers (`gesvx` and friends), iterative refinement (`gerfs`,
+  `porfs`), the `_aa`/`_rk`/`_rook` variants, RFP storage, and everything from
+  least squares onwards. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -68,6 +73,25 @@
     ever meets a new routine with the same leading-`ret` shape rather than
     trusting the header. `chla_transtype`, the only other routine with a leading
     `ret`, is unaffected.
+
+  - The condition estimators allocate their own scratch and return `rcond`
+    directly. The sizes vary by routine *and* by whether `T` is real or complex
+    - a real `gecon` wants `4n` reals and `n` integers, a complex one `2n`
+    complex and `2n` reals - and `sycon`/`hecon` are an outright exception,
+    taking no `rwork` at all where `gecon`, `pocon` and `trcon` all do. None of
+    that is in the header, and getting one wrong is a heap overflow rather than
+    an error, so it is not a number worth exposing. Two tests over-allocate and
+    poison past the documented ends to check the sizes empirically.
+  - `*con` takes `||A||` of the *original* matrix, not of the factorization
+    that overwrote it. Passing the wrong one produces a confident, meaningless
+    number with no diagnostic anywhere, so there is a characterization test
+    pinning that the two differ.
+  - Every real/complex split is a `switch (T)`, not an `if` on a type
+    predicate. Zig analyses both arms of a plain `if` even when the condition is
+    comptime-known, which type-checks the complex call shape against the real
+    symbol and fails to compile; only the selected `switch` prong is analysed.
+    The same applies to the `@compileError` guards, which otherwise fire on
+    every instantiation including the valid ones.
 
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
@@ -189,7 +213,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 244 tests covering the four modules above, including struct-layout
+- 292 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
