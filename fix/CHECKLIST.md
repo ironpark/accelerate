@@ -463,32 +463,32 @@
 
 ### `src/vimage/convolution.zig`
 
-- [ ] `convolvePlanar` — L25
-- [ ] `convolveInterleaved` — L53
-- [ ] `convolveWithBiasPlanar` — L85
-- [ ] `convolveWithBiasInterleaved` — L110
-- [ ] `convolveMultiKernelInterleaved` — L142
-- [ ] `richardsonLucyDeConvolvePlanar` — L177
-- [ ] `richardsonLucyDeConvolveInterleaved` — L205
-- [ ] `boxConvolvePlanar8` — L241
-- [ ] `boxConvolveARGB8888` — L256
-- [ ] `tentConvolvePlanar8` — L281
-- [ ] `tentConvolveARGB8888` — L296
+- [x] `convolvePlanar` — L25
+- [x] `convolveInterleaved` — L53
+- [x] `convolveWithBiasPlanar` — L85
+- [x] `convolveWithBiasInterleaved` — L110
+- [x] `convolveMultiKernelInterleaved` — L142
+- [x] `richardsonLucyDeConvolvePlanar` — L177
+- [x] `richardsonLucyDeConvolveInterleaved` — L205
+- [x] `boxConvolvePlanar8` — L241
+- [x] `boxConvolveARGB8888` — L256
+- [x] `tentConvolvePlanar8` — L281
+- [x] `tentConvolveARGB8888` — L296
 
 ### `src/vimage/geometry.zig`
 
-- [ ] `rotate` — L47
-- [ ] `scale` — L81
-- [ ] `horizontalReflect` — L111
-- [ ] `verticalReflect` — L134
-- [ ] `rotate90` — L177
-- [ ] `affineWarp` — L215
-- [ ] `affineWarpD` — L244
-- [ ] `affineWarpCG` — L273
-- [ ] `horizontalShear` — L307
-- [ ] `verticalShear` — L340
-- [ ] `newResamplingFilter` — L380
-- [ ] `destroyResamplingFilter` — L385
+- [x] `rotate` — L47
+- [x] `scale` — L81
+- [x] `horizontalReflect` — L111
+- [x] `verticalReflect` — L134
+- [x] `rotate90` — L177
+- [x] `affineWarp` — L215
+- [x] `affineWarpD` — L244
+- [x] `affineWarpCG` — L273
+- [x] `horizontalShear` — L307
+- [x] `verticalShear` — L340
+- [x] `newResamplingFilter` — L380
+- [x] `destroyResamplingFilter` — L385
 
 ### `src/vimage/histogram.zig`
 
@@ -527,35 +527,35 @@
 
 ### `src/vimage/transform.zig`
 
-- [ ] `matrixMultiplyPlanar` — L27
-- [ ] `matrixMultiplyPlanar16S` — L66
-- [ ] `matrixMultiplyARGB` — L96
-- [ ] `matrixMultiplyARGBToPlanar` — L117
-- [ ] `createGammaFunction` — L155
-- [ ] `destroyGammaFunction` — L160
-- [ ] `gammaPlanarF` — L165
-- [ ] `gammaPlanar8toPlanarF` — L170
-- [ ] `gammaPlanarFtoPlanar8` — L175
-- [ ] `piecewiseGamma` — L187
-- [ ] `symmetricPiecewiseGamma` — L218
-- [ ] `piecewisePolynomial` — L243
-- [ ] `symmetricPiecewisePolynomial` — L267
-- [ ] `piecewiseRational` — L282
-- [ ] `lookupTable_Planar8toPlanar16` — L301
-- [ ] `lookupTable_Planar8toPlanar24` — L306
-- [ ] `lookupTable_Planar8toPlanar48` — L311
-- [ ] `lookupTable_Planar8toPlanar96` — L316
-- [ ] `lookupTable_Planar8toPlanar128` — L321
-- [ ] `lookupTable_Planar8toPlanarF` — L326
-- [ ] `lookupTable_PlanarFtoPlanar8` — L331
-- [ ] `lookupTable_8to64U` — L336
-- [ ] `lookupTable_Planar16` — L341
-- [ ] `interpolatedLookupTable_PlanarF` — L347
-- [ ] `multidimensionalTableCreate` — L380
-- [ ] `multidimensionalTableRetain` — L393
-- [ ] `multidimensionalTableRelease` — L398
-- [ ] `multiDimensionalInterpolatedLookupTable` — L403
-- [ ] `floodFill_Planar8` — L424
-- [ ] `floodFill_Planar16U` — L429
-- [ ] `floodFill_ARGB8888` — L434
-- [ ] `floodFill_ARGB16U` — L439
+- [x] `matrixMultiplyPlanar` — L27
+- [x] `matrixMultiplyPlanar16S` — L66
+- [x] `matrixMultiplyARGB` — L96
+- [x] `matrixMultiplyARGBToPlanar` — L117
+- [x] `createGammaFunction` — L155
+- [x] `destroyGammaFunction` — L160
+- [x] `gammaPlanarF` — L165
+- [x] `gammaPlanar8toPlanarF` — L170
+- [x] `gammaPlanarFtoPlanar8` — L175
+- [x] `piecewiseGamma` — L187
+- [x] `symmetricPiecewiseGamma` — L218
+- [x] `piecewisePolynomial` — L243
+- [x] `symmetricPiecewisePolynomial` — L267
+- [x] `piecewiseRational` — L282
+- [x] `lookupTable_Planar8toPlanar16` — L301
+- [x] `lookupTable_Planar8toPlanar24` — L306
+- [x] `lookupTable_Planar8toPlanar48` — L311
+- [x] `lookupTable_Planar8toPlanar96` — L316
+- [x] `lookupTable_Planar8toPlanar128` — L321
+- [x] `lookupTable_Planar8toPlanarF` — L326
+- [x] `lookupTable_PlanarFtoPlanar8` — L331
+- [x] `lookupTable_8to64U` — L336
+- [x] `lookupTable_Planar16` — L341
+- [x] `interpolatedLookupTable_PlanarF` — L347
+- [x] `multidimensionalTableCreate` — L380
+- [x] `multidimensionalTableRetain` — L393
+- [x] `multidimensionalTableRelease` — L398
+- [x] `multiDimensionalInterpolatedLookupTable` — L403
+- [x] `floodFill_Planar8` — L424
+- [x] `floodFill_Planar16U` — L429
+- [x] `floodFill_ARGB8888` — L434
+- [x] `floodFill_ARGB16U` — L439
