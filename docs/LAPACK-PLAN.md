@@ -259,7 +259,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `gecon` <sub>cdsz</sub>
 - [x] `geequ` <sub>cdsz</sub>
 - [ ] `geequb` <sub>cdsz</sub>
-- [ ] `gerfs` <sub>cdsz</sub>
+- [x] `gerfs` <sub>cdsz</sub>
 - [ ] `gesc2` <sub>cdsz</sub>
 - [ ] `getc2` <sub>cdsz</sub>
 - [ ] `getf2` <sub>cdsz</sub>
@@ -276,7 +276,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hecon_3` <sub>cz</sub>
 - [ ] `hecon_rook` <sub>cz</sub>
 - [ ] `heequb` <sub>cz</sub>
-- [ ] `herfs` <sub>cz</sub>
+- [x] `herfs` <sub>cz</sub>
 - [ ] `heswapr` <sub>cz</sub>
 - [ ] `hetf2` <sub>cz</sub>
 - [ ] `hetf2_rk` <sub>cz</sub>
@@ -316,7 +316,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `pocon` <sub>cdsz</sub>
 - [ ] `poequ` <sub>cdsz</sub>
 - [ ] `poequb` <sub>cdsz</sub>
-- [ ] `porfs` <sub>cdsz</sub>
+- [x] `porfs` <sub>cdsz</sub>
 - [ ] `potf2` <sub>cdsz</sub>
 - [x] `potrf` <sub>cdsz</sub>
 - [ ] `potrf2` <sub>cdsz</sub>
@@ -347,7 +347,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `syconvf` <sub>cdsz</sub>
 - [ ] `syconvf_rook` <sub>cdsz</sub>
 - [ ] `syequb` <sub>cdsz</sub>
-- [ ] `syrfs` <sub>cdsz</sub>
+- [x] `syrfs` <sub>cdsz</sub>
 - [ ] `syswapr` <sub>cdsz</sub>
 - [ ] `sytf2` <sub>cdsz</sub>
 - [ ] `sytf2_rk` <sub>cdsz</sub>
@@ -384,7 +384,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `tpttf` <sub>cdsz</sub>
 - [x] `tpttr` <sub>cdsz</sub>
 - [x] `trcon` <sub>cdsz</sub>
-- [ ] `trrfs` <sub>cdsz</sub>
+- [x] `trrfs` <sub>cdsz</sub>
 - [ ] `trti2` <sub>cdsz</sub>
 - [x] `trtri` <sub>cdsz</sub>
 - [x] `trtrs` <sub>cdsz</sub>
