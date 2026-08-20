@@ -4,8 +4,9 @@ Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
 computational routines complete; the T3 orthogonal factorizations and least
 squares drivers complete. The T4 symmetric eigenvalue drivers and the two main
 T6 SVD drivers complete. The T5/T7 nonsymmetric and generalized eigenproblems
-complete, as is T8. Expert drivers, iterative refinement, the
-`_aa`/`_rk`/`_rook` variants, RFP storage and the CS decomposition outstanding.
+complete, as are T8, the iterative refinement routines and the main expert
+drivers. The `_aa`/`_rk`/`_rook` variants, RFP storage, the CS decomposition and
+the remaining band/packed condition estimators are outstanding.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -214,7 +215,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `gbsv` <sub>cdsz</sub>
 - [ ] `gbsvx` <sub>cdsz</sub>
 - [x] `gesv` <sub>cdsz</sub>
-- [ ] `gesvx` <sub>cdsz</sub>
+- [x] `gesvx` <sub>cdsz</sub>
 - [x] `gtsv` <sub>cdsz</sub>
 - [ ] `gtsvx` <sub>cdsz</sub>
 - [x] `hesv` <sub>cz</sub>
@@ -228,7 +229,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `pbsv` <sub>cdsz</sub>
 - [ ] `pbsvx` <sub>cdsz</sub>
 - [x] `posv` <sub>cdsz</sub>
-- [ ] `posvx` <sub>cdsz</sub>
+- [x] `posvx` <sub>cdsz</sub>
 - [x] `ppsv` <sub>cdsz</sub>
 - [ ] `ppsvx` <sub>cdsz</sub>
 - [x] `ptsv` <sub>cdsz</sub>
@@ -242,7 +243,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sysv_aa_2stage` <sub>cdsz</sub>
 - [ ] `sysv_rk` <sub>cdsz</sub>
 - [ ] `sysv_rook` <sub>cdsz</sub>
-- [ ] `sysvx` <sub>cdsz</sub>
+- [x] `sysvx` <sub>cdsz</sub>
 - [ ] `zsum1` <sub>d</sub>
 
 ### T2 Linear systems — computational
