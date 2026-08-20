@@ -1,3 +1,4 @@
+const std = @import("std");
 const types = @import("types.zig");
 const c = @import("c.zig");
 
@@ -561,4 +562,937 @@ pub fn tableLookUpPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer,
 /// pixel_size is the number of bytes per pixel (e.g., 1 for Planar8, 4 for ARGB8888 or PlanarF, 16 for ARGBFFFF).
 pub fn copyBuffer(src: *const vImage_Buffer, dest: *const vImage_Buffer, pixel_size: usize, flags: vImage_Flags) vImage_Error {
     return c.vImageCopyBuffer(src, dest, pixel_size, flags);
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+//
+// All buffers below are deliberately non-square (2 rows x 3 cols) with
+// `rowBytes` padded past `width * bytesPerPixel` (pad_pixels=1) to catch any
+// wrapper code that assumes rowBytes == width * bytesPerPixel instead of
+// respecting the struct field. Every vImage_Error return is checked against
+// kvImageNoError (0) before inspecting pixel data, per Conversion.h's error
+// convention.
+
+const kvImageNoError: vImage_Error = 0;
+
+fn PixelBuf(comptime T: type, comptime height: usize, comptime width: usize, comptime channels: usize, comptime pad_pixels: usize) type {
+    const stride = (width + pad_pixels) * channels;
+    return struct {
+        data: [height * stride]T = [_]T{0} ** (height * stride),
+
+        const Self = @This();
+
+        pub fn buffer(self: *Self) vImage_Buffer {
+            return .{
+                .data = @ptrCast(&self.data),
+                .height = height,
+                .width = width,
+                .rowBytes = stride * @sizeOf(T),
+            };
+        }
+
+        pub fn set(self: *Self, row: usize, col: usize, ch: usize, v: T) void {
+            self.data[row * stride + col * channels + ch] = v;
+        }
+
+        pub fn get(self: *Self, row: usize, col: usize, ch: usize) T {
+            return self.data[row * stride + col * channels + ch];
+        }
+    };
+}
+
+// ---- half-precision (Pixel_16F) bit patterns for exactly-representable values ----
+const half_0_0: Pixel_F16 = 0x0000;
+const half_1_0: Pixel_F16 = 0x3C00;
+const half_neg1_0: Pixel_F16 = 0xBC00;
+const half_0_5: Pixel_F16 = 0x3800;
+const Pixel_F16 = types.Pixel_16F;
+
+test "clipPlanarF" {
+    var src = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dst = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    const vals = [_][3]Pixel_F{ .{ -5.0, 3.0, 15.0 }, .{ 0.0, 10.0, -1.0 } };
+    for (vals, 0..) |row, r| for (row, 0..) |v, col| src.set(r, col, 0, v);
+
+    var s = src.buffer();
+    var d = dst.buffer();
+    const err = clipPlanarF(&s, &d, 10.0, 0.0, Flags.kvImageNoFlags);
+    try std.testing.expectEqual(kvImageNoError, err);
+
+    const expected = [_][3]Pixel_F{ .{ 0.0, 3.0, 10.0 }, .{ 0.0, 10.0, 0.0 } };
+    for (expected, 0..) |row, r| for (row, 0..) |v, col| {
+        try std.testing.expectEqual(v, dst.get(r, col, 0));
+    };
+}
+
+test "planar8ToPlanarF and planarFToPlanar8 round-trip formulas" {
+    // result = (maxFloat - minFloat) * pixel / 255.0 + minFloat, maxFloat=10, minFloat=-10.
+    var src8 = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var dstF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    src8.set(0, 0, 0, 0);
+    src8.set(0, 1, 0, 255);
+    src8.set(1, 2, 0, 128);
+
+    var s8 = src8.buffer();
+    var dF = dstF.buffer();
+    try std.testing.expectEqual(kvImageNoError, planar8ToPlanarF(&s8, &dF, 10.0, -10.0, Flags.kvImageNoFlags));
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, -10.0), dstF.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 10.0), dstF.get(0, 1, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 20.0 * 128.0 / 255.0 - 10.0), dstF.get(1, 2, 0), 1e-4);
+
+    // result = SATURATED_CLIP_0_to_255(255*(pixel-minFloat)/(maxFloat-minFloat) + 0.5), maxFloat=10, minFloat=-10.
+    var srcF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dst8 = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    srcF.set(0, 0, 0, -20.0); // below range -> clip 0
+    srcF.set(0, 1, 0, 0.0); // mid -> 128
+    srcF.set(1, 2, 0, 20.0); // above range -> clip 255
+
+    var sF = srcF.buffer();
+    var d8 = dst8.buffer();
+    try std.testing.expectEqual(kvImageNoError, planarFToPlanar8(&sF, &d8, 10.0, -10.0, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 0), dst8.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 128), dst8.get(0, 1, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 255), dst8.get(1, 2, 0));
+}
+
+test "planar16FToPlanarF and planarFToPlanar16F round-trip exactly-representable values" {
+    var src16 = PixelBuf(Pixel_F16, 2, 3, 1, 1){};
+    var dstF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    src16.set(0, 0, 0, half_0_0);
+    src16.set(0, 1, 0, half_1_0);
+    src16.set(1, 2, 0, half_neg1_0);
+
+    var s16 = src16.buffer();
+    var dF = dstF.buffer();
+    try std.testing.expectEqual(kvImageNoError, planar16FToPlanarF(&s16, &dF, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 0.0), dstF.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 1.0), dstF.get(0, 1, 0));
+    try std.testing.expectEqual(@as(Pixel_F, -1.0), dstF.get(1, 2, 0));
+
+    var srcF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dst16 = PixelBuf(Pixel_F16, 2, 3, 1, 1){};
+    srcF.set(0, 0, 0, 0.0);
+    srcF.set(0, 1, 0, 1.0);
+    srcF.set(1, 2, 0, 0.5);
+
+    var sF = srcF.buffer();
+    var d16 = dst16.buffer();
+    try std.testing.expectEqual(kvImageNoError, planarFToPlanar16F(&sF, &d16, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(half_0_0, dst16.get(0, 0, 0));
+    try std.testing.expectEqual(half_1_0, dst16.get(0, 1, 0));
+    try std.testing.expectEqual(half_0_5, dst16.get(1, 2, 0));
+}
+
+test "planar8ToPlanar16F and planar16FToPlanar8 endpoint formulas" {
+    var src8 = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var dst16 = PixelBuf(Pixel_F16, 2, 3, 1, 1){};
+    src8.set(0, 0, 0, 0);
+    src8.set(0, 1, 0, 255);
+
+    var s8 = src8.buffer();
+    var d16 = dst16.buffer();
+    try std.testing.expectEqual(kvImageNoError, planar8ToPlanar16F(&s8, &d16, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(half_0_0, dst16.get(0, 0, 0));
+    try std.testing.expectEqual(half_1_0, dst16.get(0, 1, 0));
+
+    // destPixel = ROUND_TO_INTEGER(SATURATED_CLAMP_0_to_255(255 * srcPixel)), ties-to-even.
+    var src16 = PixelBuf(Pixel_F16, 2, 3, 1, 1){};
+    var dst8 = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    src16.set(0, 0, 0, half_0_0);
+    src16.set(0, 1, 0, half_1_0);
+    src16.set(1, 2, 0, half_0_5); // 255*0.5 = 127.5 -> ties-to-even -> 128
+
+    var s16 = src16.buffer();
+    var d8 = dst8.buffer();
+    try std.testing.expectEqual(kvImageNoError, planar16FToPlanar8(&s16, &d8, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 0), dst8.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 255), dst8.get(0, 1, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 128), dst8.get(1, 2, 0));
+}
+
+test "convert16SToF and convertFTo16S: result = scale * pixel + offset" {
+    var src = PixelBuf(i16, 2, 3, 1, 1){};
+    var dst = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    src.set(0, 0, 0, 100);
+    src.set(0, 1, 0, -200);
+
+    var s = src.buffer();
+    var d = dst.buffer();
+    // offset=1.0, scale=0.1 (asymmetric, non-trivial constants)
+    try std.testing.expectEqual(kvImageNoError, convert16SToF(&s, &d, 1.0, 0.1, Flags.kvImageNoFlags));
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 11.0), dst.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, -19.0), dst.get(0, 1, 0), 1e-4);
+
+    // Round trip with same offset/scale (per header's documented lossless round trip).
+    var srcF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dstS = PixelBuf(i16, 2, 3, 1, 1){};
+    srcF.set(0, 0, 0, 11.0);
+    srcF.set(0, 1, 0, -19.0);
+    var sF = srcF.buffer();
+    var dS = dstS.buffer();
+    try std.testing.expectEqual(kvImageNoError, convertFTo16S(&sF, &dS, 1.0, 0.1, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(i16, 100), dstS.get(0, 0, 0));
+    try std.testing.expectEqual(@as(i16, -200), dstS.get(0, 1, 0));
+}
+
+test "convert16UToF and convertFTo16U: result = scale * pixel + offset" {
+    var src = PixelBuf(u16, 2, 3, 1, 1){};
+    var dst = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    src.set(0, 0, 0, 100);
+    src.set(0, 1, 0, 6000);
+
+    var s = src.buffer();
+    var d = dst.buffer();
+    try std.testing.expectEqual(kvImageNoError, convert16UToF(&s, &d, 2.0, 0.01, Flags.kvImageNoFlags));
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 3.0), dst.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 62.0), dst.get(0, 1, 0), 1e-4);
+
+    var srcF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dstU = PixelBuf(u16, 2, 3, 1, 1){};
+    srcF.set(0, 0, 0, 3.0);
+    srcF.set(0, 1, 0, 62.0);
+    var sF = srcF.buffer();
+    var dU = dstU.buffer();
+    try std.testing.expectEqual(kvImageNoError, convertFTo16U(&sF, &dU, 2.0, 0.01, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(u16, 100), dstU.get(0, 0, 0));
+    try std.testing.expectEqual(@as(u16, 6000), dstU.get(0, 1, 0));
+}
+
+test "convert16UToPlanar8: result = (pixel * 255 + 32767) / 65535" {
+    var src = PixelBuf(u16, 2, 3, 1, 1){};
+    var dst = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    src.set(0, 0, 0, 0);
+    src.set(0, 1, 0, 65535);
+    src.set(1, 2, 0, 32768);
+
+    var s = src.buffer();
+    var d = dst.buffer();
+    try std.testing.expectEqual(kvImageNoError, convert16UToPlanar8(&s, &d, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 0), dst.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 255), dst.get(0, 1, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 128), dst.get(1, 2, 0));
+}
+
+test "planar8To16U: result = (pixel * 65535 + 127) / 255" {
+    var src = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var dst = PixelBuf(u16, 2, 3, 1, 1){};
+    src.set(0, 0, 0, 0);
+    src.set(0, 1, 0, 255);
+    src.set(1, 2, 0, 128);
+
+    var s = src.buffer();
+    var d = dst.buffer();
+    try std.testing.expectEqual(kvImageNoError, planar8To16U(&s, &d, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(u16, 0), dst.get(0, 0, 0));
+    try std.testing.expectEqual(@as(u16, 65535), dst.get(0, 1, 0));
+    try std.testing.expectEqual(@as(u16, 32896), dst.get(1, 2, 0));
+}
+
+test "planar8ToARGB8888 and argb8888ToPlanar8: A,R,G,B planar order round-trip" {
+    var a = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var r = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var g = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var b = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    // Every channel gets a distinct, asymmetric value per pixel so any channel
+    // swap is detectable.
+    a.set(0, 0, 0, 10);
+    r.set(0, 0, 0, 20);
+    g.set(0, 0, 0, 30);
+    b.set(0, 0, 0, 40);
+    a.set(1, 2, 0, 11);
+    r.set(1, 2, 0, 22);
+    g.set(1, 2, 0, 33);
+    b.set(1, 2, 0, 44);
+
+    var dest = PixelBuf(Pixel_8, 2, 3, 4, 1){};
+    var ba = a.buffer();
+    var br = r.buffer();
+    var bg = g.buffer();
+    var bb = b.buffer();
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, planar8ToARGB8888(&ba, &br, &bg, &bb, &bd, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 10), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 3));
+    try std.testing.expectEqual(@as(Pixel_8, 11), dest.get(1, 2, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 22), dest.get(1, 2, 1));
+    try std.testing.expectEqual(@as(Pixel_8, 33), dest.get(1, 2, 2));
+    try std.testing.expectEqual(@as(Pixel_8, 44), dest.get(1, 2, 3));
+
+    var da = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var dr = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var dg = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var db = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var bda = da.buffer();
+    var bdr = dr.buffer();
+    var bdg = dg.buffer();
+    var bdb = db.buffer();
+    try std.testing.expectEqual(kvImageNoError, argb8888ToPlanar8(&bd, &bda, &bdr, &bdg, &bdb, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 10), da.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 20), dr.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 30), dg.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 40), db.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 11), da.get(1, 2, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 22), dr.get(1, 2, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 33), dg.get(1, 2, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 44), db.get(1, 2, 0));
+}
+
+test "planarFToARGBFFFF and argbFFFFToPlanarF: A,R,G,B planar order round-trip" {
+    var a = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var r = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var g = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var b = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    a.set(0, 0, 0, 1.0);
+    r.set(0, 0, 0, 2.0);
+    g.set(0, 0, 0, 3.0);
+    b.set(0, 0, 0, 4.0);
+
+    var dest = PixelBuf(Pixel_F, 2, 3, 4, 1){};
+    var ba = a.buffer();
+    var br = r.buffer();
+    var bg = g.buffer();
+    var bb = b.buffer();
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, planarFToARGBFFFF(&ba, &br, &bg, &bb, &bd, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 1.0), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), dest.get(0, 0, 3));
+
+    var da = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dr = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dg = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var db = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var bda = da.buffer();
+    var bdr = dr.buffer();
+    var bdg = dg.buffer();
+    var bdb = db.buffer();
+    try std.testing.expectEqual(kvImageNoError, argbFFFFToPlanarF(&bd, &bda, &bdr, &bdg, &bdb, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 1.0), da.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dr.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), dg.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), db.get(0, 0, 0));
+}
+
+test "planar8ToARGBFFFF: A,R,G,B order with per-channel min/max scaling" {
+    var a = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var r = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var g = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var b = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    a.set(0, 0, 0, 255);
+    r.set(0, 0, 0, 0);
+    g.set(0, 0, 0, 255);
+    b.set(0, 0, 0, 0);
+
+    var dest = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    var ba = a.buffer();
+    var br = r.buffer();
+    var bg = g.buffer();
+    var bb = b.buffer();
+    var bd = dest.buffer();
+    // Distinct per-channel [min,max] so a channel-index mixup in the range
+    // arrays would be caught.
+    const max_f: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
+    const min_f: Pixel_FFFF = .{ 0.0, 0.0, 0.0, 0.0 };
+    try std.testing.expectEqual(kvImageNoError, planar8ToARGBFFFF(&ba, &br, &bg, &bb, &bd, max_f, min_f, Flags.kvImageNoFlags));
+    // alpha = maxFloat[0]*255/255 = 1.0; green = maxFloat[2]*255/255 = 3.0
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 1.0), dest.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.0), dest.get(0, 0, 1), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 3.0), dest.get(0, 0, 2), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.0), dest.get(0, 0, 3), 1e-4);
+}
+
+test "argb8888ToPlanarF and argbFFFFToPlanar8: per-channel min/max scaling" {
+    var src = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    src.set(0, 0, 0, 255); // A
+    src.set(0, 0, 1, 0); // R
+    src.set(0, 0, 2, 255); // G
+    src.set(0, 0, 3, 0); // B
+    var a = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var r = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var g = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var b = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var bs = src.buffer();
+    var ba = a.buffer();
+    var br = r.buffer();
+    var bg = g.buffer();
+    var bb = b.buffer();
+    const max_f: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
+    const min_f: Pixel_FFFF = .{ 0.0, 0.0, 0.0, 0.0 };
+    try std.testing.expectEqual(kvImageNoError, argb8888ToPlanarF(&bs, &ba, &br, &bg, &bb, max_f, min_f, Flags.kvImageNoFlags));
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 1.0), a.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.0), r.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 3.0), g.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.0), b.get(0, 0, 0), 1e-4);
+
+    var srcF = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    srcF.set(0, 0, 0, 1.0);
+    srcF.set(0, 0, 1, 0.0);
+    srcF.set(0, 0, 2, 3.0);
+    srcF.set(0, 0, 3, 0.0);
+    var da = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var dr = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var dg = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var db = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var bsF = srcF.buffer();
+    var bda = da.buffer();
+    var bdr = dr.buffer();
+    var bdg = dg.buffer();
+    var bdb = db.buffer();
+    try std.testing.expectEqual(kvImageNoError, argbFFFFToPlanar8(&bsF, &bda, &bdr, &bdg, &bdb, max_f, min_f, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 255), da.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 0), dr.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 255), dg.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 0), db.get(0, 0, 0));
+}
+
+test "planarFToARGB8888: A,R,G,B order with per-channel min/max scaling" {
+    var a = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var r = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var g = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var b = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    a.set(0, 0, 0, 1.0);
+    r.set(0, 0, 0, 0.0);
+    g.set(0, 0, 0, 3.0);
+    b.set(0, 0, 0, 0.0);
+
+    var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    var ba = a.buffer();
+    var br = r.buffer();
+    var bg = g.buffer();
+    var bb = b.buffer();
+    var bd = dest.buffer();
+    const max_f: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
+    const min_f: Pixel_FFFF = .{ 0.0, 0.0, 0.0, 0.0 };
+    try std.testing.expectEqual(kvImageNoError, planarFToARGB8888(&ba, &br, &bg, &bb, &bd, max_f, min_f, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 255), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 0), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_8, 255), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(Pixel_8, 0), dest.get(0, 0, 3));
+}
+
+test "planar8ToRGB888 and rgb888ToPlanar8: R,G,B planar order round-trip" {
+    var r = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var g = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var b = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    r.set(0, 0, 0, 20);
+    g.set(0, 0, 0, 30);
+    b.set(0, 0, 0, 40);
+
+    var dest = PixelBuf(Pixel_8, 2, 3, 3, 1){};
+    var br = r.buffer();
+    var bg = g.buffer();
+    var bb = b.buffer();
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, planar8ToRGB888(&br, &bg, &bb, &bd, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 2));
+
+    var dr = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var dg = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var db = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var bdr = dr.buffer();
+    var bdg = dg.buffer();
+    var bdb = db.buffer();
+    try std.testing.expectEqual(kvImageNoError, rgb888ToPlanar8(&bd, &bdr, &bdg, &bdb, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 20), dr.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 30), dg.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 40), db.get(0, 0, 0));
+}
+
+test "planarFToRGBFFF and rgbFFFToPlanarF: R,G,B planar order round-trip" {
+    var r = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var g = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var b = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    r.set(0, 0, 0, 2.0);
+    g.set(0, 0, 0, 3.0);
+    b.set(0, 0, 0, 4.0);
+
+    var dest = PixelBuf(Pixel_F, 2, 3, 3, 1){};
+    var br = r.buffer();
+    var bg = g.buffer();
+    var bb = b.buffer();
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, planarFToRGBFFF(&br, &bg, &bb, &bd, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), dest.get(0, 0, 2));
+
+    var dr = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var dg = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var db = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var bdr = dr.buffer();
+    var bdg = dg.buffer();
+    var bdb = db.buffer();
+    try std.testing.expectEqual(kvImageNoError, rgbFFFToPlanarF(&bd, &bdr, &bdg, &bdb, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dr.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), dg.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), db.get(0, 0, 0));
+}
+
+test "rgb888ToInterleaved8888 and interleaved8888ToRGB888: channel order per variant" {
+    var rgb = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+    rgb.set(0, 0, 0, 20); // R
+    rgb.set(0, 0, 1, 30); // G
+    rgb.set(0, 0, 2, 40); // B
+    var brgb = rgb.buffer();
+
+    // ARGB: dest = {alpha, R, G, B}
+    {
+        var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        var bd = dest.buffer();
+        try std.testing.expectEqual(kvImageNoError, rgb888ToInterleaved8888(&brgb, null, 99, &bd, .argb, false, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 2));
+        try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 3));
+
+        var rgbBack = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+        var bb = rgbBack.buffer();
+        try std.testing.expectEqual(kvImageNoError, interleaved8888ToRGB888(&bd, &bb, .argb, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 20), rgbBack.get(0, 0, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 30), rgbBack.get(0, 0, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 40), rgbBack.get(0, 0, 2));
+    }
+
+    // RGBA: dest = {R, G, B, alpha}
+    {
+        var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        var bd = dest.buffer();
+        try std.testing.expectEqual(kvImageNoError, rgb888ToInterleaved8888(&brgb, null, 99, &bd, .rgba, false, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 2));
+        try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 3));
+
+        var rgbBack = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+        var bb = rgbBack.buffer();
+        try std.testing.expectEqual(kvImageNoError, interleaved8888ToRGB888(&bd, &bb, .rgba, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 20), rgbBack.get(0, 0, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 30), rgbBack.get(0, 0, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 40), rgbBack.get(0, 0, 2));
+    }
+
+    // BGRA: dest = {B, G, R, alpha}
+    {
+        var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        var bd = dest.buffer();
+        try std.testing.expectEqual(kvImageNoError, rgb888ToInterleaved8888(&brgb, null, 99, &bd, .bgra, false, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 2));
+        try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 3));
+
+        var rgbBack = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+        var bb = rgbBack.buffer();
+        try std.testing.expectEqual(kvImageNoError, interleaved8888ToRGB888(&bd, &bb, .bgra, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 20), rgbBack.get(0, 0, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 30), rgbBack.get(0, 0, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 40), rgbBack.get(0, 0, 2));
+    }
+}
+
+test "rgb888ToInterleaved8888 with premultiply: r' = (a*r + 127) / 255" {
+    var rgb = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+    rgb.set(0, 0, 0, 200); // R
+    rgb.set(0, 0, 1, 100); // G
+    rgb.set(0, 0, 2, 50); // B
+    var brgb = rgb.buffer();
+
+    var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, rgb888ToInterleaved8888(&brgb, null, 128, &bd, .argb, true, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 128), dest.get(0, 0, 0)); // alpha unchanged
+    try std.testing.expectEqual(@as(Pixel_8, (128 * 200 + 127) / 255), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_8, (128 * 100 + 127) / 255), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(Pixel_8, (128 * 50 + 127) / 255), dest.get(0, 0, 3));
+}
+
+test "interleavedFFFFToRGBFFF and rgbFFFToInterleavedFFFF: channel order per variant" {
+    var rgb = PixelBuf(Pixel_F, 1, 1, 3, 0){};
+    rgb.set(0, 0, 0, 2.0);
+    rgb.set(0, 0, 1, 3.0);
+    rgb.set(0, 0, 2, 4.0);
+    var brgb = rgb.buffer();
+
+    var dest = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, rgbFFFToInterleavedFFFF(&brgb, null, 9.0, &bd, .bgra, false, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), dest.get(0, 0, 0)); // B
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 1)); // G
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 2)); // R
+    try std.testing.expectEqual(@as(Pixel_F, 9.0), dest.get(0, 0, 3)); // alpha
+
+    var rgbBack = PixelBuf(Pixel_F, 1, 1, 3, 0){};
+    var bb = rgbBack.buffer();
+    try std.testing.expectEqual(kvImageNoError, interleavedFFFFToRGBFFF(&bd, &bb, .bgra, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), rgbBack.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), rgbBack.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), rgbBack.get(0, 0, 2));
+}
+
+test "flatten8888ToRGB888: non-premultiplied color = (color*alpha + (255-alpha)*bg + 127) / 255" {
+    var src = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    src.set(0, 0, 0, 128); // alpha
+    src.set(0, 0, 1, 200); // R
+    src.set(0, 0, 2, 100); // G
+    src.set(0, 0, 3, 50); // B
+    var bs = src.buffer();
+
+    var dest = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+    var bd = dest.buffer();
+    const bg: Pixel_8888 = .{ 255, 10, 20, 30 };
+    try std.testing.expectEqual(kvImageNoError, flatten8888ToRGB888(&bs, &bd, bg, .argb, false, Flags.kvImageNoFlags));
+    const alpha: u32 = 128;
+    const inv: u32 = 255 - alpha;
+    try std.testing.expectEqual(@as(Pixel_8, @intCast((alpha * 200 + inv * 10 + 127) / 255)), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, @intCast((alpha * 100 + inv * 20 + 127) / 255)), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_8, @intCast((alpha * 50 + inv * 30 + 127) / 255)), dest.get(0, 0, 2));
+}
+
+test "flattenFFFFToRGBFFF: non-premultiplied color = color*alpha + (1-alpha)*bg" {
+    var src = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    src.set(0, 0, 0, 0.5); // alpha
+    src.set(0, 0, 1, 1.0); // R
+    src.set(0, 0, 2, 0.4); // G
+    src.set(0, 0, 3, 0.2); // B
+    var bs = src.buffer();
+
+    var dest = PixelBuf(Pixel_F, 1, 1, 3, 0){};
+    var bd = dest.buffer();
+    const bg: Pixel_FFFF = .{ 1.0, 0.0, 0.8, 0.6 };
+    try std.testing.expectEqual(kvImageNoError, flattenFFFFToRGBFFF(&bs, &bd, bg, .argb, false, Flags.kvImageNoFlags));
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.5 * 1.0 + 0.5 * 0.0), dest.get(0, 0, 0), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.5 * 0.4 + 0.5 * 0.8), dest.get(0, 0, 1), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.5 * 0.2 + 0.5 * 0.6), dest.get(0, 0, 2), 1e-4);
+}
+
+test "permuteChannelsARGB8888: dest[i] = src[permuteMap[i]]" {
+    var src = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    src.set(0, 0, 0, 10); // A
+    src.set(0, 0, 1, 20); // R
+    src.set(0, 0, 2, 30); // G
+    src.set(0, 0, 3, 40); // B
+    var bs = src.buffer();
+
+    var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    var bd = dest.buffer();
+    // {3,2,1,0}: ARGB -> BGRA per header's own example.
+    try std.testing.expectEqual(kvImageNoError, permuteChannelsARGB8888(&bs, &bd, .{ 3, 2, 1, 0 }, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(Pixel_8, 10), dest.get(0, 0, 3));
+}
+
+test "permuteChannelsARGB16U: dest[i] = src[permuteMap[i]]" {
+    var src = PixelBuf(u16, 1, 1, 4, 0){};
+    src.set(0, 0, 0, 100);
+    src.set(0, 0, 1, 200);
+    src.set(0, 0, 2, 300);
+    src.set(0, 0, 3, 400);
+    var bs = src.buffer();
+
+    var dest = PixelBuf(u16, 1, 1, 4, 0){};
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, permuteChannelsARGB16U(&bs, &bd, .{ 1, 0, 3, 2 }, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(u16, 200), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(u16, 100), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(u16, 400), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(u16, 300), dest.get(0, 0, 3));
+}
+
+test "permuteChannelsARGBFFFF: dest[i] = src[permuteMap[i]]" {
+    var src = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    src.set(0, 0, 0, 1.0);
+    src.set(0, 0, 1, 2.0);
+    src.set(0, 0, 2, 3.0);
+    src.set(0, 0, 3, 4.0);
+    var bs = src.buffer();
+
+    var dest = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, permuteChannelsARGBFFFF(&bs, &bd, .{ 3, 2, 1, 0 }, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(Pixel_F, 1.0), dest.get(0, 0, 3));
+}
+
+test "permuteChannelsRGB888: dest[i] = src[permuteMap[i]]" {
+    var src = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+    src.set(0, 0, 0, 20);
+    src.set(0, 0, 1, 30);
+    src.set(0, 0, 2, 40);
+    var bs = src.buffer();
+
+    var dest = PixelBuf(Pixel_8, 1, 1, 3, 0){};
+    var bd = dest.buffer();
+    // {2,1,0}: RGB -> BGR per header's own example.
+    try std.testing.expectEqual(kvImageNoError, permuteChannelsRGB888(&bs, &bd, .{ 2, 1, 0 }, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 2));
+}
+
+test "extractChannelARGB8888/ARGB16U/ARGBFFFF: 0-based index, 0 = first (A) channel" {
+    var src8 = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    src8.set(0, 0, 0, 10);
+    src8.set(0, 0, 1, 20);
+    src8.set(0, 0, 2, 30);
+    src8.set(0, 0, 3, 40);
+    var bs8 = src8.buffer();
+    var d8 = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+    var bd8 = d8.buffer();
+    try std.testing.expectEqual(kvImageNoError, extractChannelARGB8888(&bs8, &bd8, 0, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 10), d8.get(0, 0, 0));
+    try std.testing.expectEqual(kvImageNoError, extractChannelARGB8888(&bs8, &bd8, 3, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 40), d8.get(0, 0, 0));
+
+    var src16 = PixelBuf(u16, 1, 1, 4, 0){};
+    src16.set(0, 0, 0, 100);
+    src16.set(0, 0, 2, 300);
+    var bs16 = src16.buffer();
+    var d16 = PixelBuf(u16, 1, 1, 1, 0){};
+    var bd16 = d16.buffer();
+    try std.testing.expectEqual(kvImageNoError, extractChannelARGB16U(&bs16, &bd16, 2, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(u16, 300), d16.get(0, 0, 0));
+
+    var srcF = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    srcF.set(0, 0, 1, 2.5);
+    var bsF = srcF.buffer();
+    var dF = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    var bdF = dF.buffer();
+    try std.testing.expectEqual(kvImageNoError, extractChannelARGBFFFF(&bsF, &bdF, 1, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 2.5), dF.get(0, 0, 0));
+}
+
+test "overwriteChannelsARGB8888 vs overwriteScalarARGB8888 vs overwritePixelARGB8888: distinct semantics" {
+    // orig = {A=1, R=2, G=3, B=4}; mask selects alpha(0x8) | red(0x4) = 0xC.
+    const mask: u8 = ChannelMask.alpha | ChannelMask.red;
+
+    // overwriteChannelsARGB8888: a single PLANAR value is broadcast into every
+    // masked channel (Conversion.h: srcPixel splatted into all lanes, then
+    // masked-combined with origSrc).
+    {
+        var orig = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        orig.set(0, 0, 0, 1);
+        orig.set(0, 0, 1, 2);
+        orig.set(0, 0, 2, 3);
+        orig.set(0, 0, 3, 4);
+        var newSrc = PixelBuf(Pixel_8, 1, 1, 1, 0){};
+        newSrc.set(0, 0, 0, 77);
+        var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        var bo = orig.buffer();
+        var bn = newSrc.buffer();
+        var bd = dest.buffer();
+        try std.testing.expectEqual(kvImageNoError, overwriteChannelsARGB8888(&bn, &bo, &bd, mask, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 77), dest.get(0, 0, 0)); // alpha <- newSrc (broadcast)
+        try std.testing.expectEqual(@as(Pixel_8, 77), dest.get(0, 0, 1)); // red <- newSrc (broadcast, same value)
+        try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2)); // green unchanged
+        try std.testing.expectEqual(@as(Pixel_8, 4), dest.get(0, 0, 3)); // blue unchanged
+    }
+
+    // overwriteScalarARGB8888: a single compile-time constant scalar is
+    // broadcast into every masked channel.
+    {
+        var src = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        src.set(0, 0, 0, 1);
+        src.set(0, 0, 1, 2);
+        src.set(0, 0, 2, 3);
+        src.set(0, 0, 3, 4);
+        var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        var bs = src.buffer();
+        var bd = dest.buffer();
+        try std.testing.expectEqual(kvImageNoError, overwriteScalarARGB8888(99, &bs, &bd, mask, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2));
+        try std.testing.expectEqual(@as(Pixel_8, 4), dest.get(0, 0, 3));
+    }
+
+    // overwritePixelARGB8888: each masked channel gets ITS OWN component from
+    // the_pixel -- distinct values per channel, not a broadcast.
+    {
+        var src = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        src.set(0, 0, 0, 1);
+        src.set(0, 0, 1, 2);
+        src.set(0, 0, 2, 3);
+        src.set(0, 0, 3, 4);
+        var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+        var bs = src.buffer();
+        var bd = dest.buffer();
+        const pixel: Pixel_8888 = .{ 9, 8, 7, 6 };
+        try std.testing.expectEqual(kvImageNoError, overwritePixelARGB8888(pixel, &bs, &bd, mask, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(Pixel_8, 9), dest.get(0, 0, 0)); // alpha <- pixel[0]
+        try std.testing.expectEqual(@as(Pixel_8, 8), dest.get(0, 0, 1)); // red <- pixel[1] (distinct from alpha!)
+        try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2)); // green unchanged
+        try std.testing.expectEqual(@as(Pixel_8, 4), dest.get(0, 0, 3)); // blue unchanged
+    }
+}
+
+test "overwriteChannelsARGBFFFF and overwritePixelARGBFFFF" {
+    const mask: u8 = ChannelMask.green | ChannelMask.blue;
+    var orig = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    orig.set(0, 0, 0, 1.0);
+    orig.set(0, 0, 1, 2.0);
+    orig.set(0, 0, 2, 3.0);
+    orig.set(0, 0, 3, 4.0);
+    var newSrc = PixelBuf(Pixel_F, 1, 1, 1, 0){};
+    newSrc.set(0, 0, 0, 77.0);
+    var dest = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    var bo = orig.buffer();
+    var bn = newSrc.buffer();
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, overwriteChannelsARGBFFFF(&bn, &bo, &bd, mask, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 1.0), dest.get(0, 0, 0)); // alpha unchanged
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 1)); // red unchanged
+    try std.testing.expectEqual(@as(Pixel_F, 77.0), dest.get(0, 0, 2)); // green <- broadcast
+    try std.testing.expectEqual(@as(Pixel_F, 77.0), dest.get(0, 0, 3)); // blue <- broadcast
+
+    var dest2 = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    var bd2 = dest2.buffer();
+    const pixel: Pixel_FFFF = .{ 9.0, 8.0, 7.0, 6.0 };
+    try std.testing.expectEqual(kvImageNoError, overwritePixelARGBFFFF(pixel, &bo, &bd2, mask, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 1.0), dest2.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dest2.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_F, 7.0), dest2.get(0, 0, 2)); // green <- pixel[2]
+    try std.testing.expectEqual(@as(Pixel_F, 6.0), dest2.get(0, 0, 3)); // blue <- pixel[3] (distinct!)
+}
+
+test "overwriteScalarPlanar8 and overwriteScalarPlanarF: fill entire buffer" {
+    var dst8 = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var bd8 = dst8.buffer();
+    try std.testing.expectEqual(kvImageNoError, overwriteScalarPlanar8(42, &bd8, Flags.kvImageNoFlags));
+    for (0..2) |r| for (0..3) |cidx| {
+        try std.testing.expectEqual(@as(Pixel_8, 42), dst8.get(r, cidx, 0));
+    };
+
+    var dstF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
+    var bdF = dstF.buffer();
+    try std.testing.expectEqual(kvImageNoError, overwriteScalarPlanarF(3.5, &bdF, Flags.kvImageNoFlags));
+    for (0..2) |r| for (0..3) |cidx| {
+        try std.testing.expectEqual(@as(Pixel_F, 3.5), dstF.get(r, cidx, 0));
+    };
+}
+
+test "selectChannelsARGB8888: masked channels come from newSrc's OWN channel position (not broadcast)" {
+    var newSrc = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    newSrc.set(0, 0, 0, 50);
+    newSrc.set(0, 0, 1, 51);
+    newSrc.set(0, 0, 2, 52);
+    newSrc.set(0, 0, 3, 53);
+    var orig = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    orig.set(0, 0, 0, 1);
+    orig.set(0, 0, 1, 2);
+    orig.set(0, 0, 2, 3);
+    orig.set(0, 0, 3, 4);
+    var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    var bn = newSrc.buffer();
+    var bo = orig.buffer();
+    var bd = dest.buffer();
+    const mask: u8 = ChannelMask.alpha | ChannelMask.blue;
+    try std.testing.expectEqual(kvImageNoError, selectChannelsARGB8888(&bn, &bo, &bd, mask, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 50), dest.get(0, 0, 0)); // alpha <- newSrc[0]
+    try std.testing.expectEqual(@as(Pixel_8, 2), dest.get(0, 0, 1)); // red <- orig[1]
+    try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2)); // green <- orig[2]
+    try std.testing.expectEqual(@as(Pixel_8, 53), dest.get(0, 0, 3)); // blue <- newSrc[3] (distinct from alpha!)
+}
+
+test "selectChannelsARGBFFFF: masked channels come from newSrc's OWN channel position" {
+    var newSrc = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    newSrc.set(0, 0, 0, 50.0);
+    newSrc.set(0, 0, 3, 53.0);
+    var orig = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    orig.set(0, 0, 0, 1.0);
+    orig.set(0, 0, 1, 2.0);
+    orig.set(0, 0, 2, 3.0);
+    orig.set(0, 0, 3, 4.0);
+    var dest = PixelBuf(Pixel_F, 1, 1, 4, 0){};
+    var bn = newSrc.buffer();
+    var bo = orig.buffer();
+    var bd = dest.buffer();
+    const mask: u8 = ChannelMask.alpha | ChannelMask.blue;
+    try std.testing.expectEqual(kvImageNoError, selectChannelsARGBFFFF(&bn, &bo, &bd, mask, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 50.0), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 1));
+    try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 2));
+    try std.testing.expectEqual(@as(Pixel_F, 53.0), dest.get(0, 0, 3));
+}
+
+test "fillARGB8888 and fillARGBFFFF: every pixel gets the constant color" {
+    var dst8 = PixelBuf(Pixel_8, 2, 3, 4, 1){};
+    var bd8 = dst8.buffer();
+    const color8: Pixel_8888 = .{ 10, 20, 30, 40 };
+    try std.testing.expectEqual(kvImageNoError, fillARGB8888(&bd8, color8, Flags.kvImageNoFlags));
+    for (0..2) |r| for (0..3) |cidx| {
+        try std.testing.expectEqual(@as(Pixel_8, 10), dst8.get(r, cidx, 0));
+        try std.testing.expectEqual(@as(Pixel_8, 20), dst8.get(r, cidx, 1));
+        try std.testing.expectEqual(@as(Pixel_8, 30), dst8.get(r, cidx, 2));
+        try std.testing.expectEqual(@as(Pixel_8, 40), dst8.get(r, cidx, 3));
+    };
+
+    var dstF = PixelBuf(Pixel_F, 2, 3, 4, 1){};
+    var bdF = dstF.buffer();
+    const colorF: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
+    try std.testing.expectEqual(kvImageNoError, fillARGBFFFF(&bdF, colorF, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_F, 1.0), dstF.get(1, 2, 0));
+    try std.testing.expectEqual(@as(Pixel_F, 4.0), dstF.get(1, 2, 3));
+}
+
+test "tableLookUpARGB8888: table[pixel] is used per channel; null leaves channel unchanged" {
+    var alpha_table: [256]Pixel_8 = undefined;
+    var blue_table: [256]Pixel_8 = undefined;
+    for (0..256) |i| {
+        alpha_table[i] = @intCast(255 - i); // invert
+        blue_table[i] = @intCast(i); // identity
+    }
+
+    var src = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    src.set(0, 0, 0, 10); // A
+    src.set(0, 0, 1, 20); // R (no table -> unchanged)
+    src.set(0, 0, 2, 30); // G (no table -> unchanged)
+    src.set(0, 0, 3, 40); // B
+    var bs = src.buffer();
+    var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, tableLookUpARGB8888(&bs, &bd, &alpha_table, null, null, &blue_table, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 255 - 10), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 1)); // unchanged (null table)
+    try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 2)); // unchanged (null table)
+    try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 3));
+}
+
+test "tableLookUpPlanar8: dest[x] = table[src[x]]" {
+    var table: [256]Pixel_8 = undefined;
+    for (0..256) |i| table[i] = @intCast(255 - i);
+
+    var src = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    src.set(0, 0, 0, 0);
+    src.set(1, 2, 0, 200);
+    var bs = src.buffer();
+    var dest = PixelBuf(Pixel_8, 2, 3, 1, 1){};
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, tableLookUpPlanar8(&bs, &bd, &table, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(Pixel_8, 255), dest.get(0, 0, 0));
+    try std.testing.expectEqual(@as(Pixel_8, 55), dest.get(1, 2, 0));
+}
+
+test "copyBuffer: byte-exact copy respecting pixel_size and rowBytes padding" {
+    var src = PixelBuf(Pixel_8, 2, 3, 4, 1){};
+    for (0..2) |r| for (0..3) |cidx| for (0..4) |ch| {
+        src.set(r, cidx, ch, @intCast(r * 10 + cidx * 4 + ch));
+    };
+    var dest = PixelBuf(Pixel_8, 2, 3, 4, 1){};
+    var bs = src.buffer();
+    var bd = dest.buffer();
+    try std.testing.expectEqual(kvImageNoError, copyBuffer(&bs, &bd, 4, Flags.kvImageNoFlags));
+    for (0..2) |r| for (0..3) |cidx| for (0..4) |ch| {
+        try std.testing.expectEqual(src.get(r, cidx, ch), dest.get(r, cidx, ch));
+    };
 }

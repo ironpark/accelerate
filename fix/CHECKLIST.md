@@ -407,59 +407,59 @@
 
 ### `src/vimage/conversion.zig`
 
-- [ ] `clipPlanarF` — L21
-- [ ] `planar8ToPlanarF` — L32
-- [ ] `planarFToPlanar8` — L39
-- [ ] `planar16FToPlanarF` — L44
-- [ ] `planarFToPlanar16F` — L49
-- [ ] `planar8ToPlanar16F` — L54
-- [ ] `planar16FToPlanar8` — L59
-- [ ] `convert16SToF` — L66
-- [ ] `convert16UToF` — L73
-- [ ] `convertFTo16S` — L80
-- [ ] `convertFTo16U` — L87
-- [ ] `convert16UToPlanar8` — L94
-- [ ] `planar8To16U` — L99
-- [ ] `planar8ToARGB8888` — L108
-- [ ] `planarFToARGBFFFF` — L120
-- [ ] `argb8888ToPlanar8` — L136
-- [ ] `argbFFFFToPlanarF` — L148
-- [ ] `planar8ToARGBFFFF` — L164
-- [ ] `argb8888ToPlanarF` — L178
-- [ ] `argbFFFFToPlanar8` — L192
-- [ ] `planarFToARGB8888` — L206
-- [ ] `planar8ToRGB888` — L224
-- [ ] `planarFToRGBFFF` — L235
-- [ ] `rgb888ToPlanar8` — L246
-- [ ] `rgbFFFToPlanarF` — L257
-- [ ] `rgb888ToInterleaved8888` — L287
-- [ ] `interleaved8888ToRGB888` — L304
-- [ ] `interleavedFFFFToRGBFFF` — L322
-- [ ] `rgbFFFToInterleavedFFFF` — L340
-- [ ] `flatten8888ToRGB888` — L358
-- [ ] `flattenFFFFToRGBFFF` — L375
-- [ ] `permuteChannelsARGB8888` — L398
-- [ ] `permuteChannelsARGB16U` — L403
-- [ ] `permuteChannelsARGBFFFF` — L408
-- [ ] `permuteChannelsRGB888` — L416
-- [ ] `extractChannelARGB8888` — L427
-- [ ] `extractChannelARGB16U` — L432
-- [ ] `extractChannelARGBFFFF` — L437
-- [ ] `overwriteChannelsARGB8888` — L456
-- [ ] `overwriteChannelsARGBFFFF` — L461
-- [ ] `overwriteScalarPlanar8` — L466
-- [ ] `overwriteScalarPlanarF` — L471
-- [ ] `overwriteScalarARGB8888` — L476
-- [ ] `overwriteScalarARGBFFFF` — L481
-- [ ] `overwritePixelARGB8888` — L486
-- [ ] `overwritePixelARGBFFFF` — L491
-- [ ] `selectChannelsARGB8888` — L500
-- [ ] `selectChannelsARGBFFFF` — L505
-- [ ] `fillARGB8888` — L514
-- [ ] `fillARGBFFFF` — L519
-- [ ] `tableLookUpARGB8888` — L530
-- [ ] `tableLookUpPlanar8` — L551
-- [ ] `copyBuffer` — L562
+- [x] `clipPlanarF` — L21
+- [x] `planar8ToPlanarF` — L32
+- [x] `planarFToPlanar8` — L39
+- [x] `planar16FToPlanarF` — L44
+- [x] `planarFToPlanar16F` — L49
+- [x] `planar8ToPlanar16F` — L54
+- [x] `planar16FToPlanar8` — L59
+- [x] `convert16SToF` — L66
+- [x] `convert16UToF` — L73
+- [x] `convertFTo16S` — L80
+- [x] `convertFTo16U` — L87
+- [x] `convert16UToPlanar8` — L94
+- [x] `planar8To16U` — L99
+- [x] `planar8ToARGB8888` — L108
+- [x] `planarFToARGBFFFF` — L120
+- [x] `argb8888ToPlanar8` — L136
+- [x] `argbFFFFToPlanarF` — L148
+- [x] `planar8ToARGBFFFF` — L164
+- [x] `argb8888ToPlanarF` — L178
+- [x] `argbFFFFToPlanar8` — L192
+- [x] `planarFToARGB8888` — L206
+- [x] `planar8ToRGB888` — L224
+- [x] `planarFToRGBFFF` — L235
+- [x] `rgb888ToPlanar8` — L246
+- [x] `rgbFFFToPlanarF` — L257
+- [x] `rgb888ToInterleaved8888` — L287
+- [x] `interleaved8888ToRGB888` — L304
+- [x] `interleavedFFFFToRGBFFF` — L322
+- [x] `rgbFFFToInterleavedFFFF` — L340
+- [x] `flatten8888ToRGB888` — L358
+- [x] `flattenFFFFToRGBFFF` — L375
+- [x] `permuteChannelsARGB8888` — L398
+- [x] `permuteChannelsARGB16U` — L403
+- [x] `permuteChannelsARGBFFFF` — L408
+- [x] `permuteChannelsRGB888` — L416
+- [x] `extractChannelARGB8888` — L427
+- [x] `extractChannelARGB16U` — L432
+- [x] `extractChannelARGBFFFF` — L437
+- [x] `overwriteChannelsARGB8888` — L456
+- [x] `overwriteChannelsARGBFFFF` — L461
+- [x] `overwriteScalarPlanar8` — L466
+- [x] `overwriteScalarPlanarF` — L471
+- [x] `overwriteScalarARGB8888` — L476
+- [x] `overwriteScalarARGBFFFF` — L481
+- [x] `overwritePixelARGB8888` — L486
+- [x] `overwritePixelARGBFFFF` — L491
+- [x] `selectChannelsARGB8888` — L500
+- [x] `selectChannelsARGBFFFF` — L505
+- [x] `fillARGB8888` — L514
+- [x] `fillARGBFFFF` — L519
+- [x] `tableLookUpARGB8888` — L530
+- [x] `tableLookUpPlanar8` — L551
+- [x] `copyBuffer` — L562
 
 ### `src/vimage/convolution.zig`
 
