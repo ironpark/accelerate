@@ -802,3 +802,166 @@ test "pows applies a single scalar exponent to every base element" {
     try std.testing.expectApproxEqRel(@as(f64, 36.0), out2[1], 1e-9);
     try std.testing.expectApproxEqRel(@as(f64, 49.0), out2[2], 1e-9);
 }
+
+// ----------------------------------------------------------------------
+// Additional regression tests: trig / inverse-trig / hyperbolic family
+// (sin, cos, tan, sinpi, cospi, tanpi, sincos, asin, acos, atan, atan2,
+// sinh, cosh, tanh, asinh, acosh, atanh)
+//
+// vForce.h positional signature for these is `(y, x, n)` for the
+// single-argument functions ("output, input, count") - i.e. output comes
+// BEFORE input, opposite of the mathematical reading order but consistent
+// across the whole family. Confirmed against vForce.h for every symbol in
+// this group before writing these tests; all wrapper call sites already
+// match that order (no swap bug found in this group).
+// ----------------------------------------------------------------------
+
+test "tan asymmetric" {
+    // tan(0) = 0, tan(pi/4) = 1, tan(-pi/4) = -1
+    const x = [_]f32{ 0.0, std.math.pi / 4.0, -std.math.pi / 4.0 };
+    var out: [3]f32 = undefined;
+    tan(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.0), out[2], 0.001);
+}
+
+test "sinpi computes sin(pi*x), not pi*sin(x)" {
+    // At x=0.5 the two interpretations diverge obviously:
+    //   sin(pi*0.5)  = 1.0
+    //   pi*sin(0.5) ~= 1.5069
+    // vForce.h L1192/1200: "y[i] is set to sin(pi*x[i])".
+    const x = [_]f32{ 0.5, 0.25, -0.5 };
+    var out: [3]f32 = undefined;
+    sinpi(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, std.math.sqrt2 / 2.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.0), out[2], 0.001);
+
+    // Cross-check against the wrong ("pi*sin(x)") interpretation to make
+    // sure the test would actually fail if the binding computed that instead.
+    try std.testing.expect(@abs(out[0] - std.math.pi * @sin(@as(f32, 0.5))) > 0.4);
+}
+
+test "cospi computes cos(pi*x), not pi*cos(x)" {
+    // cos(pi*0.5) = 0, cos(pi*0.25) = sqrt(2)/2, cos(pi*0) = 1
+    const x = [_]f32{ 0.5, 0.25, 0.0 };
+    var out: [3]f32 = undefined;
+    cospi(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, std.math.sqrt2 / 2.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[2], 0.001);
+}
+
+test "tanpi computes tan(pi*x), not pi*tan(x)" {
+    // tan(pi*0.25) = 1, tan(pi*-0.25) = -1, tan(pi*0.1) ~= 0.3249 (18 deg)
+    const x = [_]f32{ 0.25, -0.25, 0.1 };
+    var out: [3]f32 = undefined;
+    tanpi(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.3249), out[2], 0.001);
+}
+
+test "sincos matches independent sin/cos, f64" {
+    // Asymmetric input, f64 path (vvsincos, not vvsincosf), cross-checked
+    // against the independently-verified sin()/cos() wrappers rather than
+    // hand-computed constants, to also confirm f64 dispatch is wired up.
+    const x = [_]f64{ 0.3, -1.2, 2.5 };
+    var sin_out: [3]f64 = undefined;
+    var cos_out: [3]f64 = undefined;
+    sincos(f64, &x, &sin_out, &cos_out);
+
+    var sin_ref: [3]f64 = undefined;
+    var cos_ref: [3]f64 = undefined;
+    sin(f64, &x, &sin_ref);
+    cos(f64, &x, &cos_ref);
+
+    for (0..3) |i| {
+        try std.testing.expectApproxEqAbs(sin_ref[i], sin_out[i], 1e-9);
+        try std.testing.expectApproxEqAbs(cos_ref[i], cos_out[i], 1e-9);
+    }
+}
+
+test "asin, acos, atan asymmetric" {
+    const x = [_]f32{ 0.5, -0.8, 0.2 };
+    var asin_out: [3]f32 = undefined;
+    var acos_out: [3]f32 = undefined;
+    var atan_out: [3]f32 = undefined;
+    asin(f32, &x, &asin_out);
+    acos(f32, &x, &acos_out);
+    atan(f32, &x, &atan_out);
+
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5236), asin_out[0], 0.001); // asin(0.5)
+    try std.testing.expectApproxEqAbs(@as(f32, -0.9273), asin_out[1], 0.001); // asin(-0.8)
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0472), acos_out[0], 0.001); // acos(0.5)
+    try std.testing.expectApproxEqAbs(@as(f32, 2.4981), acos_out[1], 0.001); // acos(-0.8)
+    try std.testing.expectApproxEqAbs(@as(f32, 0.1974), atan_out[2], 0.001); // atan(0.2)
+}
+
+test "atan2(y, x) argument order, not atan2(x, y)" {
+    // vForce.h L671/700 ("@param z ... z[i] is set to atan2(y,x)") and the
+    // extern declaration order `(z, y, x, n)` both put y before x. This
+    // wrapper's `atan2(comptime T, y, x, out)` passes y then x straight
+    // through, matching that order.
+    //
+    // atan2(1, 2) ~= 0.4636 rad, atan2(2, 1) ~= 1.1071 rad - clearly
+    // distinguishable, so a swapped y/x would fail this test.
+    const y = [_]f32{ 1.0, -3.0 };
+    const x = [_]f32{ 2.0, 4.0 };
+    var out: [2]f32 = undefined;
+    atan2(f32, &y, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.4636), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -0.6435), out[1], 0.001); // atan2(-3,4)
+
+    // f64 path cross-check (vvatan2, not vvatan2f).
+    const yd = [_]f64{ 1.0, -3.0 };
+    const xd = [_]f64{ 2.0, 4.0 };
+    var outd: [2]f64 = undefined;
+    atan2(f64, &yd, &xd, &outd);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4636476090008061), outd[0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, -0.6435011087932844), outd[1], 1e-9);
+}
+
+test "sinh, cosh, tanh asymmetric" {
+    const x = [_]f32{ 0.5, 1.5, -1.0 };
+    var sinh_out: [3]f32 = undefined;
+    var cosh_out: [3]f32 = undefined;
+    var tanh_out: [3]f32 = undefined;
+    sinh(f32, &x, &sinh_out);
+    cosh(f32, &x, &cosh_out);
+    tanh(f32, &x, &tanh_out);
+
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5211), sinh_out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.1293), sinh_out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.1276), cosh_out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.3524), cosh_out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -0.7616), tanh_out[2], 0.001); // tanh(-1)
+}
+
+test "asinh domain: all reals" {
+    const x = [_]f32{ 1.0, -2.0, 0.0 };
+    var out: [3]f32 = undefined;
+    asinh(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.8814), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.4436), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[2], 0.001);
+}
+
+test "acosh domain boundary x=1 and interior x=2" {
+    // acosh is only defined for x >= 1; acosh(1) = 0 is the domain boundary.
+    const x = [_]f32{ 1.0, 2.0 };
+    var out: [2]f32 = undefined;
+    acosh(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.3170), out[1], 0.001);
+}
+
+test "atanh domain interior, asymmetric" {
+    // atanh is only defined for -1 < x < 1.
+    const x = [_]f32{ 0.5, -0.9 };
+    var out: [2]f32 = undefined;
+    atanh(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5493), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.4722), out[1], 0.001);
+}

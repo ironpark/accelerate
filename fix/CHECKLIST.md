@@ -342,23 +342,23 @@
 - [x] `pow` — L176
 - [x] `pows` — L189
 - [ ] `fabs` — L205
-- [ ] `sin` — L220
-- [ ] `cos` — L231
-- [ ] `tan` — L242
-- [ ] `sinpi` — L253
-- [ ] `cospi` — L264
-- [ ] `tanpi` — L275
-- [ ] `sincos` — L286
-- [ ] `asin` — L302
-- [ ] `acos` — L313
-- [ ] `atan` — L324
-- [ ] `atan2` — L335
-- [ ] `sinh` — L351
-- [ ] `cosh` — L362
-- [ ] `tanh` — L373
-- [ ] `asinh` — L388
-- [ ] `acosh` — L399
-- [ ] `atanh` — L410
+- [x] `sin` — L220
+- [x] `cos` — L231
+- [x] `tan` — L242
+- [x] `sinpi` — L253
+- [x] `cospi` — L264
+- [x] `tanpi` — L275
+- [x] `sincos` — L286
+- [x] `asin` — L302
+- [x] `acos` — L313
+- [x] `atan` — L324
+- [x] `atan2` — L335
+- [x] `sinh` — L351
+- [x] `cosh` — L362
+- [x] `tanh` — L373
+- [x] `asinh` — L388
+- [x] `acosh` — L399
+- [x] `atanh` — L410
 - [ ] `trunc` — L425
 - [ ] `nint` — L436
 - [ ] `ceil` — L447
