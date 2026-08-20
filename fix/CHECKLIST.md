@@ -56,34 +56,34 @@
 
 - [x] `vdpsp` — L13
 - [x] `vspdp` — L17
-- [ ] `vflt8` — L27
+- [x] `vflt8` — L27
 - [x] `vflt16` — L38
-- [ ] `vflt32` — L49
-- [ ] `vfltu8` — L60
-- [ ] `vfltu16` — L71
-- [ ] `vfltu32` — L82
-- [ ] `vflt24` — L96
-- [ ] `vfltu24` — L104
-- [ ] `vfltsm24` — L115
-- [ ] `vfltsmu24` — L123
-- [ ] `vsmfix24` — L138
-- [ ] `vsmfixu24` — L150
-- [ ] `vfix8` — L161
-- [ ] `vfix16` — L172
-- [ ] `vfix32` — L183
-- [ ] `vfixu8` — L197
-- [ ] `vfixu16` — L208
-- [ ] `vfixu32` — L219
-- [ ] `vfixr8` — L236
-- [ ] `vfixr16` — L250
-- [ ] `vfixr32` — L264
-- [ ] `vfixru8` — L281
-- [ ] `vfixru16` — L295
-- [ ] `vfixru32` — L309
-- [ ] `venvlp` — L326
-- [ ] `vdbcon` — L345
-- [ ] `polar` — L355
-- [ ] `rect` — L363
+- [x] `vflt32` — L49
+- [x] `vfltu8` — L60
+- [x] `vfltu16` — L71
+- [x] `vfltu32` — L82
+- [x] `vflt24` — L96
+- [x] `vfltu24` — L104
+- [x] `vfltsm24` — L115
+- [x] `vfltsmu24` — L123
+- [x] `vsmfix24` — L138
+- [x] `vsmfixu24` — L150
+- [x] `vfix8` — L161
+- [x] `vfix16` — L172
+- [x] `vfix32` — L183
+- [x] `vfixu8` — L197
+- [x] `vfixu16` — L208
+- [x] `vfixu32` — L219
+- [x] `vfixr8` — L236
+- [x] `vfixr16` — L250
+- [x] `vfixr32` — L264
+- [x] `vfixru8` — L281
+- [x] `vfixru16` — L295
+- [x] `vfixru32` — L309
+- [x] `venvlp` — L326
+- [x] `vdbcon` — L345
+- [x] `polar` — L355
+- [x] `rect` — L363
 
 ### `src/vdsp/dft.zig`
 
