@@ -225,6 +225,20 @@ pub fn FFT(comptime T: type) type {
         /// producing a real output vector coerced into the complex structure.
         ///
         /// Direction must be +1 or -1.
+        ///
+        /// Scaling, runtime-confirmed (see fft.zig tests): the forward
+        /// transform's result is 2x the equivalent complex FFT (vDSP.h
+        /// documents this "scale = 2" explicitly, and it matches reality).
+        /// The inverse transform, despite vDSP.h's pseudocode claiming a
+        /// "scale = 1./N" normalization, is NOT normalized at runtime - a
+        /// forward+inverse round trip returns 2*N times the original signal,
+        /// not the original signal. Divide by 2*N yourself for a true
+        /// inverse.
+        ///
+        /// DC and Nyquist packing: both are purely real for a real input, so
+        /// they are packed specially into io.realp[0] (DC, Re(H[0])) and
+        /// io.imagp[0] (Nyquist, Re(H[N/2])); regular bins 1..N/2-1 use
+        /// realp[k]/imagp[k] for their Re/Im parts as usual.
         pub fn zrip(self: Self, io: *const SCT, direction: Direction) void {
             switch (T) {
                 f32 => c.vDSP_fft_zrip(self.setup, io, 1, self.log2n, @intFromEnum(direction)),
@@ -259,6 +273,9 @@ pub fn FFT(comptime T: type) type {
         /// producing a real output vector coerced into the complex structure.
         ///
         /// Direction must be +1 or -1.
+        ///
+        /// Same scaling and DC/Nyquist packing convention as zrip() - see its
+        /// doc comment for the runtime-confirmed detail.
         pub fn zrop(self: Self, input: *const SCT, output: *const SCT, direction: Direction) void {
             switch (T) {
                 f32 => c.vDSP_fft_zrop(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction)),
@@ -347,6 +364,19 @@ pub fn FFT(comptime T: type) type {
         /// symmetric in this real-to-complex transform.
         ///
         /// Direction must be +1 or -1.
+        ///
+        /// Scaling, runtime-confirmed the same way as the 1D zrip(): the
+        /// forward transform applies vDSP.h's documented "scale = 2", but
+        /// the inverse transform does NOT apply the "scale = 1/(N0*N1)"
+        /// vDSP.h's pseudocode claims - a forward+inverse round trip returns
+        /// 2*N0*N1 times the original signal. Divide by 2*N0*N1 yourself for
+        /// a true inverse.
+        ///
+        /// DC/Nyquist packing here is more involved than the 1D case (an
+        /// "awkward format... due to a legacy implementation" per vDSP.h -
+        /// see vDSP.h's vDSP_fft2d_zrip Maps comment for the exact element
+        /// layout); this binding passes strides straight through to vDSP so
+        /// that layout is unchanged from what vDSP.h documents.
         pub fn zrip2d(self: Self, io: *const SCT, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
             switch (T) {
                 f32 => c.vDSP_fft2d_zrip(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
@@ -379,6 +409,9 @@ pub fn FFT(comptime T: type) type {
         /// symmetric in this real-to-complex transform.
         ///
         /// Direction must be +1 or -1.
+        ///
+        /// Same scaling and DC/Nyquist packing convention as zrip2d() - see
+        /// its doc comment for the runtime-confirmed detail.
         pub fn zrop2d(self: Self, input: *const SCT, ia0: Stride, output: *const SCT, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
             switch (T) {
                 f32 => c.vDSP_fft2d_zrop(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
