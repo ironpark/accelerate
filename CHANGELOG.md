@@ -79,9 +79,15 @@
   `gges`/`gges3`/`ggesx`/`ggev3`/`ggevx` drivers, and the generalized SVD pair
   `ggsvd3`/`tgsja`.
 
+  `svd.zig` gains the rest of the SVD family: the bidiagonal solvers `bdsqr`,
+  `bdsdc` and `bdsvdx`, the range-restricted `gesvdx`, and the high-accuracy
+  Jacobi drivers `gesvj`, `gejsv` and `gesvdq`. `util.zig` gains `disna` and
+  `csum1`, and `linear.zig` gains the complex mixed-precision pair
+  `cgesvIterative`/`cposvIterative` that had been missing next to the real one.
+
   Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
-  CS decomposition, the tall-skinny QR family, the constrained least squares
-  routines and the remaining SVD drivers. What the wrappers add:
+  CS decomposition, the tall-skinny QR family and the constrained least squares
+  routines. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -110,6 +116,24 @@
     by a conjugation. The wrapper takes it uniformly and drops it for a real
     `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
     either precision.
+  - **`gejsv` has no workspace query.** Every other queryable routine here is
+    sized by calling it with `lwork = -1` first; `gejsv` returns `info = -17`,
+    an illegal value for `lwork` itself. Its workspace is therefore sized from
+    the documented formulas, taken at their maximum over every option
+    combination the wrapper can produce. A test pins the `-17`, because that
+    choice is only justified while it holds, and another runs every accuracy
+    level through the single size.
+  - `csum1` is the **true** 1-norm of a complex vector, summing `|z|`.
+    `blas.asum` is not: it sums `|re| + |im|`, which is up to `sqrt(2)` larger.
+    The two names read as synonyms; on two unit-modulus entries they return 2
+    and 2.83.
+  - `disna`'s `.left_singular` and `.right_singular` differ on a non-square
+    matrix: the side with the null space has its last entry capped by
+    `sigma_min` rather than by a gap. Measured on `d = {5, 3, 1}`,
+    `left_singular` at 5x3 gives `{2, 2, 1}` and at 3x5 gives `{2, 2, 2}`.
+  - `bdsvdx`'s `z` has `2n` rows, not `n`: each column stacks a left and a right
+    singular vector, each separately normalized, because the bisection runs on
+    the `2n x 2n` matrix `[[0, B], [B^T, 0]]`.
   - `tgsna`'s and `ggevx`'s condition numbers are **not** bounded by 1, where
     `trsna`'s and `geevx`'s are. They are chordal distances against an
     unnormalized pencil; measured, a diagonal pair with entries 2,3,4 and 1,2,3

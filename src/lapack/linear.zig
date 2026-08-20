@@ -614,6 +614,110 @@ pub fn sposvIterative(
     return iter;
 }
 
+/// `sgesvIterative` for complex elements: factored in single, refined to double.
+///
+/// The complex counterpart takes an extra `rwork` of `n` reals that the real
+/// pair has no use for.
+pub fn cgesvIterative(
+    n: usize,
+    nrhs: usize,
+    a: []Complex(f64),
+    lda: usize,
+    ipiv: []Int,
+    b: []const Complex(f64),
+    ldb: usize,
+    x: []Complex(f64),
+    ldx: usize,
+    workd: []Complex(f64),
+    works: []Complex(f32),
+    rwork: []f64,
+) Error!Int {
+    assertMatrix(a.len, n, n, lda);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(ipiv.len >= n);
+    std.debug.assert(workd.len >= n * nrhs);
+    std.debug.assert(works.len >= n * (n + nrhs));
+    std.debug.assert(rwork.len >= n);
+
+    const n_ = dim(n);
+    const nrhs_ = dim(nrhs);
+    const lda_ = dim(lda);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var iter: Int = 0;
+    var info: Int = 0;
+
+    c.zcgesv(
+        ref(&n_),
+        ref(&nrhs_),
+        a.ptr,
+        ref(&lda_),
+        ipiv.ptr,
+        b.ptr,
+        ref(&ldb_),
+        x.ptr,
+        ref(&ldx_),
+        workd.ptr,
+        works.ptr,
+        rwork.ptr,
+        out(&iter),
+        out(&info),
+    );
+    try info_mod.checkLu(info);
+    return iter;
+}
+
+/// `cgesvIterative` for a Hermitian positive definite matrix.
+pub fn cposvIterative(
+    uplo: Uplo,
+    n: usize,
+    nrhs: usize,
+    a: []Complex(f64),
+    lda: usize,
+    b: []const Complex(f64),
+    ldb: usize,
+    x: []Complex(f64),
+    ldx: usize,
+    workd: []Complex(f64),
+    works: []Complex(f32),
+    rwork: []f64,
+) Error!Int {
+    assertMatrix(a.len, n, n, lda);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(workd.len >= n * nrhs);
+    std.debug.assert(works.len >= n * (n + nrhs));
+    std.debug.assert(rwork.len >= n);
+
+    const n_ = dim(n);
+    const nrhs_ = dim(nrhs);
+    const lda_ = dim(lda);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var iter: Int = 0;
+    var info: Int = 0;
+
+    c.zcposv(
+        opt(uplo),
+        ref(&n_),
+        ref(&nrhs_),
+        a.ptr,
+        ref(&lda_),
+        b.ptr,
+        ref(&ldb_),
+        x.ptr,
+        ref(&ldx_),
+        workd.ptr,
+        works.ptr,
+        rwork.ptr,
+        out(&iter),
+        out(&info),
+    );
+    try info_mod.checkCholesky(info);
+    return iter;
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -929,4 +1033,63 @@ test "single precision works through the same wrappers" {
     try gesv(f32, 2, 1, &a, 2, &ipiv, &b, 2);
 
     try testing.expect(residual(f32, 2, &original, 2, &b, &.{ 3, 5 }) < 1e-5);
+}
+
+test "cgesvIterative solves a complex system in mixed precision" {
+    const Z = Complex(f64);
+    const n = 3;
+    var a = [_]Z{
+        Z.init(4, 0), Z.init(1, -1), Z.init(0, 0),
+        Z.init(1, 1), Z.init(5, 0),  Z.init(1, -1),
+        Z.init(0, 0), Z.init(1, 1),  Z.init(6, 0),
+    };
+    const original = a;
+    const b = [_]Z{ Z.init(1, 0), Z.init(2, 1), Z.init(3, -1) };
+    var ipiv: [n]Int = undefined;
+    var x: [n]Z = undefined;
+    var workd: [n]Z = undefined;
+    var works: [n * (n + 1)]Complex(f32) = undefined;
+    var rwork: [n]f64 = undefined;
+
+    // iter is positive when refinement converged and negative when the routine
+    // fell back to a double factorization. Both are correct outcomes and which
+    // one happens is not this binding's business, so the residual is what is
+    // pinned.
+    _ = try cgesvIterative(n, 1, &a, n, &ipiv, &b, n, &x, n, &workd, &works, &rwork);
+
+    for (0..n) |i| {
+        var acc = Z.init(0, 0);
+        for (0..n) |j| {
+            const m = original[i + j * n];
+            acc.re += m.re * x[j].re - m.im * x[j].im;
+            acc.im += m.re * x[j].im + m.im * x[j].re;
+        }
+        try testing.expectApproxEqAbs(b[i].re, acc.re, 1e-12);
+        try testing.expectApproxEqAbs(b[i].im, acc.im, 1e-12);
+    }
+}
+
+test "cposvIterative solves a Hermitian positive definite system" {
+    const Z = Complex(f64);
+    const n = 2;
+    var a = [_]Z{ Z.init(4, 0), Z.init(0, -1), Z.init(0, 1), Z.init(5, 0) };
+    const original = a;
+    const b = [_]Z{ Z.init(1, 0), Z.init(0, 1) };
+    var x: [n]Z = undefined;
+    var workd: [n]Z = undefined;
+    var works: [n * (n + 1)]Complex(f32) = undefined;
+    var rwork: [n]f64 = undefined;
+
+    _ = try cposvIterative(.upper, n, 1, &a, n, &b, n, &x, n, &workd, &works, &rwork);
+
+    for (0..n) |i| {
+        var acc = Z.init(0, 0);
+        for (0..n) |j| {
+            const m = original[i + j * n];
+            acc.re += m.re * x[j].re - m.im * x[j].im;
+            acc.im += m.re * x[j].im + m.im * x[j].re;
+        }
+        try testing.expectApproxEqAbs(b[i].re, acc.re, 1e-12);
+        try testing.expectApproxEqAbs(b[i].im, acc.im, 1e-12);
+    }
 }

@@ -32,7 +32,9 @@
 //!   `geev`, `gees`, `ggev`, their expert forms `geevx` and `geesx`, the Schur
 //!   toolkit (`hseqr`, `hsein`, `trevc3`, `trexc`, `trsen`, `trsna`) and the
 //!   Sylvester solvers `trsyl` and `trsyl3`.
-//! - `svd.zig` - `gesvd` and `gesdd`.
+//! - `svd.zig` - `gesvd`, `gesdd`, the bidiagonal solvers `bdsqr`, `bdsdc` and
+//!   `bdsvdx`, the range-restricted `gesvdx`, and the high-accuracy Jacobi
+//!   drivers `gesvj`, `gejsv` and `gesvdq`.
 //! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
 //! - `util.zig` - machine parameters, random matrices, plane rotations,
 //!   overflow-safe scaling, and the complex-symmetric routines CBLAS lacks.
@@ -115,6 +117,10 @@ pub const sysv = linear.sysv;
 pub const spsv = linear.spsv;
 pub const hesv = linear.hesv;
 pub const hpsv = linear.hpsv;
+pub const sgesvIterative = linear.sgesvIterative;
+pub const sposvIterative = linear.sposvIterative;
+pub const cgesvIterative = linear.cgesvIterative;
+pub const cposvIterative = linear.cposvIterative;
 
 pub const getrf = factor.getrf;
 pub const getrs = factor.getrs;
@@ -223,6 +229,24 @@ pub const hbgvx = eigen.hbgvx;
 
 pub const gesvd = svd.gesvd;
 pub const gesdd = svd.gesdd;
+pub const bdsqr = svd.bdsqr;
+pub const bdsdc = svd.bdsdc;
+pub const bdsvdx = svd.bdsvdx;
+pub const gesvdx = svd.gesvdx;
+pub const gesvj = svd.gesvj;
+pub const gejsv = svd.gejsv;
+pub const gesvdq = svd.gesvdq;
+pub const SvdResult = svd.SvdResult;
+pub const BidiagVectors = svd.BidiagVectors;
+pub const JacobiStructure = svd.JacobiStructure;
+pub const JacobiLeft = svd.JacobiLeft;
+pub const JacobiRight = svd.JacobiRight;
+pub const JsvAccuracy = svd.JsvAccuracy;
+pub const JsvLeft = svd.JsvLeft;
+pub const JsvRight = svd.JsvRight;
+pub const SvdqAccuracy = svd.SvdqAccuracy;
+pub const SvdqLeft = svd.SvdqLeft;
+pub const SvdqRight = svd.SvdqRight;
 
 pub const geev = eigen_gen.geev;
 pub const gees = eigen_gen.gees;
@@ -330,6 +354,9 @@ pub const lasrt = util.lasrt;
 pub const lacgv = util.lacgv;
 pub const ladiv = util.ladiv;
 pub const rscl = util.rscl;
+pub const disna = util.disna;
+pub const csum1 = util.csum1;
+pub const SeparationKind = util.SeparationKind;
 
 pub const gerfs = refine.gerfs;
 pub const porfs = refine.porfs;

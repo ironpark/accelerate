@@ -421,6 +421,93 @@ pub fn spr(
 }
 
 // ============================================================================
+// Perturbation bounds and complex sums
+// ============================================================================
+
+/// What `disna`'s numbers are separations *of*.
+pub const SeparationKind = enum(u8) {
+    /// Eigenvectors of a symmetric matrix.
+    eigenvectors = 'E',
+    /// Left singular vectors.
+    left_singular = 'L',
+    /// Right singular vectors.
+    right_singular = 'R',
+};
+
+/// Reciprocal condition numbers for eigenvectors or singular vectors, from the
+/// eigenvalues or singular values alone.
+///
+/// `sep[i]` is the gap between value `i` and its nearest neighbour, which is
+/// what governs how far vector `i` moves under a perturbation. Cheap — it looks
+/// only at `d`, never at a matrix — and it is the standard way to turn a
+/// spectrum into an error bound without a second factorization.
+///
+/// `d` must be **sorted** and, for the singular-vector kinds, non-negative;
+/// neither is checked by the routine. `sep` needs `n` entries for
+/// `.eigenvectors` and `min(rows, cols)` for the singular kinds.
+///
+/// The two singular kinds differ when the matrix is not square. For
+/// `.left_singular` with `rows > cols` the last entry is capped by the smallest
+/// singular value rather than by a gap, because the extra left singular vectors
+/// span a null space and are only as well determined as `sigma_min`;
+/// `.right_singular` does the same when `cols > rows`. Measured on
+/// `d = {5, 3, 1}`: `left_singular` at 5x3 gives `{2, 2, 1}` where the same
+/// call at 3x5 gives `{2, 2, 2}`.
+pub fn disna(
+    comptime T: type,
+    kind: SeparationKind,
+    rows: usize,
+    cols: usize,
+    d: []const T,
+    sep: []T,
+) Error!void {
+    requireReal(T, "disna");
+
+    const m_ = dim(rows);
+    const n_ = dim(cols);
+    var info: Int = 0;
+
+    sym(T, "disna")(opt(kind), ref(&m_), ref(&n_), d.ptr, sep.ptr, out(&info));
+    return info_mod.checkArgs(info);
+}
+
+/// The true 1-norm of a complex vector: `sum |z_i|`.
+///
+/// The one to use when you mean the 1-norm, because `blas.asum` does **not**
+/// compute it. BLAS's `dzasum` sums `|re| + |im|`, which is cheaper and can be
+/// up to `sqrt(2)` larger; this sums the actual moduli. LAPACK ships `dzsum1`
+/// precisely because its condition estimators need the real thing.
+///
+/// Measured on two unit-modulus entries: this returns 2, `blas.asum` returns
+/// 2.83.
+pub fn csum1(comptime T: type, n: usize, x: []const T, incx: usize) Real(T) {
+    requireComplexVector(T, "csum1");
+    std.debug.assert(incx >= 1);
+    std.debug.assert(x.len >= (n - @min(n, 1)) * incx + @min(n, 1));
+
+    const n_ = dim(n);
+    const incx_ = dim(incx);
+    return switch (T) {
+        Complex(f32) => c.scsum1(ref(&n_), x.ptr, ref(&incx_)),
+        else => c.dzsum1(ref(&n_), x.ptr, ref(&incx_)),
+    };
+}
+
+fn requireReal(comptime T: type, comptime routine: []const u8) void {
+    switch (T) {
+        f32, f64 => {},
+        else => @compileError(routine ++ " is real-only; it takes a spectrum, which is real for every problem that has one"),
+    }
+}
+
+fn requireComplexVector(comptime T: type, comptime routine: []const u8) void {
+    switch (T) {
+        Complex(f32), Complex(f64) => {},
+        else => @compileError(routine ++ " is complex-only; for a real vector the same sum is blas.asum"),
+    }
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -667,4 +754,68 @@ test "single precision complex works through the same wrappers" {
     const Z = Complex(f32);
     const q = ladiv(Z, Z.init(1, 2), Z.init(3, 4));
     try testing.expectApproxEqAbs(@as(f32, 0.44), q.re, 1e-6);
+}
+
+test "disna turns a spectrum into eigenvector condition numbers" {
+    // Two close eigenvalues and one far away: the close pair's vectors are the
+    // ill-conditioned ones, and disna says so without ever seeing a matrix.
+    const d = [_]f64{ 1, 1 + 1e-6, 10 };
+    var sep: [3]f64 = undefined;
+    try disna(f64, .eigenvectors, 3, 3, &d, &sep);
+
+    try testing.expectApproxEqAbs(@as(f64, 1e-6), sep[0], 1e-15);
+    try testing.expectApproxEqAbs(@as(f64, 1e-6), sep[1], 1e-15);
+    // The far one's gap is to its nearest neighbour, which is the pair.
+    try testing.expectApproxEqRel(@as(f64, 9 - 1e-6), sep[2], 1e-12);
+}
+
+test "disna's left and right kinds differ on a non-square matrix" {
+    const d = [_]f64{ 5, 3, 1 };
+
+    // Tall: the extra left singular vectors span a null space, so the last
+    // entry is capped by sigma_min rather than by the gap to its neighbour.
+    var tall: [3]f64 = undefined;
+    try disna(f64, .left_singular, 5, 3, &d, &tall);
+    try testing.expectEqualSlices(f64, &.{ 2, 2, 1 }, &tall);
+
+    // Wide, same job: no null space on the left, so the gap stands.
+    var wide: [3]f64 = undefined;
+    try disna(f64, .left_singular, 3, 5, &d, &wide);
+    try testing.expectEqualSlices(f64, &.{ 2, 2, 2 }, &wide);
+
+    // And the right kind is the mirror image.
+    var right: [3]f64 = undefined;
+    try disna(f64, .right_singular, 3, 5, &d, &right);
+    try testing.expectEqualSlices(f64, &.{ 2, 2, 1 }, &right);
+}
+
+test "csum1 is the true 1-norm where blas.asum is not" {
+    const blas = @import("../blas/root.zig");
+    const Z = Complex(f64);
+    // Each entry has modulus 1 but abs(re) + abs(im) = sqrt(2).
+    const x = [_]Z{
+        Z.init(std.math.sqrt1_2, std.math.sqrt1_2),
+        Z.init(std.math.sqrt1_2, -std.math.sqrt1_2),
+    };
+
+    try testing.expectApproxEqRel(@as(f64, 2), csum1(Z, 2, &x, 1), 1e-14);
+
+    // BLAS sums abs(re) + abs(im) instead, which is larger by sqrt(2) here.
+    // The two names look interchangeable and are not.
+    const BZ = blas.Complex(f64);
+    const bx = [_]BZ{
+        BZ.init(std.math.sqrt1_2, std.math.sqrt1_2),
+        BZ.init(std.math.sqrt1_2, -std.math.sqrt1_2),
+    };
+    try testing.expectApproxEqRel(2 * @sqrt(@as(f64, 2)), blas.asum(BZ, &bx), 1e-14);
+}
+
+test "csum1 honours a stride" {
+    const Z = Complex(f64);
+    const x = [_]Z{
+        Z.init(1, 0), Z.init(100, 0),
+        Z.init(2, 0), Z.init(100, 0),
+        Z.init(3, 0), Z.init(100, 0),
+    };
+    try testing.expectApproxEqAbs(@as(f64, 6), csum1(Z, 3, &x, 2), 1e-15);
 }

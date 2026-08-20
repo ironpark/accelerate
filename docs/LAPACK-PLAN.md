@@ -213,9 +213,9 @@ Includes the mixed-precision iterative-refinement drivers `dsgesv`, `zcgesv`,
 names appear below as `sgesv`/`cgesv`/`sposv`/`cposv` because the precision
 prefix is two characters, not one — a naming trap for the generator.
 
-- [ ] `cgesv` <sub>z</sub>
-- [ ] `cposv` <sub>z</sub>
-- [ ] `csum1` <sub>s</sub>
+- [x] `cgesv` <sub>z</sub>
+- [x] `cposv` <sub>z</sub>
+- [x] `csum1` <sub>s</sub>
 - [x] `gbsv` <sub>cdsz</sub>
 - [x] `gbsvx` <sub>cdsz</sub>
 - [x] `gesv` <sub>cdsz</sub>
@@ -248,7 +248,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sysv_rk` <sub>cdsz</sub>
 - [ ] `sysv_rook` <sub>cdsz</sub>
 - [x] `sysvx` <sub>cdsz</sub>
-- [ ] `zsum1` <sub>d</sub>
+- [x] `zsum1` <sub>d</sub>
 
 ### T2 Linear systems — computational
 
@@ -527,7 +527,7 @@ prefix is two characters, not one — a naming trap for the generator.
 
 `97` base routines, `208` symbols.
 
-- [ ] `disna` <sub>ds</sub>
+- [x] `disna` <sub>ds</sub>
 - [ ] `hb2st_kernels` <sub>cz</sub>
 - [x] `hbev` <sub>cz</sub>
 - [ ] `hbev_2stage` <sub>cz</sub>
@@ -651,18 +651,18 @@ prefix is two characters, not one — a naming trap for the generator.
 
 `14` base routines, `52` symbols.
 
-- [ ] `bdsdc` <sub>ds</sub>
-- [ ] `bdsqr` <sub>cdsz</sub>
-- [ ] `bdsvdx` <sub>ds</sub>
+- [x] `bdsdc` <sub>ds</sub>
+- [x] `bdsqr` <sub>cdsz</sub>
+- [x] `bdsvdx` <sub>ds</sub>
 - [x] `gbbrd` <sub>cdsz</sub>
 - [ ] `gebd2` <sub>cdsz</sub>
 - [x] `gebrd` <sub>cdsz</sub>
-- [ ] `gejsv` <sub>cdsz</sub>
+- [x] `gejsv` <sub>cdsz</sub>
 - [x] `gesdd` <sub>cdsz</sub>
 - [x] `gesvd` <sub>cdsz</sub>
-- [ ] `gesvdq` <sub>cdsz</sub>
-- [ ] `gesvdx` <sub>cdsz</sub>
-- [ ] `gesvj` <sub>cdsz</sub>
+- [x] `gesvdq` <sub>cdsz</sub>
+- [x] `gesvdx` <sub>cdsz</sub>
+- [x] `gesvj` <sub>cdsz</sub>
 - [ ] `gsvj0` <sub>cdsz</sub>
 - [ ] `gsvj1` <sub>cdsz</sub>
 
