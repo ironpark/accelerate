@@ -337,6 +337,15 @@ test "sve" {
     try std.testing.expectApproxEqAbs(@as(f32, 10.0), sve(f32, &a), 0.001);
 }
 
+test "sve_svesq" {
+    const a = [_]f32{ 1.0, 2.0, 3.0, 4.0 };
+    const result = sve_svesq(f32, &a);
+    // sum = 1+2+3+4 = 10, sum_sq = 1+4+9+16 = 30 - distinct values, so an
+    // output-order bug (sum/sum_sq swapped) would be caught.
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), result.sum, 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 30.0), result.sum_sq, 0.001);
+}
+
 test "maxv and minv" {
     const a = [_]f32{ 3.0, 1.0, 4.0, 1.0, 5.0 };
     try std.testing.expectApproxEqAbs(@as(f32, 5.0), maxv(f32, &a), 0.001);

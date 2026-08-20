@@ -186,7 +186,7 @@
 - [ ] `NormResult` — L10
 - [ ] `sve` — L19
 - [ ] `svesq` — L32
-- [ ] `sve_svesq` — L46
+- [x] `sve_svesq` — L46
 - [ ] `svemg` — L60
 - [ ] `meanv` — L75
 - [ ] `meamgv` — L88
