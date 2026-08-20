@@ -132,9 +132,9 @@
 - [ ] `FFT(T).zrop` — L251
 - [ ] `FFT(T).zropt` — L266
 - [ ] `FFT(T).zip2d` — L279
-- [ ] `FFT(T).zipt2d` — L294
+- [x] `FFT(T).zipt2d` — L294
 - [ ] `FFT(T).zop2d` — L305
-- [ ] `FFT(T).zopt2d` — L320
+- [x] `FFT(T).zopt2d` — L320
 - [ ] `FFT(T).zrip2d` — L339
 - [ ] `FFT(T).zript2d` — L354
 - [ ] `FFT(T).zrop2d` — L371

@@ -1,3 +1,4 @@
+const std = @import("std");
 const types = @import("types.zig");
 const Stride = types.Stride;
 const Length = types.Length;
@@ -507,4 +508,99 @@ pub fn FFT(comptime T: type) type {
             }
         }
     };
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+test "zipt2d matches zip2d (fft2d_zipt header param-name anomaly check)" {
+    // vDSP.h declares vDSP_fft2d_zipt's 3rd/4th params as (__IC1, __IC0),
+    // reversed from vDSP_fft2d_zip/vDSP_fft2d_ziptD's (__IC0, __IC1). If that
+    // reversal were real (not a header documentation typo), zipt2d would
+    // silently compute a different (wrong) result than zip2d for the same
+    // input whenever log2n0 != log2n1 and ic0 != 1. We use asymmetric
+    // dimensions (N0=4, N1=8) and a non-trivial ic0 (=N1=8, i.e. dimension 0
+    // has row-stride-8, dimension 1 is contiguous) specifically so a real
+    // swap would be detectable.
+    const log2n0: Length = 2; // N0 = 4
+    const log2n1: Length = 3; // N1 = 8
+    const n0: usize = 4;
+    const n1: usize = 8;
+    const total = n0 * n1;
+    const ic0: Stride = @intCast(n1);
+
+    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    defer fft.deinit();
+
+    var zip_re: [total]f32 = undefined;
+    var zip_im: [total]f32 = undefined;
+    var zipt_re: [total]f32 = undefined;
+    var zipt_im: [total]f32 = undefined;
+    for (0..total) |i| {
+        const v: f32 = @floatFromInt(i);
+        zip_re[i] = v;
+        zip_im[i] = -v * 0.5;
+        zipt_re[i] = v;
+        zipt_im[i] = -v * 0.5;
+    }
+    const zip_sc = SC(f32){ .realp = &zip_re, .imagp = &zip_im };
+    const zipt_sc = SC(f32){ .realp = &zipt_re, .imagp = &zipt_im };
+
+    var buf_re: [total]f32 = undefined;
+    var buf_im: [total]f32 = undefined;
+    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
+
+    fft.zip2d(&zip_sc, ic0, log2n0, log2n1, .forward);
+    fft.zipt2d(&zipt_sc, ic0, &buffer, log2n0, log2n1, .forward);
+
+    for (0..total) |i| {
+        try std.testing.expectApproxEqAbs(zip_re[i], zipt_re[i], 0.01);
+        try std.testing.expectApproxEqAbs(zip_im[i], zipt_im[i], 0.01);
+    }
+}
+
+test "zopt2d matches zop2d" {
+    // Sibling sanity check to the zipt2d test above: vDSP_fft2d_zopt/zoptD's
+    // parameter order matches vDSP_fft2d_zop/zopD in the header (no reversal
+    // like zipt's), so this should already agree - confirms there's no
+    // similar latent issue in the out-of-place temp-buffer path.
+    const log2n0: Length = 2; // N0 = 4
+    const log2n1: Length = 3; // N1 = 8
+    const n0: usize = 4;
+    const n1: usize = 8;
+    const total = n0 * n1;
+    const ia0: Stride = @intCast(n1);
+    const ic0: Stride = @intCast(n1);
+
+    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    defer fft.deinit();
+
+    var in_re: [total]f32 = undefined;
+    var in_im: [total]f32 = undefined;
+    for (0..total) |i| {
+        const v: f32 = @floatFromInt(i);
+        in_re[i] = v;
+        in_im[i] = -v * 0.5;
+    }
+    const input = SC(f32){ .realp = &in_re, .imagp = &in_im };
+
+    var zop_re: [total]f32 = undefined;
+    var zop_im: [total]f32 = undefined;
+    var zopt_re: [total]f32 = undefined;
+    var zopt_im: [total]f32 = undefined;
+    const zop_out = SC(f32){ .realp = &zop_re, .imagp = &zop_im };
+    const zopt_out = SC(f32){ .realp = &zopt_re, .imagp = &zopt_im };
+
+    var buf_re: [total]f32 = undefined;
+    var buf_im: [total]f32 = undefined;
+    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
+
+    fft.zop2d(&input, ia0, &zop_out, ic0, log2n0, log2n1, .forward);
+    fft.zopt2d(&input, ia0, &zopt_out, ic0, &buffer, log2n0, log2n1, .forward);
+
+    for (0..total) |i| {
+        try std.testing.expectApproxEqAbs(zop_re[i], zopt_re[i], 0.01);
+        try std.testing.expectApproxEqAbs(zop_im[i], zopt_im[i], 0.01);
+    }
 }
