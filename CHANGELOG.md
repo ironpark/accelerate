@@ -4,6 +4,31 @@
 
 ### Added
 
+- **`quadrature` module - numerical integration.** One-dimensional integration
+  of a real function via QNG, QAG or QAGS, including infinite intervals.
+
+  Small and ordinary C - one exported symbol, no overloading, a plain function
+  pointer rather than a block - so unlike `sparse` it binds directly. What the
+  Zig API adds is that three ways to get a runtime failure become
+  unrepresentable or checked, all three found by probing rather than from the
+  header:
+
+  - `max_intervals = 0` is rejected by both adaptive integrators (status -2),
+    so a zero-initialized options struct is a trap. `Integrator` is a tagged
+    union carrying each algorithm's own parameters, with a documented non-zero
+    default that is this binding's choice - Apple gives none.
+  - Infinite bounds work **only** with QAGS. QNG reports an invalid argument,
+    but QAG returns `NaN` with a max-eval status, which is a poor way to learn
+    the integrator was wrong. Both are rejected up front.
+  - `qag_points_per_interval` accepts only 0/15/21/31/41/51/61; 17 returns -2.
+    It is an enum here.
+
+  Failing to reach the requested tolerance is **not** an error - it arrives as
+  `Result.status` next to the partial estimate and Accelerate's error bound.
+  That matters for integrands like `sin(1/x)`, which never converges at any
+  budget (measured at 8 through 4096 intervals) yet yields a value good to
+  ~1e-6.
+
 - **`sparse` module - Apple's Sparse Solvers.** Direct sparse linear solvers:
   Cholesky, `LDL^T` (four pivoting modes) and QR, over `f32` and `f64`, plus
   sparse-times-dense multiplication and coordinate-to-block-CSC conversion.
@@ -66,8 +91,8 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 109 tests covering the above, including struct-layout assertions against the
-  C headers for every ABI type. Those are not decoration: each one is passed to
+- 128 tests covering the two modules above, including struct-layout assertions
+  against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
   asserted for the same reason - a wrong one is a wild jump, not a type error.

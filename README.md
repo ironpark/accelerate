@@ -10,6 +10,7 @@ Zig bindings for Apple's [Accelerate framework](https://developer.apple.com/docu
 | `vimage` | Image processing — alpha compositing, format conversion, convolution, geometric transforms, histograms, morphology |
 | `vforce` | Vectorized math functions — exp, log, trig, hyperbolic, power, rounding, and more on large arrays |
 | `sparse` | Sparse solvers — direct (Cholesky, LDL^T, QR) and iterative (CG, GMRES, LSMR), subfactors, preconditioners |
+| `quadrature` | Numerical integration — QNG, QAG and QAGS, including infinite intervals |
 
 ## Installation
 
@@ -37,6 +38,7 @@ const vdsp = accelerate.vdsp;
 const vforce = accelerate.vforce;
 const vimage = accelerate.vimage;
 const sparse = accelerate.sparse;
+const quadrature = accelerate.quadrature;
 ```
 
 ### vDSP
@@ -131,6 +133,27 @@ _ = try sparse.Iterative(f64).conjugateGradientOperator(
 );
 ```
 
+### Quadrature
+
+```zig
+fn gaussian(_: void, x: f64) f64 {
+    return @exp(-x * x);
+}
+
+// Integrates to sqrt(pi) over the whole real line.
+const r = try quadrature.integrateScalar(void, {}, gaussian, -inf, inf, .{
+    .integrator = .{ .qags = .{} },
+    .abs_tolerance = 1e-12,
+}, allocator);
+// r.value, r.abs_error, r.status
+
+// The array form is the one Accelerate actually calls; use it to vectorize.
+fn batched(_: void, x: []const f64, y: []f64) void {
+    vforce.exp(f64, x, y);
+}
+_ = try quadrature.integrate(void, {}, batched, 0, 1, .{}, allocator);
+```
+
 ## API Overview
 
 ### vdsp
@@ -219,6 +242,19 @@ individually
 
 Supports `f32` and `f64`. See `docs/SPARSE-RESEARCH.md` for how these bind to a
 C API that exports no symbols for its public functions.
+
+### quadrature
+
+**Integrators:** `.qng` (non-adaptive Gauss-Kronrod-Patterson, no workspace),
+`.qag` (adaptive, selectable 15/21/31/41/51/61 points per interval), `.qags`
+(adaptive with epsilon-algorithm acceleration; the only one accepting infinite
+bounds)
+
+**Entry points:** `integrate` / `integrateWithWorkspace` (array integrand),
+`integrateScalar` / `integrateScalarWithWorkspace`
+
+Failing to reach the requested tolerance is reported through `Result.status`,
+not as an error, so a partial estimate and its error bound stay available.
 
 ## Requirements
 
