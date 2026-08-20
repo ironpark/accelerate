@@ -373,37 +373,37 @@
 
 ### `src/vimage/alpha.zig`
 
-- [ ] `alphaBlendPlanar` — L19
-- [ ] `alphaBlendARGB` — L31
-- [ ] `premultipliedAlphaBlendPlanar` — L48
-- [ ] `premultipliedAlphaBlendARGB` — L57
-- [ ] `premultipliedAlphaBlendBGRA` — L66
-- [ ] `premultipliedAlphaBlendWithPermuteARGB` — L76
-- [ ] `premultipliedAlphaBlendWithPermuteRGBA` — L82
-- [ ] `premultipliedAlphaBlendRGBA` — L100
-- [ ] `premultipliedConstAlphaBlendPlanar` — L118
-- [ ] `premultipliedConstAlphaBlendARGB` — L128
-- [ ] `alphaBlendNonpremultipliedToPremultipliedPlanar` — L142
-- [ ] `alphaBlendNonpremultipliedToPremultipliedARGB` — L152
-- [ ] `premultiplyDataPlanar` — L168
-- [ ] `premultiplyDataARGB` — L177
-- [ ] `premultiplyDataRGBA` — L186
-- [ ] `premultiplyDataARGB16U` — L195
-- [ ] `premultiplyDataRGBA16U` — L200
-- [ ] `premultiplyDataARGB16Q12` — L205
-- [ ] `premultiplyDataRGBA16Q12` — L210
-- [ ] `premultiplyDataRGBA16F` — L215
-- [ ] `unpremultiplyDataPlanar` — L228
-- [ ] `unpremultiplyDataARGB` — L237
-- [ ] `unpremultiplyDataRGBA` — L246
-- [ ] `unpremultiplyDataARGB16U` — L255
-- [ ] `unpremultiplyDataRGBA16U` — L260
-- [ ] `unpremultiplyDataARGB16Q12` — L265
-- [ ] `unpremultiplyDataRGBA16Q12` — L270
-- [ ] `unpremultiplyDataRGBA16F` — L275
-- [ ] `clipToAlphaPlanar` — L287
-- [ ] `clipToAlphaARGB` — L297
-- [ ] `clipToAlphaRGBA` — L307
+- [x] `alphaBlendPlanar` — L19
+- [x] `alphaBlendARGB` — L31
+- [x] `premultipliedAlphaBlendPlanar` — L48
+- [x] `premultipliedAlphaBlendARGB` — L57
+- [x] `premultipliedAlphaBlendBGRA` — L66
+- [x] `premultipliedAlphaBlendWithPermuteARGB` — L76
+- [x] `premultipliedAlphaBlendWithPermuteRGBA` — L82
+- [x] `premultipliedAlphaBlendRGBA` — L100
+- [x] `premultipliedConstAlphaBlendPlanar` — L118
+- [x] `premultipliedConstAlphaBlendARGB` — L128
+- [x] `alphaBlendNonpremultipliedToPremultipliedPlanar` — L142
+- [x] `alphaBlendNonpremultipliedToPremultipliedARGB` — L152
+- [x] `premultiplyDataPlanar` — L168
+- [x] `premultiplyDataARGB` — L177
+- [x] `premultiplyDataRGBA` — L186
+- [x] `premultiplyDataARGB16U` — L195
+- [x] `premultiplyDataRGBA16U` — L200
+- [x] `premultiplyDataARGB16Q12` — L205
+- [x] `premultiplyDataRGBA16Q12` — L210
+- [x] `premultiplyDataRGBA16F` — L215
+- [x] `unpremultiplyDataPlanar` — L228
+- [x] `unpremultiplyDataARGB` — L237
+- [x] `unpremultiplyDataRGBA` — L246
+- [x] `unpremultiplyDataARGB16U` — L255
+- [x] `unpremultiplyDataRGBA16U` — L260
+- [x] `unpremultiplyDataARGB16Q12` — L265
+- [x] `unpremultiplyDataRGBA16Q12` — L270
+- [x] `unpremultiplyDataRGBA16F` — L275
+- [x] `clipToAlphaPlanar` — L287
+- [x] `clipToAlphaARGB` — L297
+- [x] `clipToAlphaRGBA` — L307
 
 ### `src/vimage/conversion.zig`
 
@@ -492,38 +492,38 @@
 
 ### `src/vimage/histogram.zig`
 
-- [ ] `histogramCalculation_Planar8` — L25
-- [ ] `histogramCalculation_PlanarF` — L37
-- [ ] `histogramCalculation_ARGB8888` — L51
-- [ ] `histogramCalculation_ARGBFFFF` — L63
-- [ ] `histogramCalculation` — L78
-- [ ] `equalization_Planar8` — L119
-- [ ] `equalization_PlanarF` — L131
-- [ ] `equalization_ARGB8888` — L144
-- [ ] `equalization_ARGBFFFF` — L153
-- [ ] `equalization` — L166
-- [ ] `histogramSpecification_Planar8` — L212
-- [ ] `histogramSpecification_PlanarF` — L222
-- [ ] `histogramSpecification_ARGB8888` — L239
-- [ ] `histogramSpecification_ARGBFFFF` — L249
-- [ ] `histogramSpecification` — L263
-- [ ] `contrastStretch_Planar8` — L310
-- [ ] `contrastStretch_PlanarF` — L319
-- [ ] `contrastStretch_ARGB8888` — L332
-- [ ] `contrastStretch_ARGBFFFF` — L341
-- [ ] `contrastStretch` — L354
-- [ ] `endsInContrastStretch_Planar8` — L400
-- [ ] `endsInContrastStretch_PlanarF` — L411
-- [ ] `endsInContrastStretch_ARGB8888` — L428
-- [ ] `endsInContrastStretch_ARGBFFFF` — L439
-- [ ] `endsInContrastStretch` — L454
+- [x] `histogramCalculation_Planar8` — L25
+- [x] `histogramCalculation_PlanarF` — L37
+- [x] `histogramCalculation_ARGB8888` — L51
+- [x] `histogramCalculation_ARGBFFFF` — L63
+- [x] `histogramCalculation` — L78
+- [x] `equalization_Planar8` — L119
+- [x] `equalization_PlanarF` — L131
+- [x] `equalization_ARGB8888` — L144
+- [x] `equalization_ARGBFFFF` — L153
+- [x] `equalization` — L166
+- [x] `histogramSpecification_Planar8` — L212
+- [x] `histogramSpecification_PlanarF` — L222
+- [x] `histogramSpecification_ARGB8888` — L239
+- [x] `histogramSpecification_ARGBFFFF` — L249
+- [x] `histogramSpecification` — L263
+- [x] `contrastStretch_Planar8` — L310
+- [x] `contrastStretch_PlanarF` — L319
+- [x] `contrastStretch_ARGB8888` — L332
+- [x] `contrastStretch_ARGBFFFF` — L341
+- [x] `contrastStretch` — L354
+- [x] `endsInContrastStretch_Planar8` — L400
+- [x] `endsInContrastStretch_PlanarF` — L411
+- [x] `endsInContrastStretch_ARGB8888` — L428
+- [x] `endsInContrastStretch_ARGBFFFF` — L439
+- [x] `endsInContrastStretch` — L454
 
 ### `src/vimage/morphology.zig`
 
-- [ ] `dilate` — L32
-- [ ] `erode` — L63
-- [ ] `max` — L95
-- [ ] `min` — L127
+- [x] `dilate` — L32
+- [x] `erode` — L63
+- [x] `max` — L95
+- [x] `min` — L127
 
 ### `src/vimage/transform.zig`
 
