@@ -30,18 +30,18 @@
 
 ### `src/vdsp/clip.zig`
 
-- [ ] `vclr` — L11
-- [ ] `vcmprs` — L27
-- [ ] `vclip` — L45
-- [ ] `vclipc` — L63
-- [ ] `viclip` — L74
-- [ ] `vthr` — L82
-- [ ] `vthres` — L90
-- [ ] `vlim` — L98
-- [ ] `vmax` — L108
-- [ ] `vmin` — L116
-- [ ] `vmaxmg` — L124
-- [ ] `vminmg` — L132
+- [x] `vclr` — L11
+- [x] `vcmprs` — L27
+- [x] `vclip` — L45
+- [x] `vclipc` — L63
+- [x] `viclip` — L74
+- [x] `vthr` — L82
+- [x] `vthres` — L90
+- [x] `vlim` — L98
+- [x] `vmax` — L108
+- [x] `vmin` — L116
+- [x] `vmaxmg` — L124
+- [x] `vminmg` — L132
 
 ### `src/vdsp/conv.zig`
 
