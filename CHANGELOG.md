@@ -101,6 +101,12 @@
   `tpttf`, `tfttp`) plus `pftrf`/`pftrs`/`pftri`, `tftri`, `tfsm` and
   `sfrk`/`hfrk`.
 
+  `norms.zig` is finished off with the `lan*` norms that were missing:
+  `langt`, `lanhs`, `lansb`/`lanhb`, `lantb`, `lantp` and `lansf`/`lanhf`.
+  `lanhs` is worth knowing about — it reads only the upper triangle and first
+  subdiagonal, so on a `gehrd` output it and `lange` give different answers and
+  `lanhs` is the one you want.
+
   `cs.zig` is the CS decomposition: `orcsd` for a full square orthogonal
   matrix, `orcsd2by1` for the common single-block-column case, and the two
   halves `orbdb` and `bbcsd` they are built from, plus the `orbdb1`-`orbdb6`

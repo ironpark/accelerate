@@ -721,17 +721,17 @@ a genuine addition over the BLAS module, not a duplicate of it.
 - [x] `lamch` <sub>ds</sub>
 - [x] `langb` <sub>cdsz</sub>
 - [x] `lange` <sub>cdsz</sub>
-- [ ] `langt` <sub>cdsz</sub>
-- [ ] `lanhb` <sub>cz</sub>
+- [x] `langt` <sub>cdsz</sub>
+- [x] `lanhb` <sub>cz</sub>
 - [x] `lanhe` <sub>cz</sub>
 - [x] `lanhp` <sub>cz</sub>
 - [x] `lanht` <sub>cz</sub>
-- [ ] `lansb` <sub>cdsz</sub>
+- [x] `lansb` <sub>cdsz</sub>
 - [x] `lansp` <sub>cdsz</sub>
 - [x] `lanst` <sub>ds</sub>
 - [x] `lansy` <sub>cdsz</sub>
-- [ ] `lantb` <sub>cdsz</sub>
-- [ ] `lantp` <sub>cdsz</sub>
+- [x] `lantb` <sub>cdsz</sub>
+- [x] `lantp` <sub>cdsz</sub>
 - [x] `lantr` <sub>cdsz</sub>
 - [ ] `lapmr` <sub>cdsz</sub>
 - [ ] `lapmt` <sub>cdsz</sub>
@@ -760,9 +760,17 @@ a genuine addition over the BLAS module, not a duplicate of it.
 `216` base routines, `630` symbols.
 
 These are LAPACK's own building blocks. They are reachable through `lapack.c`
-but get no typed wrapper unless a specific one proves useful (`lamch`, `lange`,
-`lacpy`, `laset`, `larnv`, `lartg` are already promoted into T8). Listed here for
-completeness so the generator's coverage can be audited against this file.
+but get no typed wrapper unless a specific one proves useful. Promoted so far:
+
+- the whole `lan*` norm family, in `norms.zig` — `lange`, `langb`, `langt`,
+  `lanhs`, `lansy`/`lanhe`, `lansb`/`lanhb`, `lansp`/`lanhp`, `lansf`/`lanhf`,
+  `lanst`/`lanht`, `lantr`, `lantb`, `lantp`
+- `lacpy`, `laset` in `norms.zig`
+- `lamch`, `ilaenv`, `larnv`, `lartg`, `lascl`, `lasrt`, `lacgv`, `ladiv`,
+  `rscl` in `util.zig`
+
+Listed here for completeness so the generator's coverage can be audited against
+this file.
 
 <details><summary>Full list</summary>
 

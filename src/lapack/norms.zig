@@ -36,6 +36,7 @@ const Real = types.Real;
 const Uplo = types.Uplo;
 const Norm = types.Norm;
 const Diag = types.Diag;
+const RfpLayout = @import("rfp.zig").RfpLayout;
 const dim = types.dim;
 const assertMatrix = types.assertMatrix;
 const packedLen = types.packedLen;
@@ -261,6 +262,177 @@ pub fn lanht(
 
     const n_ = dim(n);
     return sym(T, "lanht")(opt(norm), ref(&n_), d.ptr, e.ptr);
+}
+
+/// `||A||` for a general tridiagonal matrix.
+///
+/// Takes no workspace: with at most three nonzeros per row there is nothing to
+/// accumulate.
+pub fn langt(
+    comptime T: type,
+    norm: Norm,
+    n: usize,
+    dl: []const T,
+    d: []const T,
+    du: []const T,
+) Real(T) {
+    std.debug.assert(d.len >= n);
+    if (n > 1) {
+        std.debug.assert(dl.len >= n - 1);
+        std.debug.assert(du.len >= n - 1);
+    }
+
+    const n_ = dim(n);
+    return sym(T, "langt")(opt(norm), ref(&n_), dl.ptr, d.ptr, du.ptr);
+}
+
+/// `||A||` for an upper Hessenberg matrix.
+///
+/// Reads the upper triangle and the first subdiagonal, and ignores everything
+/// below — which is why it is not the same as `lange` on the same array when
+/// the array still holds `gehrd`'s reflectors down there.
+pub fn lanhs(
+    comptime T: type,
+    norm: Norm,
+    n: usize,
+    a: []const T,
+    lda: usize,
+    work: []Real(T),
+) Real(T) {
+    assertMatrix(a.len, n, n, lda);
+    std.debug.assert(work.len >= langeWorkspaceLen(norm, n));
+
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    return sym(T, "lanhs")(opt(norm), ref(&n_), a.ptr, ref(&lda_), work.ptr);
+}
+
+/// `||A||` for a symmetric band matrix.
+pub fn lansb(
+    comptime T: type,
+    norm: Norm,
+    uplo: Uplo,
+    n: usize,
+    k: usize,
+    ab: []const T,
+    ldab: usize,
+    work: []Real(T),
+) Real(T) {
+    std.debug.assert(ldab >= k + 1);
+    std.debug.assert(work.len >= symmetricWorkspaceLen(norm, n));
+
+    const n_ = dim(n);
+    const k_ = dim(k);
+    const ldab_ = dim(ldab);
+    return sym(T, "lansb")(opt(norm), opt(uplo), ref(&n_), ref(&k_), ab.ptr, ref(&ldab_), work.ptr);
+}
+
+/// `lansb` for a Hermitian band matrix. Complex only.
+pub fn lanhb(
+    comptime T: type,
+    norm: Norm,
+    uplo: Uplo,
+    n: usize,
+    k: usize,
+    ab: []const T,
+    ldab: usize,
+    work: []Real(T),
+) Real(T) {
+    requireComplex(T, "lanhb", "lansb");
+    std.debug.assert(ldab >= k + 1);
+    std.debug.assert(work.len >= symmetricWorkspaceLen(norm, n));
+
+    const n_ = dim(n);
+    const k_ = dim(k);
+    const ldab_ = dim(ldab);
+    return sym(T, "lanhb")(opt(norm), opt(uplo), ref(&n_), ref(&k_), ab.ptr, ref(&ldab_), work.ptr);
+}
+
+/// `||A||` for a triangular band matrix.
+pub fn lantb(
+    comptime T: type,
+    norm: Norm,
+    uplo: Uplo,
+    diag: Diag,
+    n: usize,
+    k: usize,
+    ab: []const T,
+    ldab: usize,
+    work: []Real(T),
+) Real(T) {
+    std.debug.assert(ldab >= k + 1);
+    std.debug.assert(work.len >= symmetricWorkspaceLen(norm, n));
+
+    const n_ = dim(n);
+    const k_ = dim(k);
+    const ldab_ = dim(ldab);
+    return sym(T, "lantb")(opt(norm), opt(uplo), opt(diag), ref(&n_), ref(&k_), ab.ptr, ref(&ldab_), work.ptr);
+}
+
+/// `||A||` for a triangular matrix in packed storage.
+pub fn lantp(
+    comptime T: type,
+    norm: Norm,
+    uplo: Uplo,
+    diag: Diag,
+    n: usize,
+    ap: []const T,
+    work: []Real(T),
+) Real(T) {
+    std.debug.assert(ap.len >= packedLen(n));
+    std.debug.assert(work.len >= symmetricWorkspaceLen(norm, n));
+
+    const n_ = dim(n);
+    return sym(T, "lantp")(opt(norm), opt(uplo), opt(diag), ref(&n_), ap.ptr, work.ptr);
+}
+
+/// `||A||` for a symmetric matrix in RFP storage.
+///
+/// `transr` is the RFP layout flag, the same one `rfp.zig`'s routines take; the
+/// enum lives there because that is where RFP arrays come from.
+pub fn lansf(
+    comptime T: type,
+    norm: Norm,
+    transr: RfpLayout,
+    uplo: Uplo,
+    n: usize,
+    a: []const T,
+    work: []Real(T),
+) Real(T) {
+    std.debug.assert(a.len >= packedLen(n));
+    std.debug.assert(work.len >= symmetricWorkspaceLen(norm, n));
+
+    const n_ = dim(n);
+    return sym(T, "lansf")(opt(norm), rfpLayout(T, transr), opt(uplo), ref(&n_), a.ptr, work.ptr);
+}
+
+/// `lansf` for a Hermitian matrix in RFP storage. Complex only.
+pub fn lanhf(
+    comptime T: type,
+    norm: Norm,
+    transr: RfpLayout,
+    uplo: Uplo,
+    n: usize,
+    a: []const T,
+    work: []Real(T),
+) Real(T) {
+    requireComplex(T, "lanhf", "lansf");
+    std.debug.assert(a.len >= packedLen(n));
+    std.debug.assert(work.len >= symmetricWorkspaceLen(norm, n));
+
+    const n_ = dim(n);
+    return sym(T, "lanhf")(opt(norm), rfpLayout(T, transr), opt(uplo), ref(&n_), a.ptr, work.ptr);
+}
+
+fn rfpLayout(comptime T: type, l: RfpLayout) [*]const u8 {
+    const Chars = enum(u8) { n = 'N', t = 'T', c_ = 'C' };
+    return switch (l) {
+        .normal => opt(Chars.n),
+        .transposed => switch (T) {
+            f32, f64 => opt(Chars.t),
+            else => opt(Chars.c_),
+        },
+    };
 }
 
 // ============================================================================
@@ -491,4 +663,114 @@ test "norms work in single precision and through complex" {
     const n = lange(Z, .frobenius, 1, 1, &z, 1, &zwork);
     try testing.expectEqual(f32, @TypeOf(n));
     try testing.expectApproxEqAbs(@as(f32, 5), n, 1e-6);
+}
+
+// ============================================================================
+// Tests: the remaining storage forms
+// ============================================================================
+
+/// `tridiag(1, 4, 1)` of order 3, dense column-major, and the same matrix in
+/// the storage forms below. Every norm is checked against `lange` on this.
+const tri3 = [_]f64{ 4, 1, 0, 1, 4, 1, 0, 1, 4 };
+
+test "langt matches lange on the same tridiagonal" {
+    var work = [_]f64{ 0, 0, 0 };
+    const dl = [_]f64{ 1, 1 };
+    const d = [_]f64{ 4, 4, 4 };
+    const du = [_]f64{ 1, 1 };
+
+    for ([_]Norm{ .max_abs, .one, .infinity, .frobenius }) |norm| {
+        const dense = lange(f64, norm, 3, 3, &tri3, 3, &work);
+        try testing.expectApproxEqRel(dense, langt(f64, norm, 3, &dl, &d, &du), 1e-14);
+    }
+}
+
+test "lansb and lantb match their dense equivalents" {
+    var work = [_]f64{ 0, 0, 0 };
+    // Upper band, kd = 1: row kd + i - j.
+    const ab = [_]f64{ 0, 4, 1, 4, 1, 4 };
+
+    for ([_]Norm{ .max_abs, .one, .infinity, .frobenius }) |norm| {
+        const dense = lansy(f64, norm, .upper, 3, &tri3, 3, &work);
+        try testing.expectApproxEqRel(dense, lansb(f64, norm, .upper, 3, 1, &ab, 2, &work), 1e-14);
+    }
+
+    // Triangular: only the upper band, so compare against lantr.
+    const upper = [_]f64{ 4, 0, 0, 1, 4, 0, 0, 1, 4 };
+    for ([_]Norm{ .max_abs, .one, .infinity, .frobenius }) |norm| {
+        const dense = lantr(f64, norm, .upper, .non_unit, 3, 3, &upper, 3, &work);
+        try testing.expectApproxEqRel(dense, lantb(f64, norm, .upper, .non_unit, 3, 1, &ab, 2, &work), 1e-14);
+    }
+}
+
+test "lantp matches lantr in packed storage" {
+    var work = [_]f64{ 0, 0, 0 };
+    const upper = [_]f64{ 4, 0, 0, 1, 4, 0, 0, 1, 4 };
+    const ap = [_]f64{ 4, 1, 4, 0, 1, 4 };
+
+    for ([_]Norm{ .max_abs, .one, .infinity, .frobenius }) |norm| {
+        const dense = lantr(f64, norm, .upper, .non_unit, 3, 3, &upper, 3, &work);
+        try testing.expectApproxEqRel(dense, lantp(f64, norm, .upper, .non_unit, 3, &ap, &work), 1e-14);
+    }
+}
+
+test "lanhs ignores what lange would count below the subdiagonal" {
+    var work = [_]f64{ 0, 0, 0 };
+    // Upper Hessenberg plus a large entry two rows below the diagonal, which is
+    // exactly what gehrd leaves there as a reflector.
+    const h = [_]f64{
+        1, 2, 100,
+        3, 4, 5,
+        0, 6, 7,
+    };
+    const clean = [_]f64{
+        1, 2, 0,
+        3, 4, 5,
+        0, 6, 7,
+    };
+
+    const hess = lanhs(f64, .max_abs, 3, &h, 3, &work);
+    const dense = lange(f64, .max_abs, 3, 3, &h, 3, &work);
+    // lange sees the 100 and lanhs does not: they are not interchangeable on a
+    // gehrd output.
+    try testing.expectApproxEqAbs(@as(f64, 100), dense, 1e-14);
+    try testing.expectApproxEqAbs(@as(f64, 7), hess, 1e-14);
+    // And it agrees with lange on a matrix that really is Hessenberg.
+    try testing.expectApproxEqRel(lange(f64, .max_abs, 3, 3, &clean, 3, &work), hess, 1e-14);
+}
+
+test "lansf matches lansy through the RFP conversion" {
+    var work = [_]f64{ 0, 0, 0 };
+    const rfp = @import("rfp.zig");
+
+    for ([_]rfp.RfpLayout{ .normal, .transposed }) |transr| {
+        var arf: [6]f64 = undefined;
+        try rfp.trttf(f64, transr, .upper, 3, &tri3, 3, &arf);
+
+        for ([_]Norm{ .max_abs, .one, .infinity, .frobenius }) |norm| {
+            const dense = lansy(f64, norm, .upper, 3, &tri3, 3, &work);
+            try testing.expectApproxEqRel(dense, lansf(f64, norm, transr, .upper, 3, &arf, &work), 1e-14);
+        }
+    }
+}
+
+test "lanhb and lanhf are the Hermitian band and RFP norms" {
+    const Z = Complex(f64);
+    var work = [_]f64{ 0, 0 };
+    // [[2, i], [-i, 2]]: Hermitian, so the 1-norm and infinity norm are both 3.
+    const dense = [_]Z{ Z.init(2, 0), Z.init(0, -1), Z.init(0, 1), Z.init(2, 0) };
+    const ab = [_]Z{ Z.init(0, 0), Z.init(2, 0), Z.init(0, -1), Z.init(2, 0) };
+
+    for ([_]Norm{ .max_abs, .one, .infinity, .frobenius }) |norm| {
+        const full = lanhe(Z, norm, .upper, 2, &dense, 2, &work);
+        try testing.expectApproxEqRel(full, lanhb(Z, norm, .upper, 2, 1, &ab, 2, &work), 1e-14);
+    }
+
+    const rfp = @import("rfp.zig");
+    var arf: [3]Z = undefined;
+    try rfp.trttf(Z, .normal, .upper, 2, &dense, 2, &arf);
+    for ([_]Norm{ .max_abs, .one, .infinity, .frobenius }) |norm| {
+        const full = lanhe(Z, norm, .upper, 2, &dense, 2, &work);
+        try testing.expectApproxEqRel(full, lanhf(Z, norm, .normal, .upper, 2, &arf, &work), 1e-14);
+    }
 }

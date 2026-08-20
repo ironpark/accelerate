@@ -43,7 +43,8 @@
 //!   Cholesky, inversion, `trsm` and `syrk` operating on it directly.
 //! - `cs.zig` - the CS decomposition (`orcsd`, `orcsd2by1`) and its two halves
 //!   `orbdb` and `bbcsd`.
-//! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
+//! - `norms.zig` - the `lan*` matrix norms for every storage form, plus
+//!   `lacpy` and `laset`.
 //! - `util.zig` - machine parameters, random matrices, plane rotations,
 //!   overflow-safe scaling, and the complex-symmetric routines CBLAS lacks.
 //! - `refine.zig` - iterative refinement and the forward/backward error bounds
@@ -459,6 +460,19 @@ pub const lanhe = norms.lanhe;
 pub const lantr = norms.lantr;
 pub const lacpy = norms.lacpy;
 pub const laset = norms.laset;
+pub const langb = norms.langb;
+pub const langt = norms.langt;
+pub const lanst = norms.lanst;
+pub const lanht = norms.lanht;
+pub const lanhs = norms.lanhs;
+pub const lansb = norms.lansb;
+pub const lanhb = norms.lanhb;
+pub const lantb = norms.lantb;
+pub const lansp = norms.lansp;
+pub const lanhp = norms.lanhp;
+pub const lantp = norms.lantp;
+pub const lansf = norms.lansf;
+pub const lanhf = norms.lanhf;
 
 test {
     std.testing.refAllDecls(@This());
