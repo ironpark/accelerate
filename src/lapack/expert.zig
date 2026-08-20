@@ -47,6 +47,7 @@ const Equed = types.Equed;
 const Error = info_mod.Error;
 const dim = types.dim;
 const assertMatrix = types.assertMatrix;
+const packedLen = types.packedLen;
 const ref = work_mod.ref;
 const out = work_mod.out;
 const opt = types.opt;
@@ -56,6 +57,15 @@ const Fail = Error || Allocator.Error;
 
 fn sym(comptime T: type, comptime name: []const u8) @TypeOf(@field(c, [_]u8{types.prefix(T)} ++ name)) {
     return @field(c, [_]u8{types.prefix(T)} ++ name);
+}
+
+/// Rejects a real `T` at compile time. A `switch` rather than an `if`, for the
+/// reason spelled out in `factor.zig`.
+fn requireComplex(comptime T: type, comptime routine: []const u8, comptime alternative: []const u8) void {
+    switch (T) {
+        Complex(f32), Complex(f64) => {},
+        else => @compileError(routine ++ " is complex-only; for " ++ @typeName(T) ++ " use " ++ alternative),
+    }
 }
 
 /// `equed` is read *and written*, so it cannot come from the shared immutable
@@ -300,6 +310,444 @@ pub fn sysvx(
     return finish(info, n, rcond, .none);
 }
 
+/// `gesvx` for a band matrix.
+///
+/// `ab` is the original band in the narrow `kl + ku + 1` layout, `afb` the
+/// factor in the wide `2*kl + ku + 1` one — the same split `gbrfs` uses. With
+/// `fact = .equilibrate` the routine scales `ab` **in place**.
+pub fn gbsvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    trans: Trans,
+    n: usize,
+    kl: usize,
+    ku: usize,
+    nrhs: usize,
+    ab: []T,
+    ldab: usize,
+    afb: []T,
+    ldafb: usize,
+    ipiv: []Int,
+    equed: *Equed,
+    r: []Real(T),
+    col_scale: []Real(T),
+    b: []T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    std.debug.assert(ldab >= kl + ku + 1);
+    std.debug.assert(ldafb >= 2 * kl + ku + 1);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(ipiv.len >= n);
+    std.debug.assert(r.len >= n and col_scale.len >= n);
+    std.debug.assert(ferr.len >= nrhs and berr.len >= nrhs);
+
+    const n_ = dim(n);
+    const kl_ = dim(kl);
+    const ku_ = dim(ku);
+    const nrhs_ = dim(nrhs);
+    const ldab_ = dim(ldab);
+    const ldafb_ = dim(ldafb);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => {
+            const work = try allocator.alloc(T, @max(2 * n, 1));
+            defer allocator.free(work);
+            const rwork = try allocator.alloc(Real(T), @max(2 * n, 1));
+            defer allocator.free(rwork);
+            sym(T, "gbsvx")(opt(fact), opt(trans), ref(&n_), ref(&kl_), ref(&ku_), ref(&nrhs_), ab.ptr, ref(&ldab_), afb.ptr, ref(&ldafb_), ipiv.ptr, equedPtr(equed), r.ptr, col_scale.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, rwork.ptr, out(&info));
+        },
+        else => {
+            const work = try allocator.alloc(T, @max(3 * n, 1));
+            defer allocator.free(work);
+            const iwork = try allocator.alloc(Int, @max(n, 1));
+            defer allocator.free(iwork);
+            sym(T, "gbsvx")(opt(fact), opt(trans), ref(&n_), ref(&kl_), ref(&ku_), ref(&nrhs_), ab.ptr, ref(&ldab_), afb.ptr, ref(&ldafb_), ipiv.ptr, equedPtr(equed), r.ptr, col_scale.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, iwork.ptr, out(&info));
+        },
+    }
+    return finish(info, n, rcond, equed.*);
+}
+
+/// `gesvx` for a tridiagonal matrix.
+///
+/// No equilibration: LAPACK offers none for tridiagonal storage, so there is no
+/// `equed` here and `fact = .equilibrate` is rejected.
+pub fn gtsvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    trans: Trans,
+    n: usize,
+    nrhs: usize,
+    dl: []const T,
+    d: []const T,
+    du: []const T,
+    dlf: []T,
+    df: []T,
+    duf: []T,
+    du2: []T,
+    ipiv: []Int,
+    b: []const T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    std.debug.assert(fact != .equilibrate);
+    std.debug.assert(d.len >= n and df.len >= n);
+    std.debug.assert(ipiv.len >= n);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(ferr.len >= nrhs and berr.len >= nrhs);
+
+    const n_ = dim(n);
+    const nrhs_ = dim(nrhs);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => {
+            const work = try allocator.alloc(T, @max(2 * n, 1));
+            defer allocator.free(work);
+            const rwork = try allocator.alloc(Real(T), @max(n, 1));
+            defer allocator.free(rwork);
+            sym(T, "gtsvx")(opt(fact), opt(trans), ref(&n_), ref(&nrhs_), dl.ptr, d.ptr, du.ptr, dlf.ptr, df.ptr, duf.ptr, du2.ptr, ipiv.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, rwork.ptr, out(&info));
+        },
+        else => {
+            const work = try allocator.alloc(T, @max(3 * n, 1));
+            defer allocator.free(work);
+            const iwork = try allocator.alloc(Int, @max(n, 1));
+            defer allocator.free(iwork);
+            sym(T, "gtsvx")(opt(fact), opt(trans), ref(&n_), ref(&nrhs_), dl.ptr, d.ptr, du.ptr, dlf.ptr, df.ptr, duf.ptr, du2.ptr, ipiv.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, iwork.ptr, out(&info));
+        },
+    }
+    return finish(info, n, rcond, .none);
+}
+
+/// `posvx` for a positive definite band matrix.
+pub fn pbsvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    uplo: Uplo,
+    n: usize,
+    kd: usize,
+    nrhs: usize,
+    ab: []T,
+    ldab: usize,
+    afb: []T,
+    ldafb: usize,
+    equed: *Equed,
+    s: []Real(T),
+    b: []T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    std.debug.assert(ldab >= kd + 1 and ldafb >= kd + 1);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(s.len >= n);
+    std.debug.assert(ferr.len >= nrhs and berr.len >= nrhs);
+
+    const n_ = dim(n);
+    const kd_ = dim(kd);
+    const nrhs_ = dim(nrhs);
+    const ldab_ = dim(ldab);
+    const ldafb_ = dim(ldafb);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => {
+            const work = try allocator.alloc(T, @max(2 * n, 1));
+            defer allocator.free(work);
+            const rwork = try allocator.alloc(Real(T), @max(n, 1));
+            defer allocator.free(rwork);
+            sym(T, "pbsvx")(opt(fact), opt(uplo), ref(&n_), ref(&kd_), ref(&nrhs_), ab.ptr, ref(&ldab_), afb.ptr, ref(&ldafb_), equedPtr(equed), s.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, rwork.ptr, out(&info));
+        },
+        else => {
+            const work = try allocator.alloc(T, @max(3 * n, 1));
+            defer allocator.free(work);
+            const iwork = try allocator.alloc(Int, @max(n, 1));
+            defer allocator.free(iwork);
+            sym(T, "pbsvx")(opt(fact), opt(uplo), ref(&n_), ref(&kd_), ref(&nrhs_), ab.ptr, ref(&ldab_), afb.ptr, ref(&ldafb_), equedPtr(equed), s.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, iwork.ptr, out(&info));
+        },
+    }
+    return finish(info, n, rcond, equed.*);
+}
+
+/// `posvx` in packed storage.
+pub fn ppsvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    uplo: Uplo,
+    n: usize,
+    nrhs: usize,
+    ap: []T,
+    afp: []T,
+    equed: *Equed,
+    s: []Real(T),
+    b: []T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    std.debug.assert(ap.len >= packedLen(n) and afp.len >= packedLen(n));
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(s.len >= n);
+    std.debug.assert(ferr.len >= nrhs and berr.len >= nrhs);
+
+    const n_ = dim(n);
+    const nrhs_ = dim(nrhs);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => {
+            const work = try allocator.alloc(T, @max(2 * n, 1));
+            defer allocator.free(work);
+            const rwork = try allocator.alloc(Real(T), @max(n, 1));
+            defer allocator.free(rwork);
+            sym(T, "ppsvx")(opt(fact), opt(uplo), ref(&n_), ref(&nrhs_), ap.ptr, afp.ptr, equedPtr(equed), s.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, rwork.ptr, out(&info));
+        },
+        else => {
+            const work = try allocator.alloc(T, @max(3 * n, 1));
+            defer allocator.free(work);
+            const iwork = try allocator.alloc(Int, @max(n, 1));
+            defer allocator.free(iwork);
+            sym(T, "ppsvx")(opt(fact), opt(uplo), ref(&n_), ref(&nrhs_), ap.ptr, afp.ptr, equedPtr(equed), s.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, iwork.ptr, out(&info));
+        },
+    }
+    return finish(info, n, rcond, equed.*);
+}
+
+/// `posvx` for a positive definite tridiagonal matrix.
+///
+/// No equilibration and no `uplo` — unlike `refine.ptrfs`, neither the real nor
+/// the complex routine takes one here, because `ptsvx` always reads `e` as the
+/// subdiagonal.
+pub fn ptsvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    n: usize,
+    nrhs: usize,
+    d: []const Real(T),
+    e: []const T,
+    df: []Real(T),
+    ef: []T,
+    b: []const T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    std.debug.assert(fact != .equilibrate);
+    std.debug.assert(d.len >= n and df.len >= n);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(ferr.len >= nrhs and berr.len >= nrhs);
+
+    const n_ = dim(n);
+    const nrhs_ = dim(nrhs);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => {
+            const work = try allocator.alloc(T, @max(n, 1));
+            defer allocator.free(work);
+            const rwork = try allocator.alloc(Real(T), @max(n, 1));
+            defer allocator.free(rwork);
+            sym(T, "ptsvx")(opt(fact), ref(&n_), ref(&nrhs_), d.ptr, e.ptr, df.ptr, ef.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, rwork.ptr, out(&info));
+        },
+        else => {
+            const work = try allocator.alloc(T, @max(2 * n, 1));
+            defer allocator.free(work);
+            sym(T, "ptsvx")(opt(fact), ref(&n_), ref(&nrhs_), d.ptr, e.ptr, df.ptr, ef.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, out(&info));
+        },
+    }
+    return finish(info, n, rcond, .none);
+}
+
+/// `sysvx` in packed storage.
+pub fn spsvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    uplo: Uplo,
+    n: usize,
+    nrhs: usize,
+    ap: []const T,
+    afp: []T,
+    ipiv: []Int,
+    b: []const T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    return packedIndefiniteExpert(T, "spsvx", allocator, fact, uplo, n, nrhs, ap, afp, ipiv, b, ldb, x, ldx, ferr, berr);
+}
+
+/// `spsvx` for a Hermitian matrix. Complex only.
+pub fn hpsvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    uplo: Uplo,
+    n: usize,
+    nrhs: usize,
+    ap: []const T,
+    afp: []T,
+    ipiv: []Int,
+    b: []const T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    requireComplex(T, "hpsvx", "spsvx");
+    return packedIndefiniteExpert(T, "hpsvx", allocator, fact, uplo, n, nrhs, ap, afp, ipiv, b, ldb, x, ldx, ferr, berr);
+}
+
+fn packedIndefiniteExpert(
+    comptime T: type,
+    comptime name: []const u8,
+    allocator: Allocator,
+    fact: Fact,
+    uplo: Uplo,
+    n: usize,
+    nrhs: usize,
+    ap: []const T,
+    afp: []T,
+    ipiv: []Int,
+    b: []const T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    std.debug.assert(fact != .equilibrate);
+    std.debug.assert(ap.len >= packedLen(n) and afp.len >= packedLen(n));
+    std.debug.assert(ipiv.len >= n);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(ferr.len >= nrhs and berr.len >= nrhs);
+
+    const n_ = dim(n);
+    const nrhs_ = dim(nrhs);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => {
+            const work = try allocator.alloc(T, @max(2 * n, 1));
+            defer allocator.free(work);
+            const rwork = try allocator.alloc(Real(T), @max(n, 1));
+            defer allocator.free(rwork);
+            sym(T, name)(opt(fact), opt(uplo), ref(&n_), ref(&nrhs_), ap.ptr, afp.ptr, ipiv.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, rwork.ptr, out(&info));
+        },
+        else => {
+            const work = try allocator.alloc(T, @max(3 * n, 1));
+            defer allocator.free(work);
+            const iwork = try allocator.alloc(Int, @max(n, 1));
+            defer allocator.free(iwork);
+            sym(T, name)(opt(fact), opt(uplo), ref(&n_), ref(&nrhs_), ap.ptr, afp.ptr, ipiv.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, iwork.ptr, out(&info));
+        },
+    }
+    return finish(info, n, rcond, .none);
+}
+
+/// `sysvx` for a Hermitian indefinite matrix. Complex only.
+pub fn hesvx(
+    comptime T: type,
+    allocator: Allocator,
+    fact: Fact,
+    uplo: Uplo,
+    n: usize,
+    nrhs: usize,
+    a: []const T,
+    lda: usize,
+    af: []T,
+    ldaf: usize,
+    ipiv: []Int,
+    b: []const T,
+    ldb: usize,
+    x: []T,
+    ldx: usize,
+    ferr: []Real(T),
+    berr: []Real(T),
+) Fail!ExpertResult {
+    requireComplex(T, "hesvx", "sysvx");
+    std.debug.assert(fact != .equilibrate);
+    assertMatrix(a.len, n, n, lda);
+    assertMatrix(af.len, n, n, ldaf);
+    assertMatrix(b.len, n, nrhs, ldb);
+    assertMatrix(x.len, n, nrhs, ldx);
+    std.debug.assert(ipiv.len >= n);
+    std.debug.assert(ferr.len >= nrhs and berr.len >= nrhs);
+
+    const n_ = dim(n);
+    const nrhs_ = dim(nrhs);
+    const lda_ = dim(lda);
+    const ldaf_ = dim(ldaf);
+    const ldb_ = dim(ldb);
+    const ldx_ = dim(ldx);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    // Like sysvx, this takes an lwork worth querying.
+    var probe: [1]T = undefined;
+    var probe_i: [1]Int = undefined;
+    var rprobe: [1]Real(T) = undefined;
+    var wq: [1]T = undefined;
+    const neg = work_mod.query;
+    sym(T, "hesvx")(opt(fact), opt(uplo), ref(&n_), ref(&nrhs_), &probe, ref(&lda_), &probe, ref(&ldaf_), &probe_i, &probe, ref(&ldb_), &probe, ref(&ldx_), out(&rcond), &rprobe, &rprobe, &wq, ref(&neg), &rprobe, out(&info));
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), @as(Int, @intCast(2 * n))));
+    const work = try allocator.alloc(T, @max(size, 1));
+    defer allocator.free(work);
+    const lwork = dim(size);
+    const rwork = try allocator.alloc(Real(T), @max(n, 1));
+    defer allocator.free(rwork);
+
+    sym(T, "hesvx")(opt(fact), opt(uplo), ref(&n_), ref(&nrhs_), a.ptr, ref(&lda_), af.ptr, ref(&ldaf_), ipiv.ptr, b.ptr, ref(&ldb_), x.ptr, ref(&ldx_), out(&rcond), ferr.ptr, berr.ptr, work.ptr, ref(&lwork), rwork.ptr, out(&info));
+    return finish(info, n, rcond, .none);
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -536,4 +984,197 @@ test "single precision works through the same wrappers" {
 
     try testing.expect(res.rcond > 0.1);
     try testing.expectApproxEqAbs(@as(f32, 0.8), x[0], 1e-5);
+}
+
+// ============================================================================
+// Tests: expert drivers for the other storage forms
+// ============================================================================
+
+/// `tridiag(1, 4, 1)`, the matrix every test below solves in a different
+/// storage form, and its right-hand side.
+const tri3 = [_]f64{ 4, 1, 0, 1, 4, 1, 0, 1, 4 };
+const rhs3 = [_]f64{ 1, 2, 3 };
+
+fn solves(x: []const f64) !void {
+    for (0..3) |i| {
+        var acc: f64 = 0;
+        for (0..3) |j| acc += tri3[i + j * 3] * x[j];
+        try testing.expectApproxEqAbs(rhs3[i], acc, 1e-12);
+    }
+}
+
+test "gbsvx equilibrates a badly scaled band matrix" {
+    const kl = 1;
+    const ku = 1;
+    const narrow_ld = kl + ku + 1;
+    const wide_ld = 2 * kl + ku + 1;
+
+    // Row 0 is scaled up by 1e8, which is what equilibration is for.
+    const scaled = [_]f64{ 4e8, 1, 0, 1e8, 4, 1, 0, 1, 4 };
+    var ab = [_]f64{0} ** (narrow_ld * 3);
+    for (0..3) |j| for (0..3) |i| {
+        if (i + kl < j or j + ku < i) continue;
+        ab[ku + i - j + j * narrow_ld] = scaled[i + j * 3];
+    };
+    var afb = [_]f64{0} ** (wide_ld * 3);
+
+    var b = [_]f64{ 1e8, 2, 3 };
+    var ipiv: [3]Int = undefined;
+    var r: [3]f64 = undefined;
+    var col: [3]f64 = undefined;
+    var x: [3]f64 = undefined;
+    var ferr: [1]f64 = undefined;
+    var berr: [1]f64 = undefined;
+    var equed: Equed = .none;
+
+    const res = try gbsvx(f64, testing.allocator, .equilibrate, .no_trans, 3, kl, ku, 1, &ab, narrow_ld, &afb, wide_ld, &ipiv, &equed, &r, &col, &b, 3, &x, 3, &ferr, &berr);
+
+    // The scaled system is the unscaled one with row 0 multiplied through, so
+    // it has the same solution.
+    try testing.expect(!res.singular_to_working_precision);
+    try testing.expect(berr[0] < 1e-14);
+    try testing.expect(equed != .none);
+    try solves(&x);
+}
+
+test "gtsvx rejects equilibration, which LAPACK does not offer for tridiagonals" {
+    const dl = [_]f64{ 1, 1 };
+    const d = [_]f64{ 4, 4, 4 };
+    const du = [_]f64{ 1, 1 };
+    var dlf: [2]f64 = undefined;
+    var df: [3]f64 = undefined;
+    var duf: [2]f64 = undefined;
+    var du2: [1]f64 = undefined;
+    var ipiv: [3]Int = undefined;
+    var x: [3]f64 = undefined;
+    var ferr: [1]f64 = undefined;
+    var berr: [1]f64 = undefined;
+
+    const res = try gtsvx(f64, testing.allocator, .not_factored, .no_trans, 3, 1, &dl, &d, &du, &dlf, &df, &duf, &du2, &ipiv, &rhs3, 3, &x, 3, &ferr, &berr);
+
+    try testing.expect(res.rcond > 0.1);
+    try testing.expectEqual(Equed.none, res.equed);
+    try testing.expect(berr[0] < 1e-14);
+    try solves(&x);
+}
+
+test "gtsvx reuses a factorization the caller already has" {
+    const dl = [_]f64{ 1, 1 };
+    const d = [_]f64{ 4, 4, 4 };
+    const du = [_]f64{ 1, 1 };
+    var dlf = dl;
+    var df = d;
+    var duf = du;
+    var du2 = [_]f64{0};
+    var ipiv: [3]Int = undefined;
+    const factor_mod = @import("factor.zig");
+    try factor_mod.gttrf(f64, 3, &dlf, &df, &duf, &du2, &ipiv);
+
+    var x: [3]f64 = undefined;
+    var ferr: [1]f64 = undefined;
+    var berr: [1]f64 = undefined;
+    _ = try gtsvx(f64, testing.allocator, .factored, .no_trans, 3, 1, &dl, &d, &du, &dlf, &df, &duf, &du2, &ipiv, &rhs3, 3, &x, 3, &ferr, &berr);
+
+    try testing.expect(berr[0] < 1e-14);
+    try solves(&x);
+}
+
+test "pbsvx and ppsvx agree with posvx on the same matrix" {
+    var a_dense = tri3;
+    var af_dense: [9]f64 = undefined;
+    var b_dense = rhs3;
+    var s_dense: [3]f64 = undefined;
+    var x_dense: [3]f64 = undefined;
+    var ferr: [1]f64 = undefined;
+    var berr: [1]f64 = undefined;
+    var equed: Equed = .none;
+    const dense = try posvx(f64, testing.allocator, .not_factored, .upper, 3, 1, &a_dense, 3, &af_dense, 3, &equed, &s_dense, &b_dense, 3, &x_dense, 3, &ferr, &berr);
+
+    var ab = [_]f64{ 0, 4, 1, 4, 1, 4 };
+    var afb: [6]f64 = undefined;
+    var b_band = rhs3;
+    var s_band: [3]f64 = undefined;
+    var x_band: [3]f64 = undefined;
+    equed = .none;
+    const band = try pbsvx(f64, testing.allocator, .not_factored, .upper, 3, 1, 1, &ab, 2, &afb, 2, &equed, &s_band, &b_band, 3, &x_band, 3, &ferr, &berr);
+
+    var ap = [_]f64{ 4, 1, 4, 0, 1, 4 };
+    var afp: [6]f64 = undefined;
+    var b_packed = rhs3;
+    var s_packed: [3]f64 = undefined;
+    var x_packed: [3]f64 = undefined;
+    equed = .none;
+    const packed_ = try ppsvx(f64, testing.allocator, .not_factored, .upper, 3, 1, &ap, &afp, &equed, &s_packed, &b_packed, 3, &x_packed, 3, &ferr, &berr);
+
+    try testing.expectApproxEqRel(dense.rcond, band.rcond, 1e-10);
+    try testing.expectApproxEqRel(dense.rcond, packed_.rcond, 1e-10);
+    for (x_dense, x_band, x_packed) |a, b, cc| {
+        try testing.expectApproxEqAbs(a, b, 1e-14);
+        try testing.expectApproxEqAbs(a, cc, 1e-14);
+    }
+    try solves(&x_band);
+}
+
+test "ptsvx takes no uplo where refine.ptrfs does" {
+    const d = [_]f64{ 4, 4, 4 };
+    const e = [_]f64{ 1, 1 };
+    var df: [3]f64 = undefined;
+    var ef: [2]f64 = undefined;
+    var x: [3]f64 = undefined;
+    var ferr: [1]f64 = undefined;
+    var berr: [1]f64 = undefined;
+
+    const res = try ptsvx(f64, testing.allocator, .not_factored, 3, 1, &d, &e, &df, &ef, &rhs3, 3, &x, 3, &ferr, &berr);
+
+    try testing.expect(res.rcond > 0.1);
+    try testing.expect(berr[0] < 1e-14);
+    try solves(&x);
+}
+
+test "spsvx solves an indefinite packed system" {
+    const ap = [_]f64{ 1, 2, 1, 0, 2, 1 };
+    const dense = [_]f64{ 1, 2, 0, 2, 1, 2, 0, 2, 1 };
+    var afp: [6]f64 = undefined;
+    var ipiv: [3]Int = undefined;
+    var x: [3]f64 = undefined;
+    var ferr: [1]f64 = undefined;
+    var berr: [1]f64 = undefined;
+
+    const res = try spsvx(f64, testing.allocator, .not_factored, .upper, 3, 1, &ap, &afp, &ipiv, &rhs3, 3, &x, 3, &ferr, &berr);
+
+    try testing.expect(res.rcond > 0.01);
+    try testing.expect(berr[0] < 1e-14);
+    for (0..3) |i| {
+        var acc: f64 = 0;
+        for (0..3) |j| acc += dense[i + j * 3] * x[j];
+        try testing.expectApproxEqAbs(rhs3[i], acc, 1e-12);
+    }
+}
+
+test "hpsvx and hesvx solve the same Hermitian system" {
+    const Z = Complex(f64);
+    // [[2, i], [-i, 2]]
+    const a = [_]Z{ Z.init(2, 0), Z.init(0, -1), Z.init(0, 1), Z.init(2, 0) };
+    const ap = [_]Z{ Z.init(2, 0), Z.init(0, 1), Z.init(2, 0) }; // upper packed
+    const b = [_]Z{ Z.init(1, 0), Z.init(0, 1) };
+
+    var af: [4]Z = undefined;
+    var ipiv_f: [2]Int = undefined;
+    var x_full: [2]Z = undefined;
+    var ferr: [1]f64 = undefined;
+    var berr: [1]f64 = undefined;
+    const full = try hesvx(Z, testing.allocator, .not_factored, .upper, 2, 1, &a, 2, &af, 2, &ipiv_f, &b, 2, &x_full, 2, &ferr, &berr);
+    try testing.expect(berr[0] < 1e-14);
+
+    var afp: [3]Z = undefined;
+    var ipiv_p: [2]Int = undefined;
+    var x_packed: [2]Z = undefined;
+    const packed_ = try hpsvx(Z, testing.allocator, .not_factored, .upper, 2, 1, &ap, &afp, &ipiv_p, &b, 2, &x_packed, 2, &ferr, &berr);
+    try testing.expect(berr[0] < 1e-14);
+
+    try testing.expectApproxEqRel(full.rcond, packed_.rcond, 1e-10);
+    for (x_full, x_packed) |u, v| {
+        try testing.expectApproxEqAbs(u.re, v.re, 1e-14);
+        try testing.expectApproxEqAbs(u.im, v.im, 1e-14);
+    }
 }

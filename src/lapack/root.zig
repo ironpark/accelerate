@@ -34,15 +34,19 @@
 //! - `util.zig` - machine parameters, random matrices, plane rotations,
 //!   overflow-safe scaling, and the complex-symmetric routines CBLAS lacks.
 //! - `refine.zig` - iterative refinement and the forward/backward error bounds
-//!   that say how much of a computed solution to believe.
+//!   that say how much of a computed solution to believe, for every storage
+//!   form.
 //! - `expert.zig` - the expert drivers, which equilibrate, factor, solve,
-//!   estimate the condition number and bound the error in one call.
+//!   estimate the condition number and bound the error in one call, again for
+//!   every storage form.
 //!
-//! Not yet wrapped: the *expert* drivers (`gesvx` and friends), the iterative
-//! refinement routines (`gerfs`, `porfs`, ...), the `_aa`/`_rk`/`_rook`
-//! factorization variants, RFP storage, the expert eigenvalue drivers
-//! (`geevx`, `geesx`, `ggevx`, `ggesx`), the CS decomposition, and the
-//! remaining SVD drivers (`gesvdx`, `gejsv`, `gesvdq`).
+//! Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants,
+//! RFP storage, the reductions to condensed form (`gehrd`, `sytrd`, `gebrd`)
+//! and their `Q` builders, the tridiagonal eigensolvers (`steqr`, `stedc`,
+//! `stemr`, ...), the expert eigenvalue drivers (`geevx`, `geesx`, `ggevx`,
+//! `ggesx`), the generalized Schur family (`gges`, `hgeqz`, `tgsen`, ...), the
+//! CS decomposition, the tall-skinny QR family, and the remaining SVD drivers
+//! (`gesvdx`, `gejsv`, `gesvdq`).
 //!
 //! Until a routine has a wrapper it is reachable through `c`, with the caveats
 //! documented there: every argument by pointer, no bounds checking, `info`
@@ -114,6 +118,27 @@ pub const hetrs = factor.hetrs;
 pub const trtrs = factor.trtrs;
 pub const trtri = factor.trtri;
 pub const trcon = factor.trcon;
+pub const gbcon = factor.gbcon;
+pub const gtcon = factor.gtcon;
+pub const pbcon = factor.pbcon;
+pub const ppcon = factor.ppcon;
+pub const ptcon = factor.ptcon;
+pub const spcon = factor.spcon;
+pub const hpcon = factor.hpcon;
+pub const tbcon = factor.tbcon;
+pub const tpcon = factor.tpcon;
+pub const geequ = factor.geequ;
+pub const geequb = factor.geequb;
+pub const gbequ = factor.gbequ;
+pub const gbequb = factor.gbequb;
+pub const poequ = factor.poequ;
+pub const poequb = factor.poequb;
+pub const pbequ = factor.pbequ;
+pub const ppequ = factor.ppequ;
+pub const syequb = factor.syequb;
+pub const heequb = factor.heequb;
+pub const Equilibration = factor.Equilibration;
+pub const SymmetricEquilibration = factor.SymmetricEquilibration;
 
 pub const geqrf = qr.geqrf;
 pub const gelqf = qr.gelqf;
@@ -173,10 +198,27 @@ pub const porfs = refine.porfs;
 pub const syrfs = refine.syrfs;
 pub const herfs = refine.herfs;
 pub const trrfs = refine.trrfs;
+pub const gbrfs = refine.gbrfs;
+pub const gtrfs = refine.gtrfs;
+pub const pbrfs = refine.pbrfs;
+pub const pprfs = refine.pprfs;
+pub const ptrfs = refine.ptrfs;
+pub const sprfs = refine.sprfs;
+pub const hprfs = refine.hprfs;
+pub const tbrfs = refine.tbrfs;
+pub const tprfs = refine.tprfs;
 
 pub const gesvx = expert.gesvx;
 pub const posvx = expert.posvx;
 pub const sysvx = expert.sysvx;
+pub const gbsvx = expert.gbsvx;
+pub const gtsvx = expert.gtsvx;
+pub const pbsvx = expert.pbsvx;
+pub const ppsvx = expert.ppsvx;
+pub const ptsvx = expert.ptsvx;
+pub const spsvx = expert.spsvx;
+pub const hpsvx = expert.hpsvx;
+pub const hesvx = expert.hesvx;
 pub const ExpertResult = expert.ExpertResult;
 pub const MachineParam = util.MachineParam;
 pub const Distribution = util.Distribution;

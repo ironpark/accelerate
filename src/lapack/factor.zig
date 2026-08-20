@@ -1297,6 +1297,613 @@ pub fn tpttr(comptime T: type, uplo: Uplo, n: usize, ap: []const T, a: []T, lda:
 }
 
 // ============================================================================
+// Condition estimators for the remaining storage forms
+// ============================================================================
+
+/// The scratch the `*con` estimators want.
+///
+/// Every one of them takes two workspaces whose element types flip with `T`:
+/// real routines want `T` plus `Int`, complex ones want `T` plus `Real(T)`. The
+/// *sizes* differ per routine, which is why they are parameters here rather
+/// than constants — `gecon` wants `4n` reals where `pocon` wants `3n` and
+/// `spcon` wants `2n`, and each is a heap overflow if you guess low.
+///
+/// A few complex routines (`gtcon`, `spcon`, `hpcon`) take no second workspace
+/// at all; pass `0` for `reals` and they allocate nothing.
+fn ConScratch(comptime T: type) type {
+    return struct {
+        const Self = @This();
+        work: []T,
+        iwork: []Int,
+        rwork: []Real(T),
+        allocator: Allocator,
+
+        fn init(allocator: Allocator, reals: usize, complexes: usize, ints: usize) !Self {
+            return switch (T) {
+                Complex(f32), Complex(f64) => .{
+                    .work = try allocator.alloc(T, @max(complexes, 1)),
+                    .iwork = &.{},
+                    .rwork = try allocator.alloc(Real(T), @max(ints, 1)),
+                    .allocator = allocator,
+                },
+                else => .{
+                    .work = try allocator.alloc(T, @max(reals, 1)),
+                    .iwork = try allocator.alloc(Int, @max(ints, 1)),
+                    .rwork = &.{},
+                    .allocator = allocator,
+                },
+            };
+        }
+
+        fn deinit(self: Self) void {
+            self.allocator.free(self.work);
+            if (self.iwork.len > 0) self.allocator.free(self.iwork);
+            if (self.rwork.len > 0) self.allocator.free(self.rwork);
+        }
+    };
+}
+
+/// `gecon` for a band matrix factored by `gbtrf`.
+///
+/// `ab` is the *factored* band array, so `ldab >= 2*kl + ku + 1`, but `anorm`
+/// must come from the original — `norms.langb`, which uses the narrower
+/// `kl + ku + 1` layout. The two arrays are not the same shape.
+pub fn gbcon(
+    comptime T: type,
+    allocator: Allocator,
+    norm: Norm,
+    n: usize,
+    kl: usize,
+    ku: usize,
+    ab: []const T,
+    ldab: usize,
+    ipiv: []const Int,
+    anorm: Real(T),
+) Fail!Real(T) {
+    std.debug.assert(norm == .one or norm == .infinity);
+    std.debug.assert(ldab >= 2 * kl + ku + 1);
+    std.debug.assert(ipiv.len >= n);
+
+    const scratch = try ConScratch(T).init(allocator, 3 * n, 2 * n, n);
+    defer scratch.deinit();
+
+    const n_ = dim(n);
+    const kl_ = dim(kl);
+    const ku_ = dim(ku);
+    const ldab_ = dim(ldab);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => sym(T, "gbcon")(opt(norm), ref(&n_), ref(&kl_), ref(&ku_), ab.ptr, ref(&ldab_), ipiv.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, scratch.rwork.ptr, out(&info)),
+        else => sym(T, "gbcon")(opt(norm), ref(&n_), ref(&kl_), ref(&ku_), ab.ptr, ref(&ldab_), ipiv.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, scratch.iwork.ptr, out(&info)),
+    }
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+/// `gecon` for a tridiagonal matrix factored by `gttrf`.
+pub fn gtcon(
+    comptime T: type,
+    allocator: Allocator,
+    norm: Norm,
+    n: usize,
+    dl: []const T,
+    d: []const T,
+    du: []const T,
+    du2: []const T,
+    ipiv: []const Int,
+    anorm: Real(T),
+) Fail!Real(T) {
+    std.debug.assert(norm == .one or norm == .infinity);
+    std.debug.assert(d.len >= n);
+    std.debug.assert(ipiv.len >= n);
+
+    // The complex routine takes no real workspace at all, hence the 0.
+    const scratch = try ConScratch(T).init(allocator, 2 * n, 2 * n, switch (T) {
+        Complex(f32), Complex(f64) => 0,
+        else => n,
+    });
+    defer scratch.deinit();
+
+    const n_ = dim(n);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => sym(T, "gtcon")(opt(norm), ref(&n_), dl.ptr, d.ptr, du.ptr, du2.ptr, ipiv.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, out(&info)),
+        else => sym(T, "gtcon")(opt(norm), ref(&n_), dl.ptr, d.ptr, du.ptr, du2.ptr, ipiv.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, scratch.iwork.ptr, out(&info)),
+    }
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+/// `pocon` for a positive definite band matrix factored by `pbtrf`.
+pub fn pbcon(
+    comptime T: type,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    kd: usize,
+    ab: []const T,
+    ldab: usize,
+    anorm: Real(T),
+) Fail!Real(T) {
+    std.debug.assert(ldab >= kd + 1);
+
+    const scratch = try ConScratch(T).init(allocator, 3 * n, 2 * n, n);
+    defer scratch.deinit();
+
+    const n_ = dim(n);
+    const kd_ = dim(kd);
+    const ldab_ = dim(ldab);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => sym(T, "pbcon")(opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), ref(&anorm), out(&rcond), scratch.work.ptr, scratch.rwork.ptr, out(&info)),
+        else => sym(T, "pbcon")(opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), ref(&anorm), out(&rcond), scratch.work.ptr, scratch.iwork.ptr, out(&info)),
+    }
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+/// `pocon` in packed storage, from a `pptrf` factorization.
+pub fn ppcon(
+    comptime T: type,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    ap: []const T,
+    anorm: Real(T),
+) Fail!Real(T) {
+    std.debug.assert(ap.len >= packedLen(n));
+
+    const scratch = try ConScratch(T).init(allocator, 3 * n, 2 * n, n);
+    defer scratch.deinit();
+
+    const n_ = dim(n);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => sym(T, "ppcon")(opt(uplo), ref(&n_), ap.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, scratch.rwork.ptr, out(&info)),
+        else => sym(T, "ppcon")(opt(uplo), ref(&n_), ap.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, scratch.iwork.ptr, out(&info)),
+    }
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+/// `pocon` for a positive definite tridiagonal matrix factored by `pttrf`.
+///
+/// This one takes no `norm` argument: the 1-norm and the infinity norm of a
+/// symmetric matrix are the same, and it is the only estimator here that says
+/// so in its signature.
+pub fn ptcon(
+    comptime T: type,
+    allocator: Allocator,
+    n: usize,
+    d: []const Real(T),
+    e: []const T,
+    anorm: Real(T),
+) Fail!Real(T) {
+    std.debug.assert(d.len >= n);
+    if (n > 1) std.debug.assert(e.len >= n - 1);
+
+    // Both variants want exactly one n-element real workspace; the complex one
+    // just spells it `rwork` and takes no complex scratch at all.
+    const work = try allocator.alloc(Real(T), @max(n, 1));
+    defer allocator.free(work);
+
+    const n_ = dim(n);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    sym(T, "ptcon")(ref(&n_), d.ptr, e.ptr, ref(&anorm), out(&rcond), work.ptr, out(&info));
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+/// `sycon` in packed storage, from an `sptrf` factorization.
+pub fn spcon(
+    comptime T: type,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    ap: []const T,
+    ipiv: []const Int,
+    anorm: Real(T),
+) Fail!Real(T) {
+    return packedIndefiniteCondition(T, "spcon", allocator, uplo, n, ap, ipiv, anorm);
+}
+
+/// `hecon` in packed storage, from an `hptrf` factorization. Complex only.
+pub fn hpcon(
+    comptime T: type,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    ap: []const T,
+    ipiv: []const Int,
+    anorm: Real(T),
+) Fail!Real(T) {
+    requireComplex(T, "hpcon", "spcon");
+    return packedIndefiniteCondition(T, "hpcon", allocator, uplo, n, ap, ipiv, anorm);
+}
+
+fn packedIndefiniteCondition(
+    comptime T: type,
+    comptime name: []const u8,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    ap: []const T,
+    ipiv: []const Int,
+    anorm: Real(T),
+) Fail!Real(T) {
+    std.debug.assert(ap.len >= packedLen(n));
+    std.debug.assert(ipiv.len >= n);
+
+    const scratch = try ConScratch(T).init(allocator, 2 * n, 2 * n, switch (T) {
+        Complex(f32), Complex(f64) => 0,
+        else => n,
+    });
+    defer scratch.deinit();
+
+    const n_ = dim(n);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => sym(T, name)(opt(uplo), ref(&n_), ap.ptr, ipiv.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, out(&info)),
+        else => sym(T, name)(opt(uplo), ref(&n_), ap.ptr, ipiv.ptr, ref(&anorm), out(&rcond), scratch.work.ptr, scratch.iwork.ptr, out(&info)),
+    }
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+/// `trcon` for a triangular band matrix.
+///
+/// Like `trcon`, this needs no `anorm` — a triangular matrix is its own factor,
+/// so the routine has the original in hand.
+pub fn tbcon(
+    comptime T: type,
+    allocator: Allocator,
+    norm: Norm,
+    uplo: Uplo,
+    diag: Diag,
+    n: usize,
+    kd: usize,
+    ab: []const T,
+    ldab: usize,
+) Fail!Real(T) {
+    std.debug.assert(norm == .one or norm == .infinity);
+    std.debug.assert(ldab >= kd + 1);
+
+    const scratch = try ConScratch(T).init(allocator, 3 * n, 2 * n, n);
+    defer scratch.deinit();
+
+    const n_ = dim(n);
+    const kd_ = dim(kd);
+    const ldab_ = dim(ldab);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => sym(T, "tbcon")(opt(norm), opt(uplo), opt(diag), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), out(&rcond), scratch.work.ptr, scratch.rwork.ptr, out(&info)),
+        else => sym(T, "tbcon")(opt(norm), opt(uplo), opt(diag), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), out(&rcond), scratch.work.ptr, scratch.iwork.ptr, out(&info)),
+    }
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+/// `trcon` in packed triangular storage.
+pub fn tpcon(
+    comptime T: type,
+    allocator: Allocator,
+    norm: Norm,
+    uplo: Uplo,
+    diag: Diag,
+    n: usize,
+    ap: []const T,
+) Fail!Real(T) {
+    std.debug.assert(norm == .one or norm == .infinity);
+    std.debug.assert(ap.len >= packedLen(n));
+
+    const scratch = try ConScratch(T).init(allocator, 3 * n, 2 * n, n);
+    defer scratch.deinit();
+
+    const n_ = dim(n);
+    var rcond: Real(T) = 0;
+    var info: Int = 0;
+
+    switch (T) {
+        Complex(f32), Complex(f64) => sym(T, "tpcon")(opt(norm), opt(uplo), opt(diag), ref(&n_), ap.ptr, out(&rcond), scratch.work.ptr, scratch.rwork.ptr, out(&info)),
+        else => sym(T, "tpcon")(opt(norm), opt(uplo), opt(diag), ref(&n_), ap.ptr, out(&rcond), scratch.work.ptr, scratch.iwork.ptr, out(&info)),
+    }
+
+    try info_mod.checkArgs(info);
+    return rcond;
+}
+
+// ============================================================================
+// Equilibration for the remaining storage forms
+// ============================================================================
+
+/// One set of scale factors, for a matrix that has only one — anything
+/// symmetric, Hermitian or positive definite, where the same `S` is applied on
+/// both sides as `S A S`.
+pub const SymmetricEquilibration = struct {
+    /// Ratio of smallest to largest scale factor. Close to 1 means scaling is
+    /// not worth doing.
+    cond: f64,
+    /// Largest absolute element of the matrix, for detecting overflow risk.
+    max_abs: f64,
+};
+
+/// `geequ` for a band matrix.
+///
+/// `ab` here is the *unfactored* band layout, `ldab >= kl + ku + 1` — narrower
+/// than what `gbtrf` wants, since there is no fill-in to leave room for.
+pub fn gbequ(
+    comptime T: type,
+    rows: usize,
+    cols: usize,
+    kl: usize,
+    ku: usize,
+    ab: []const T,
+    ldab: usize,
+    r: []Real(T),
+    col_scale: []Real(T),
+) Error!Equilibration {
+    return bandEquilibrate(T, "gbequ", rows, cols, kl, ku, ab, ldab, r, col_scale);
+}
+
+/// `gbequ` with the scale factors rounded to a power of the radix.
+///
+/// Powers of two scale exactly, so `R A C` introduces no rounding error of its
+/// own. The scaling is coarser and the resulting condition number slightly
+/// worse; use this when you care that equilibration be reversible.
+pub fn gbequb(
+    comptime T: type,
+    rows: usize,
+    cols: usize,
+    kl: usize,
+    ku: usize,
+    ab: []const T,
+    ldab: usize,
+    r: []Real(T),
+    col_scale: []Real(T),
+) Error!Equilibration {
+    return bandEquilibrate(T, "gbequb", rows, cols, kl, ku, ab, ldab, r, col_scale);
+}
+
+fn bandEquilibrate(
+    comptime T: type,
+    comptime name: []const u8,
+    rows: usize,
+    cols: usize,
+    kl: usize,
+    ku: usize,
+    ab: []const T,
+    ldab: usize,
+    r: []Real(T),
+    col_scale: []Real(T),
+) Error!Equilibration {
+    std.debug.assert(ldab >= kl + ku + 1);
+    std.debug.assert(r.len >= rows);
+    std.debug.assert(col_scale.len >= cols);
+
+    const m_ = dim(rows);
+    const n_ = dim(cols);
+    const kl_ = dim(kl);
+    const ku_ = dim(ku);
+    const ldab_ = dim(ldab);
+    var rowcnd: Real(T) = 0;
+    var colcnd: Real(T) = 0;
+    var amax: Real(T) = 0;
+    var info: Int = 0;
+
+    sym(T, name)(ref(&m_), ref(&n_), ref(&kl_), ref(&ku_), ab.ptr, ref(&ldab_), r.ptr, col_scale.ptr, out(&rowcnd), out(&colcnd), out(&amax), out(&info));
+    try info_mod.checkLu(info);
+    return .{ .row_cond = rowcnd, .col_cond = colcnd, .max_abs = amax };
+}
+
+/// `geequ` with the scale factors rounded to a power of the radix. See `gbequb`
+/// for why you would want that.
+pub fn geequb(
+    comptime T: type,
+    rows: usize,
+    cols: usize,
+    a: []const T,
+    lda: usize,
+    r: []Real(T),
+    col_scale: []Real(T),
+) Error!Equilibration {
+    assertMatrix(a.len, rows, cols, lda);
+    std.debug.assert(r.len >= rows);
+    std.debug.assert(col_scale.len >= cols);
+
+    const m_ = dim(rows);
+    const n_ = dim(cols);
+    const lda_ = dim(lda);
+    var rowcnd: Real(T) = 0;
+    var colcnd: Real(T) = 0;
+    var amax: Real(T) = 0;
+    var info: Int = 0;
+
+    sym(T, "geequb")(ref(&m_), ref(&n_), a.ptr, ref(&lda_), r.ptr, col_scale.ptr, out(&rowcnd), out(&colcnd), out(&amax), out(&info));
+    try info_mod.checkLu(info);
+    return .{ .row_cond = rowcnd, .col_cond = colcnd, .max_abs = amax };
+}
+
+/// Scale factors `S` for a positive definite matrix, so that `S A S` has a unit
+/// diagonal. `s[i]` is `1 / sqrt(a[i,i])`.
+///
+/// Returns `error.NotPositiveDefinite` if a diagonal entry is not positive;
+/// `lastInfo()` gives its 1-based index. That is a genuine test — this is the
+/// cheapest way to reject a matrix before attempting a Cholesky.
+pub fn poequ(
+    comptime T: type,
+    n: usize,
+    a: []const T,
+    lda: usize,
+    s: []Real(T),
+) Error!SymmetricEquilibration {
+    return fullPosEquilibrate(T, "poequ", n, a, lda, s);
+}
+
+/// `poequ` with the scale factors rounded to a power of the radix.
+pub fn poequb(
+    comptime T: type,
+    n: usize,
+    a: []const T,
+    lda: usize,
+    s: []Real(T),
+) Error!SymmetricEquilibration {
+    return fullPosEquilibrate(T, "poequb", n, a, lda, s);
+}
+
+fn fullPosEquilibrate(
+    comptime T: type,
+    comptime name: []const u8,
+    n: usize,
+    a: []const T,
+    lda: usize,
+    s: []Real(T),
+) Error!SymmetricEquilibration {
+    assertMatrix(a.len, n, n, lda);
+    std.debug.assert(s.len >= n);
+
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    var scond: Real(T) = 0;
+    var amax: Real(T) = 0;
+    var info: Int = 0;
+
+    sym(T, name)(ref(&n_), a.ptr, ref(&lda_), s.ptr, out(&scond), out(&amax), out(&info));
+    try info_mod.checkCholesky(info);
+    return .{ .cond = scond, .max_abs = amax };
+}
+
+/// `poequ` for a positive definite band matrix.
+pub fn pbequ(
+    comptime T: type,
+    uplo: Uplo,
+    n: usize,
+    kd: usize,
+    ab: []const T,
+    ldab: usize,
+    s: []Real(T),
+) Error!SymmetricEquilibration {
+    std.debug.assert(ldab >= kd + 1);
+    std.debug.assert(s.len >= n);
+
+    const n_ = dim(n);
+    const kd_ = dim(kd);
+    const ldab_ = dim(ldab);
+    var scond: Real(T) = 0;
+    var amax: Real(T) = 0;
+    var info: Int = 0;
+
+    sym(T, "pbequ")(opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), s.ptr, out(&scond), out(&amax), out(&info));
+    try info_mod.checkCholesky(info);
+    return .{ .cond = scond, .max_abs = amax };
+}
+
+/// `poequ` in packed storage.
+pub fn ppequ(
+    comptime T: type,
+    uplo: Uplo,
+    n: usize,
+    ap: []const T,
+    s: []Real(T),
+) Error!SymmetricEquilibration {
+    std.debug.assert(ap.len >= packedLen(n));
+    std.debug.assert(s.len >= n);
+
+    const n_ = dim(n);
+    var scond: Real(T) = 0;
+    var amax: Real(T) = 0;
+    var info: Int = 0;
+
+    sym(T, "ppequ")(opt(uplo), ref(&n_), ap.ptr, s.ptr, out(&scond), out(&amax), out(&info));
+    try info_mod.checkCholesky(info);
+    return .{ .cond = scond, .max_abs = amax };
+}
+
+/// Scale factors for a symmetric *indefinite* matrix.
+///
+/// Unlike `poequ` this cannot just take the reciprocal square root of the
+/// diagonal — the diagonal of an indefinite matrix can be zero or negative — so
+/// it runs an iteration that minimises the condition number, which is why it
+/// needs a workspace and the others do not.
+pub fn syequb(
+    comptime T: type,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    a: []const T,
+    lda: usize,
+    s: []Real(T),
+) Fail!SymmetricEquilibration {
+    return indefiniteEquilibrate(T, "syequb", allocator, uplo, n, a, lda, s);
+}
+
+/// `syequb` for a Hermitian matrix. Complex only.
+pub fn heequb(
+    comptime T: type,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    a: []const T,
+    lda: usize,
+    s: []Real(T),
+) Fail!SymmetricEquilibration {
+    requireComplex(T, "heequb", "syequb");
+    return indefiniteEquilibrate(T, "heequb", allocator, uplo, n, a, lda, s);
+}
+
+fn indefiniteEquilibrate(
+    comptime T: type,
+    comptime name: []const u8,
+    allocator: Allocator,
+    uplo: Uplo,
+    n: usize,
+    a: []const T,
+    lda: usize,
+    s: []Real(T),
+) Fail!SymmetricEquilibration {
+    assertMatrix(a.len, n, n, lda);
+    std.debug.assert(s.len >= n);
+
+    // 3n reals or 2n complex; the workspace is `T`-typed either way here, which
+    // is why this one does not go through ConScratch.
+    const work = try allocator.alloc(T, @max(switch (T) {
+        Complex(f32), Complex(f64) => 2 * n,
+        else => 3 * n,
+    }, 1));
+    defer allocator.free(work);
+
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    var scond: Real(T) = 0;
+    var amax: Real(T) = 0;
+    var info: Int = 0;
+
+    sym(T, name)(opt(uplo), ref(&n_), a.ptr, ref(&lda_), s.ptr, out(&scond), out(&amax), work.ptr, out(&info));
+    try info_mod.checkArgs(info);
+    return .{ .cond = scond, .max_abs = amax };
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -1834,4 +2441,264 @@ test "the complex condition estimators also stay inside their workspaces" {
     for (work[2 * n ..]) |slot| try testing.expectEqual(@as(f64, -999), slot.re);
     for (rwork[2 * n ..]) |slot| try testing.expectEqual(@as(f64, -999), slot);
     try testing.expectApproxEqAbs(@as(f64, 0.25), rcond, 1e-9);
+}
+
+// ============================================================================
+// Tests: condition estimators for the other storage forms
+// ============================================================================
+
+/// The 3x3 tridiagonal `tridiag(1, 4, 1)` in dense column-major form. Every
+/// band and packed test below uses this same matrix, so their `rcond` estimates
+/// can be checked against a dense `gecon` on it.
+const tri3 = [_]f64{ 4, 1, 0, 1, 4, 1, 0, 1, 4 };
+
+/// `gecon` on a dense copy of `tri3`, the reference every band estimator below
+/// is compared against.
+fn denseRcond(norm: Norm) !f64 {
+    var a = tri3;
+    var nwork = [_]f64{ 0, 0, 0 };
+    const anorm = norms.lange(f64, norm, 3, 3, &a, 3, &nwork);
+    var ipiv: [3]Int = undefined;
+    try getrf(f64, 3, 3, &a, 3, &ipiv);
+    return gecon(f64, testing.allocator, norm, 3, &a, 3, anorm);
+}
+
+/// Packs `tri3` into the `gbtrf` band layout, which leaves `kl` rows of
+/// headroom above the band for fill-in.
+fn packBandForFactor(ab: []f64, ldab: usize, kl: usize, ku: usize) void {
+    @memset(ab, 0);
+    for (0..3) |j| {
+        for (0..3) |i| {
+            if (i + kl < j or j + ku < i) continue;
+            ab[kl + ku + i - j + j * ldab] = tri3[i + j * 3];
+        }
+    }
+}
+
+test "gbcon agrees with a dense gecon on the same matrix" {
+    const kl = 1;
+    const ku = 1;
+    const ldab = 2 * kl + ku + 1;
+    var ab = [_]f64{0} ** (ldab * 3);
+    packBandForFactor(&ab, ldab, kl, ku);
+
+    // anorm comes from the *unfactored* band, in the narrower langb layout.
+    var narrow = [_]f64{0} ** ((kl + ku + 1) * 3);
+    for (0..3) |j| for (0..3) |i| {
+        if (i + kl < j or j + ku < i) continue;
+        narrow[ku + i - j + j * (kl + ku + 1)] = tri3[i + j * 3];
+    };
+    var nwork = [_]f64{};
+    const anorm = norms.langb(f64, .one, 3, kl, ku, &narrow, kl + ku + 1, &nwork);
+
+    var ipiv: [3]Int = undefined;
+    try gbtrf(f64, 3, 3, kl, ku, &ab, ldab, &ipiv);
+    const rcond = try gbcon(f64, testing.allocator, .one, 3, kl, ku, &ab, ldab, &ipiv, anorm);
+
+    try testing.expectApproxEqRel(try denseRcond(.one), rcond, 1e-10);
+}
+
+test "gtcon agrees with a dense gecon on the same matrix" {
+    var dl = [_]f64{ 1, 1 };
+    var d = [_]f64{ 4, 4, 4 };
+    var du = [_]f64{ 1, 1 };
+    var du2 = [_]f64{0};
+    const anorm = norms.lanst(f64, .one, 3, &d, &dl);
+
+    var ipiv: [3]Int = undefined;
+    try gttrf(f64, 3, &dl, &d, &du, &du2, &ipiv);
+    const rcond = try gtcon(f64, testing.allocator, .one, 3, &dl, &d, &du, &du2, &ipiv, anorm);
+
+    try testing.expectApproxEqRel(try denseRcond(.one), rcond, 1e-10);
+}
+
+test "pbcon and ppcon agree with a dense pocon on the same matrix" {
+    var nwork = [_]f64{ 0, 0, 0 };
+    const anorm = norms.lansy(f64, .one, .upper, 3, &tri3, 3, &nwork);
+
+    var ab = [_]f64{ 0, 4, 1, 4, 1, 4 }; // upper band, kd = 1
+    try pbtrf(f64, .upper, 3, 1, &ab, 2);
+    const band = try pbcon(f64, testing.allocator, .upper, 3, 1, &ab, 2, anorm);
+
+    var ap = [_]f64{ 4, 1, 4, 0, 1, 4 }; // upper packed
+    try pptrf(f64, .upper, 3, &ap);
+    const packed_ = try ppcon(f64, testing.allocator, .upper, 3, &ap, anorm);
+
+    var dense = tri3;
+    try potrf(f64, .upper, 3, &dense, 3);
+    const full = try pocon(f64, testing.allocator, .upper, 3, &dense, 3, anorm);
+
+    try testing.expectApproxEqRel(full, band, 1e-10);
+    try testing.expectApproxEqRel(full, packed_, 1e-10);
+}
+
+test "ptcon takes no norm argument because the two norms coincide" {
+    var d = [_]f64{ 4, 4, 4 };
+    var e = [_]f64{ 1, 1 };
+    const anorm = norms.lanst(f64, .one, 3, &d, &e);
+    // Symmetric, so the infinity norm is the same number.
+    try testing.expectEqual(anorm, norms.lanst(f64, .infinity, 3, &d, &e));
+
+    try pttrf(f64, 3, &d, &e);
+    const rcond = try ptcon(f64, testing.allocator, 3, &d, &e, anorm);
+    try testing.expectApproxEqRel(try denseRcond(.one), rcond, 1e-10);
+}
+
+test "spcon agrees with sycon on the same indefinite matrix" {
+    const dense_a = [_]f64{ 1, 2, 0, 2, 1, 2, 0, 2, 1 };
+    var nwork = [_]f64{ 0, 0, 0 };
+    const anorm = norms.lansy(f64, .one, .upper, 3, &dense_a, 3, &nwork);
+
+    var ap = [_]f64{ 1, 2, 1, 0, 2, 1 };
+    var ipiv_p: [3]Int = undefined;
+    try sptrf(f64, .upper, 3, &ap, &ipiv_p);
+    const packed_ = try spcon(f64, testing.allocator, .upper, 3, &ap, &ipiv_p, anorm);
+
+    var full = dense_a;
+    var ipiv_f: [3]Int = undefined;
+    try sytrf(f64, testing.allocator, .upper, 3, &full, 3, &ipiv_f);
+    const dense = try sycon(f64, testing.allocator, .upper, 3, &full, 3, &ipiv_f, anorm);
+
+    try testing.expectApproxEqRel(dense, packed_, 1e-10);
+}
+
+test "hpcon takes no rwork, matching hecon's packed shape" {
+    const Z = Complex(f64);
+    const one = Z.init(1, 0);
+    const two_i = Z.init(0, 2);
+    // Hermitian [[1, 2i], [-2i, 1]] in upper packed storage.
+    var ap = [_]Z{ one, two_i, one };
+    var nwork = [_]f64{ 0, 0 };
+    const anorm = norms.lanhp(Z, .one, .upper, 2, &ap, &nwork);
+
+    var ipiv: [2]Int = undefined;
+    try hptrf(Z, .upper, 2, &ap, &ipiv);
+    const rcond = try hpcon(Z, testing.allocator, .upper, 2, &ap, &ipiv, anorm);
+
+    // Eigenvalues are 1 +/- 2, so the true rcond in the 1-norm is 1/(3*1) here:
+    // ||A||_1 = 3 and ||A^-1||_1 = 1/3 * ... the estimate is what we pin.
+    try testing.expect(rcond > 0.1 and rcond <= 1.0);
+}
+
+test "tbcon and tpcon agree with trcon, and need no anorm" {
+    // Upper triangular [[1, 2, 0], [0, 3, 4], [0, 0, 5]], column-major.
+    const dense_t = [_]f64{ 1, 0, 0, 2, 3, 0, 0, 4, 5 };
+    const full = try trcon(f64, testing.allocator, .one, .upper, .non_unit, 3, &dense_t, 3);
+
+    // Band form with kd = 1: row kd + i - j.
+    var ab = [_]f64{ 0, 1, 2, 3, 4, 5 };
+    const band = try tbcon(f64, testing.allocator, .one, .upper, .non_unit, 3, 1, &ab, 2);
+
+    var ap = [_]f64{ 1, 2, 3, 0, 4, 5 };
+    const packed_ = try tpcon(f64, testing.allocator, .one, .upper, .non_unit, 3, &ap);
+
+    try testing.expectApproxEqRel(full, band, 1e-10);
+    try testing.expectApproxEqRel(full, packed_, 1e-10);
+}
+
+// ============================================================================
+// Tests: equilibration
+// ============================================================================
+
+test "gbequ finds the same scaling as geequ on the same matrix" {
+    const kl = 1;
+    const ku = 1;
+    const ld = kl + ku + 1;
+    const badly_scaled = [_]f64{ 1e6, 1, 0, 1e6, 1, 0, 0, 1, 1 };
+    var ab = [_]f64{0} ** (ld * 3);
+    for (0..3) |j| for (0..3) |i| {
+        if (i + kl < j or j + ku < i) continue;
+        ab[ku + i - j + j * ld] = badly_scaled[i + j * 3];
+    };
+
+    var r_band: [3]f64 = undefined;
+    var c_band: [3]f64 = undefined;
+    const band = try gbequ(f64, 3, 3, kl, ku, &ab, ld, &r_band, &c_band);
+
+    var r_full: [3]f64 = undefined;
+    var c_full: [3]f64 = undefined;
+    const full = try geequ(f64, 3, 3, &badly_scaled, 3, &r_full, &c_full);
+
+    try testing.expectApproxEqRel(full.max_abs, band.max_abs, 1e-12);
+    for (r_full, r_band) |a, b| try testing.expectApproxEqRel(a, b, 1e-12);
+    for (c_full, c_band) |a, b| try testing.expectApproxEqRel(a, b, 1e-12);
+}
+
+test "the b variants round the scale factors to exact powers of two" {
+    const a = [_]f64{ 3, 0, 0, 0, 7, 0, 0, 0, 100 };
+    var r: [3]f64 = undefined;
+    var col: [3]f64 = undefined;
+    _ = try geequb(f64, 3, 3, &a, 3, &r, &col);
+
+    // Every factor is 2^k exactly, so scaling introduces no rounding of its own.
+    for (r) |v| try testing.expectEqual(@as(f64, 0.5), std.math.frexp(v).significand);
+    // geequ, by contrast, uses the reciprocals themselves.
+    var r_plain: [3]f64 = undefined;
+    _ = try geequ(f64, 3, 3, &a, 3, &r_plain, &col);
+    try testing.expectApproxEqRel(@as(f64, 1.0 / 3.0), r_plain[0], 1e-15);
+    try testing.expect(r[0] != r_plain[0]);
+}
+
+test "poequ takes the reciprocal square root of the diagonal" {
+    const a = [_]f64{ 4, 1, 1, 1, 9, 1, 1, 1, 16 }; // SPD, diagonal 4, 9, 16
+    var s: [3]f64 = undefined;
+    const e = try poequ(f64, 3, &a, 3, &s);
+
+    try testing.expectApproxEqRel(@as(f64, 0.5), s[0], 1e-15);
+    try testing.expectApproxEqRel(@as(f64, 1.0 / 3.0), s[1], 1e-15);
+    try testing.expectApproxEqRel(@as(f64, 0.25), s[2], 1e-15);
+    try testing.expectApproxEqRel(@as(f64, 16), e.max_abs, 1e-15);
+    // cond is min(s) / max(s).
+    try testing.expectApproxEqRel(@as(f64, 0.5), e.cond, 1e-15);
+}
+
+test "poequ rejects a non-positive diagonal, which poequb also does" {
+    const a = [_]f64{ 4, 0, 0, -1 };
+    var s: [2]f64 = undefined;
+    try testing.expectError(error.NotPositiveDefinite, poequ(f64, 2, &a, 2, &s));
+    try testing.expectEqual(@as(Int, 2), info_mod.lastInfo());
+    try testing.expectError(error.NotPositiveDefinite, poequb(f64, 2, &a, 2, &s));
+}
+
+test "pbequ and ppequ match poequ on the same matrix" {
+    var s_full: [3]f64 = undefined;
+    const full = try poequ(f64, 3, &tri3, 3, &s_full);
+
+    var ab = [_]f64{ 0, 4, 1, 4, 1, 4 };
+    var s_band: [3]f64 = undefined;
+    const band = try pbequ(f64, .upper, 3, 1, &ab, 2, &s_band);
+
+    var ap = [_]f64{ 4, 1, 4, 0, 1, 4 };
+    var s_packed: [3]f64 = undefined;
+    const packed_ = try ppequ(f64, .upper, 3, &ap, &s_packed);
+
+    for (s_full, s_band, s_packed) |a, b, cc| {
+        try testing.expectApproxEqRel(a, b, 1e-15);
+        try testing.expectApproxEqRel(a, cc, 1e-15);
+    }
+    try testing.expectApproxEqRel(full.cond, band.cond, 1e-15);
+    try testing.expectApproxEqRel(full.cond, packed_.cond, 1e-15);
+}
+
+test "syequb scales a matrix whose diagonal poequ could not use" {
+    // Indefinite: the diagonal has a zero, so poequ's 1/sqrt(a[i,i]) is undefined.
+    const a = [_]f64{ 0, 2, 3, 2, 5, 1, 3, 1, 0 };
+    var s: [3]f64 = undefined;
+    const e = try syequb(f64, testing.allocator, .upper, 3, &a, 3, &s);
+
+    for (s) |v| try testing.expect(v > 0 and std.math.isFinite(v));
+    try testing.expect(e.cond > 0 and e.cond <= 1);
+    try testing.expectApproxEqRel(@as(f64, 5), e.max_abs, 1e-15);
+}
+
+test "heequb wants 2n complex scratch where syequb wants 3n real" {
+    const Z = Complex(f64);
+    const a = [_]Z{
+        Z.init(2, 0), Z.init(0, -1),
+        Z.init(0, 1), Z.init(3, 0),
+    };
+    var s: [2]f64 = undefined;
+    const e = try heequb(Z, testing.allocator, .upper, 2, &a, 2, &s);
+    for (s) |v| try testing.expect(v > 0 and std.math.isFinite(v));
+    try testing.expect(e.cond > 0 and e.cond <= 1);
 }

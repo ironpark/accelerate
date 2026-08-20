@@ -4,9 +4,15 @@ Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
 computational routines complete; the T3 orthogonal factorizations and least
 squares drivers complete. The T4 symmetric eigenvalue drivers and the two main
 T6 SVD drivers complete. The T5/T7 nonsymmetric and generalized eigenproblems
-complete, as are T8, the iterative refinement routines and the main expert
-drivers. The `_aa`/`_rk`/`_rook` variants, RFP storage, the CS decomposition and
-the remaining band/packed condition estimators are outstanding.
+complete, as are T8 and the iterative refinement routines. Every storage form —
+full, band, tridiagonal, packed and triangular-band — now has its condition
+estimator, equilibration, iterative refinement and expert driver.
+
+Outstanding: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants, RFP
+storage, the reductions to condensed form and their `Q` builders, the
+tridiagonal eigensolvers, the expert eigenvalue drivers, the generalized Schur
+family, the CS decomposition, the tall-skinny QR family and the remaining SVD
+drivers.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -213,31 +219,31 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `cposv` <sub>z</sub>
 - [ ] `csum1` <sub>s</sub>
 - [x] `gbsv` <sub>cdsz</sub>
-- [ ] `gbsvx` <sub>cdsz</sub>
+- [x] `gbsvx` <sub>cdsz</sub>
 - [x] `gesv` <sub>cdsz</sub>
 - [x] `gesvx` <sub>cdsz</sub>
 - [x] `gtsv` <sub>cdsz</sub>
-- [ ] `gtsvx` <sub>cdsz</sub>
+- [x] `gtsvx` <sub>cdsz</sub>
 - [x] `hesv` <sub>cz</sub>
 - [ ] `hesv_aa` <sub>cz</sub>
 - [ ] `hesv_aa_2stage` <sub>cz</sub>
 - [ ] `hesv_rk` <sub>cz</sub>
 - [ ] `hesv_rook` <sub>cz</sub>
-- [ ] `hesvx` <sub>cz</sub>
+- [x] `hesvx` <sub>cz</sub>
 - [x] `hpsv` <sub>cz</sub>
-- [ ] `hpsvx` <sub>cz</sub>
+- [x] `hpsvx` <sub>cz</sub>
 - [x] `pbsv` <sub>cdsz</sub>
-- [ ] `pbsvx` <sub>cdsz</sub>
+- [x] `pbsvx` <sub>cdsz</sub>
 - [x] `posv` <sub>cdsz</sub>
 - [x] `posvx` <sub>cdsz</sub>
 - [x] `ppsv` <sub>cdsz</sub>
-- [ ] `ppsvx` <sub>cdsz</sub>
+- [x] `ppsvx` <sub>cdsz</sub>
 - [x] `ptsv` <sub>cdsz</sub>
-- [ ] `ptsvx` <sub>cdsz</sub>
+- [x] `ptsvx` <sub>cdsz</sub>
 - [x] `sgesv` <sub>d</sub>
 - [x] `sposv` <sub>d</sub>
 - [x] `spsv` <sub>cdsz</sub>
-- [ ] `spsvx` <sub>cdsz</sub>
+- [x] `spsvx` <sub>cdsz</sub>
 - [x] `sysv` <sub>cdsz</sub>
 - [ ] `sysv_aa` <sub>cdsz</sub>
 - [ ] `sysv_aa_2stage` <sub>cdsz</sub>
@@ -250,16 +256,16 @@ prefix is two characters, not one — a naming trap for the generator.
 
 `141` base routines, `502` symbols.
 
-- [ ] `gbcon` <sub>cdsz</sub>
-- [ ] `gbequ` <sub>cdsz</sub>
-- [ ] `gbequb` <sub>cdsz</sub>
-- [ ] `gbrfs` <sub>cdsz</sub>
+- [x] `gbcon` <sub>cdsz</sub>
+- [x] `gbequ` <sub>cdsz</sub>
+- [x] `gbequb` <sub>cdsz</sub>
+- [x] `gbrfs` <sub>cdsz</sub>
 - [ ] `gbtf2` <sub>cdsz</sub>
 - [x] `gbtrf` <sub>cdsz</sub>
 - [x] `gbtrs` <sub>cdsz</sub>
 - [x] `gecon` <sub>cdsz</sub>
 - [x] `geequ` <sub>cdsz</sub>
-- [ ] `geequb` <sub>cdsz</sub>
+- [x] `geequb` <sub>cdsz</sub>
 - [x] `gerfs` <sub>cdsz</sub>
 - [ ] `gesc2` <sub>cdsz</sub>
 - [ ] `getc2` <sub>cdsz</sub>
@@ -268,15 +274,15 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `getrf2` <sub>cdsz</sub>
 - [x] `getri` <sub>cdsz</sub>
 - [x] `getrs` <sub>cdsz</sub>
-- [ ] `gtcon` <sub>cdsz</sub>
-- [ ] `gtrfs` <sub>cdsz</sub>
+- [x] `gtcon` <sub>cdsz</sub>
+- [x] `gtrfs` <sub>cdsz</sub>
 - [x] `gttrf` <sub>cdsz</sub>
 - [x] `gttrs` <sub>cdsz</sub>
 - [ ] `gtts2` <sub>cdsz</sub>
 - [x] `hecon` <sub>cz</sub>
 - [ ] `hecon_3` <sub>cz</sub>
 - [ ] `hecon_rook` <sub>cz</sub>
-- [ ] `heequb` <sub>cz</sub>
+- [x] `heequb` <sub>cz</sub>
 - [x] `herfs` <sub>cz</sub>
 - [ ] `heswapr` <sub>cz</sub>
 - [ ] `hetf2` <sub>cz</sub>
@@ -299,14 +305,14 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hetrs_aa` <sub>cz</sub>
 - [ ] `hetrs_aa_2stage` <sub>cz</sub>
 - [ ] `hetrs_rook` <sub>cz</sub>
-- [ ] `hpcon` <sub>cz</sub>
-- [ ] `hprfs` <sub>cz</sub>
+- [x] `hpcon` <sub>cz</sub>
+- [x] `hprfs` <sub>cz</sub>
 - [x] `hptrf` <sub>cz</sub>
 - [x] `hptri` <sub>cz</sub>
 - [x] `hptrs` <sub>cz</sub>
-- [ ] `pbcon` <sub>cdsz</sub>
-- [ ] `pbequ` <sub>cdsz</sub>
-- [ ] `pbrfs` <sub>cdsz</sub>
+- [x] `pbcon` <sub>cdsz</sub>
+- [x] `pbequ` <sub>cdsz</sub>
+- [x] `pbrfs` <sub>cdsz</sub>
 - [ ] `pbstf` <sub>cdsz</sub>
 - [ ] `pbtf2` <sub>cdsz</sub>
 - [x] `pbtrf` <sub>cdsz</sub>
@@ -315,29 +321,29 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `pftri` <sub>cdsz</sub>
 - [ ] `pftrs` <sub>cdsz</sub>
 - [x] `pocon` <sub>cdsz</sub>
-- [ ] `poequ` <sub>cdsz</sub>
-- [ ] `poequb` <sub>cdsz</sub>
+- [x] `poequ` <sub>cdsz</sub>
+- [x] `poequb` <sub>cdsz</sub>
 - [x] `porfs` <sub>cdsz</sub>
 - [ ] `potf2` <sub>cdsz</sub>
 - [x] `potrf` <sub>cdsz</sub>
 - [ ] `potrf2` <sub>cdsz</sub>
 - [x] `potri` <sub>cdsz</sub>
 - [x] `potrs` <sub>cdsz</sub>
-- [ ] `ppcon` <sub>cdsz</sub>
-- [ ] `ppequ` <sub>cdsz</sub>
-- [ ] `pprfs` <sub>cdsz</sub>
+- [x] `ppcon` <sub>cdsz</sub>
+- [x] `ppequ` <sub>cdsz</sub>
+- [x] `pprfs` <sub>cdsz</sub>
 - [x] `pptrf` <sub>cdsz</sub>
 - [x] `pptri` <sub>cdsz</sub>
 - [x] `pptrs` <sub>cdsz</sub>
 - [ ] `pstf2` <sub>cdsz</sub>
 - [x] `pstrf` <sub>cdsz</sub>
-- [ ] `ptcon` <sub>cdsz</sub>
-- [ ] `ptrfs` <sub>cdsz</sub>
+- [x] `ptcon` <sub>cdsz</sub>
+- [x] `ptrfs` <sub>cdsz</sub>
 - [x] `pttrf` <sub>cdsz</sub>
 - [x] `pttrs` <sub>cdsz</sub>
 - [ ] `ptts2` <sub>cdsz</sub>
-- [ ] `spcon` <sub>cdsz</sub>
-- [ ] `sprfs` <sub>cdsz</sub>
+- [x] `spcon` <sub>cdsz</sub>
+- [x] `sprfs` <sub>cdsz</sub>
 - [x] `sptrf` <sub>cdsz</sub>
 - [x] `sptri` <sub>cdsz</sub>
 - [x] `sptrs` <sub>cdsz</sub>
@@ -347,7 +353,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `syconv` <sub>cdsz</sub>
 - [ ] `syconvf` <sub>cdsz</sub>
 - [ ] `syconvf_rook` <sub>cdsz</sub>
-- [ ] `syequb` <sub>cdsz</sub>
+- [x] `syequb` <sub>cdsz</sub>
 - [x] `syrfs` <sub>cdsz</sub>
 - [ ] `syswapr` <sub>cdsz</sub>
 - [ ] `sytf2` <sub>cdsz</sub>
@@ -370,16 +376,16 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sytrs_aa` <sub>cdsz</sub>
 - [ ] `sytrs_aa_2stage` <sub>cdsz</sub>
 - [ ] `sytrs_rook` <sub>cdsz</sub>
-- [ ] `tbcon` <sub>cdsz</sub>
-- [ ] `tbrfs` <sub>cdsz</sub>
+- [x] `tbcon` <sub>cdsz</sub>
+- [x] `tbrfs` <sub>cdsz</sub>
 - [x] `tbtrs` <sub>cdsz</sub>
 - [ ] `tfsm` <sub>cdsz</sub>
 - [ ] `tftri` <sub>cdsz</sub>
 - [ ] `tfttp` <sub>cdsz</sub>
 - [ ] `tfttr` <sub>cdsz</sub>
-- [ ] `tpcon` <sub>cdsz</sub>
+- [x] `tpcon` <sub>cdsz</sub>
 - [ ] `tprfb` <sub>cdsz</sub>
-- [ ] `tprfs` <sub>cdsz</sub>
+- [x] `tprfs` <sub>cdsz</sub>
 - [x] `tptri` <sub>cdsz</sub>
 - [x] `tptrs` <sub>cdsz</sub>
 - [ ] `tpttf` <sub>cdsz</sub>
@@ -536,7 +542,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hbgvd` <sub>cz</sub>
 - [ ] `hbgvx` <sub>cz</sub>
 - [ ] `hbtrd` <sub>cz</sub>
-- [ ] `heequb` <sub>cz</sub>
+- [x] `heequb` <sub>cz</sub>
 - [x] `heev` <sub>cz</sub>
 - [ ] `heev_2stage` <sub>cz</sub>
 - [x] `heevd` <sub>cz</sub>
@@ -598,7 +604,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `stevd` <sub>ds</sub>
 - [ ] `stevr` <sub>ds</sub>
 - [ ] `stevx` <sub>ds</sub>
-- [ ] `syequb` <sub>cdsz</sub>
+- [x] `syequb` <sub>cdsz</sub>
 - [x] `syev` <sub>ds</sub>
 - [ ] `syev_2stage` <sub>ds</sub>
 - [x] `syevd` <sub>ds</sub>

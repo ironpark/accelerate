@@ -28,10 +28,20 @@
   `larnv`, `lartg`, `lascl`, `lasrt`, `lacgv`, `ladiv`, `rscl`, `symv`, `syr`,
   `spmv`, `spr`); and iterative refinement with error bounds in `refine.zig`
   (`gerfs`, `porfs`, `syrfs`, `herfs`, `trrfs`); and the expert drivers in
-  `expert.zig` (`gesvx`, `posvx`, `sysvx`). Not yet wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
-  iterative refinement (`gerfs`, `porfs`), the `_aa`/`_rk`/`_rook` variants,
-  RFP storage, the CS decomposition, and the remaining SVD drivers. What the
-  wrappers add:
+  `expert.zig` (`gesvx`, `posvx`, `sysvx`).
+
+  Every storage form now carries the same four services as the dense one:
+  condition estimation (`gbcon`, `gtcon`, `pbcon`, `ppcon`, `ptcon`, `spcon`,
+  `hpcon`, `tbcon`, `tpcon`), equilibration (`gbequ`, `gbequb`, `geequb`,
+  `pbequ`, `poequ`, `poequb`, `ppequ`, `syequb`, `heequb`), iterative
+  refinement (`gbrfs`, `gtrfs`, `pbrfs`, `pprfs`, `ptrfs`, `sprfs`, `hprfs`,
+  `tbrfs`, `tprfs`) and an expert driver (`gbsvx`, `gtsvx`, `pbsvx`, `ppsvx`,
+  `ptsvx`, `spsvx`, `hpsvx`, `hesvx`).
+
+  Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
+  reductions to condensed form, the tridiagonal eigensolvers, the expert
+  eigenvalue drivers, the generalized Schur family, the CS decomposition, the
+  tall-skinny QR family and the remaining SVD drivers. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -54,6 +64,18 @@
   - Solves are tested by residual against the original matrix rather than
     against a solution vector written down by hand, so a wrong answer and a
     wrong expectation cannot cancel.
+  - `ptrfs` takes a `uplo` that the *real* routine does not have. A real
+    symmetric tridiagonal has the same off-diagonal read either way, so LAPACK
+    omits the argument; the complex one needs it, since the two readings differ
+    by a conjugation. The wrapper takes it uniformly and drops it for a real
+    `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
+    either precision.
+  - The band routines disagree with each other about band layout, and nothing
+    checks. `gbrfs` and `gbsvx` want the *original* matrix in the narrow
+    `kl + ku + 1` form and its *factor* in the wide `2*kl + ku + 1` one, in
+    adjacent arguments. `pbrfs` and `pbsvx` use the same `kd + 1` layout for
+    both, because a band Cholesky creates no fill-in. Both leading dimensions
+    are asserted.
 
   Verifying the ABI before writing any of it turned up two things the header
   does not tell you:
