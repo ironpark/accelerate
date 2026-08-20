@@ -580,3 +580,257 @@ test "vsmul" {
     try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[1], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 7.5), out[2], 0.001);
 }
+
+test "vfill" {
+    var out: [3]f32 = undefined;
+    vfill(f32, 9.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 9.0, 9.0, 9.0 }, &out);
+}
+
+test "veqvi" {
+    // ~(A ^ B), computed by hand: 3^6=5 -> ~5=-6; 5^9=12 -> ~12=-13; 12^3=15 -> ~15=-16.
+    const a = [_]i32{ 3, 5, 12 };
+    const b = [_]i32{ 6, 9, 3 };
+    var out: [3]i32 = undefined;
+    veqvi(&a, &b, &out);
+    try std.testing.expectEqualSlices(i32, &[_]i32{ -6, -13, -16 }, &out);
+}
+
+test "vsadd" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    var out: [3]f32 = undefined;
+    vsadd(f32, &a, 10.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 12.0, 13.0, 15.0 }, &out);
+}
+
+test "svdiv" {
+    // C[n] = A[0] / B[n], with A[0] the scalar - the wrapper's first argument.
+    const b = [_]f32{ 2.0, 4.0, 5.0 };
+    var out: [3]f32 = undefined;
+    svdiv(f32, 100.0, &b, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 50.0, 25.0, 20.0 }, &out);
+}
+
+test "vma" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const addend = [_]f32{ 1.0, 4.0, 2.0 };
+    var out: [3]f32 = undefined;
+    vma(f32, &a, &b, &addend, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 15.0, 37.0, 67.0 }, &out);
+}
+
+test "vmsa" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    var out: [3]f32 = undefined;
+    vmsa(f32, &a, &b, 10.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 24.0, 43.0, 75.0 }, &out);
+}
+
+test "vsma" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const addend = [_]f32{ 1.0, 4.0, 2.0 };
+    var out: [3]f32 = undefined;
+    vsma(f32, &a, 10.0, &addend, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 21.0, 34.0, 52.0 }, &out);
+}
+
+test "vam" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const multiplier = [_]f32{ 1.0, 4.0, 2.0 };
+    var out: [3]f32 = undefined;
+    vam(f32, &a, &b, &multiplier, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 9.0, 56.0, 36.0 }, &out);
+}
+
+test "vmsb" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const subtrahend = [_]f32{ 1.0, 4.0, 2.0 };
+    var out: [3]f32 = undefined;
+    vmsb(f32, &a, &b, &subtrahend, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 13.0, 29.0, 63.0 }, &out);
+}
+
+test "vmma" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const c_vec = [_]f32{ 1.0, 4.0, 2.0 };
+    const d = [_]f32{ 6.0, 3.0, 1.0 };
+    var out: [3]f32 = undefined;
+    vmma(f32, &a, &b, &c_vec, &d, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 20.0, 45.0, 67.0 }, &out);
+}
+
+test "vmmsb" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const c_vec = [_]f32{ 1.0, 4.0, 2.0 };
+    const d = [_]f32{ 6.0, 3.0, 1.0 };
+    var out: [3]f32 = undefined;
+    vmmsb(f32, &a, &b, &c_vec, &d, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 8.0, 21.0, 63.0 }, &out);
+}
+
+test "vsmsa" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    var out: [3]f32 = undefined;
+    vsmsa(f32, &a, 10.0, 1.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 21.0, 31.0, 51.0 }, &out);
+}
+
+test "vsmsb" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const subtrahend = [_]f32{ 1.0, 4.0, 2.0 };
+    var out: [3]f32 = undefined;
+    vsmsb(f32, &a, 10.0, &subtrahend, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 19.0, 26.0, 48.0 }, &out);
+}
+
+test "vsmsma" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    var out: [3]f32 = undefined;
+    vsmsma(f32, &a, 10.0, &b, 2.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 34.0, 52.0, 76.0 }, &out);
+}
+
+test "vaam" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const c_vec = [_]f32{ 1.0, 4.0, 2.0 };
+    const d = [_]f32{ 6.0, 3.0, 1.0 };
+    var out: [3]f32 = undefined;
+    vaam(f32, &a, &b, &c_vec, &d, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 63.0, 98.0, 54.0 }, &out);
+}
+
+test "vasbm" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const c_vec = [_]f32{ 1.0, 4.0, 2.0 };
+    const d = [_]f32{ 6.0, 3.0, 1.0 };
+    var out: [3]f32 = undefined;
+    vasbm(f32, &a, &b, &c_vec, &d, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ -45.0, 14.0, 18.0 }, &out);
+}
+
+test "vasm" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    var out: [3]f32 = undefined;
+    vasm(f32, &a, &b, 2.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 18.0, 28.0, 36.0 }, &out);
+}
+
+test "vsbm" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const multiplier = [_]f32{ 1.0, 4.0, 2.0 };
+    var out: [3]f32 = undefined;
+    vsbm(f32, &a, &b, &multiplier, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ -5.0, -32.0, -16.0 }, &out);
+}
+
+test "vsbsbm" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const c_vec = [_]f32{ 1.0, 4.0, 2.0 };
+    const d = [_]f32{ 6.0, 3.0, 1.0 };
+    var out: [3]f32 = undefined;
+    vsbsbm(f32, &a, &b, &c_vec, &d, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 25.0, -8.0, -8.0 }, &out);
+}
+
+test "vsbsm" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    var out: [3]f32 = undefined;
+    vsbsm(f32, &a, &b, 2.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ -10.0, -16.0, -16.0 }, &out);
+}
+
+test "vavlin" {
+    // In-place: out holds the previous C[n] on entry.
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    var out = [_]f32{ 1.0, 4.0, 2.0 };
+    vavlin(f32, &a, 1.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 1.5, 3.5, 3.5 }, &out);
+}
+
+test "vpythg" {
+    const a = [_]f32{ 2.0, 3.0, 5.0 };
+    const b = [_]f32{ 7.0, 11.0, 13.0 };
+    const c_vec = [_]f32{ 1.0, 4.0, 2.0 };
+    const d = [_]f32{ 6.0, 3.0, 1.0 };
+    var out: [3]f32 = undefined;
+    vpythg(f32, &a, &b, &c_vec, &d, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.41421), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 8.06226), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 12.3693), out[2], 0.001);
+}
+
+test "vsq" {
+    const a = [_]f32{ -2.0, 3.0, 5.0 };
+    var out: [3]f32 = undefined;
+    vsq(f32, &a, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 4.0, 9.0, 25.0 }, &out);
+}
+
+test "vssq" {
+    const a = [_]f32{ -2.0, 3.0, -5.0 };
+    var out: [3]f32 = undefined;
+    vssq(f32, &a, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ -4.0, 9.0, -25.0 }, &out);
+}
+
+test "vabs" {
+    const a = [_]f32{ -2.0, 3.0, -5.0 };
+    var out: [3]f32 = undefined;
+    vabs(f32, &a, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 2.0, 3.0, 5.0 }, &out);
+}
+
+test "vneg" {
+    const a = [_]f32{ -2.0, 3.0, -5.0 };
+    var out: [3]f32 = undefined;
+    vneg(f32, &a, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 2.0, -3.0, 5.0 }, &out);
+}
+
+test "vnabs" {
+    const a = [_]f32{ -2.0, 3.0, -5.0 };
+    var out: [3]f32 = undefined;
+    vnabs(f32, &a, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ -2.0, -3.0, -5.0 }, &out);
+}
+
+test "vfrac" {
+    // C[n] = A[n] - trunc(A[n]) (vDSP.h:5352-5354).
+    const a = [_]f32{ 2.5, -2.5, 3.75 };
+    var out: [3]f32 = undefined;
+    vfrac(f32, &a, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -0.5), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.75), out[2], 0.001);
+}
+
+test "vdist" {
+    // C[n] = sqrt(A[n]^2 + B[n]^2) (vDSP.h:4919-4922); Pythagorean triples.
+    const a = [_]f32{ 3.0, 5.0, 8.0 };
+    const b = [_]f32{ 4.0, 12.0, 15.0 };
+    var out: [3]f32 = undefined;
+    vdist(f32, &a, &b, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 13.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 17.0), out[2], 0.001);
+}
+
+test "distancesq" {
+    const a = [_]f32{ 1.0, 2.0, 3.0 };
+    const b = [_]f32{ 4.0, 6.0, 15.0 };
+    // (1-4)^2 + (2-6)^2 + (3-15)^2 = 9 + 16 + 144 = 169
+    try std.testing.expectApproxEqAbs(@as(f32, 169.0), distancesq(f32, &a, &b), 0.001);
+}

@@ -255,42 +255,42 @@
 
 ### `src/vdsp/vecop.zig`
 
-- [ ] `vfill` — L14
+- [x] `vfill` — L14
 - [ ] `vadd` — L31
 - [x] `vsub` — L46
 - [x] `vmul` — L60
 - [x] `vdiv` — L74
-- [ ] `veqvi` — L89
+- [x] `veqvi` — L89
 - [x] `vsmul` — L103
-- [ ] `vsadd` — L116
+- [x] `vsadd` — L116
 - [x] `vsdiv` — L130
-- [ ] `svdiv` — L141
-- [ ] `vma` — L158
-- [ ] `vmsa` — L170
-- [ ] `vsma` — L181
-- [ ] `vam` — L195
-- [ ] `vmsb` — L207
-- [ ] `vmma` — L219
-- [ ] `vmmsb` — L232
-- [ ] `vsmsa` — L245
-- [ ] `vsmsb` — L255
-- [ ] `vsmsma` — L266
-- [ ] `vaam` — L281
-- [ ] `vasbm` — L294
-- [ ] `vasm` — L307
-- [ ] `vsbm` — L322
-- [ ] `vsbsbm` — L334
-- [ ] `vsbsm` — L347
-- [ ] `vavlin` — L362
-- [ ] `vpythg` — L376
-- [ ] `vsq` — L396
-- [ ] `vssq` — L409
-- [ ] `vabs` — L422
-- [ ] `vneg` — L432
-- [ ] `vnabs` — L442
-- [ ] `vfrac` — L451
-- [ ] `vdist` — L460
-- [ ] `distancesq` — L473
+- [x] `svdiv` — L141
+- [x] `vma` — L158
+- [x] `vmsa` — L170
+- [x] `vsma` — L181
+- [x] `vam` — L195
+- [x] `vmsb` — L207
+- [x] `vmma` — L219
+- [x] `vmmsb` — L232
+- [x] `vsmsa` — L245
+- [x] `vsmsb` — L255
+- [x] `vsmsma` — L266
+- [x] `vaam` — L281
+- [x] `vasbm` — L294
+- [x] `vasm` — L307
+- [x] `vsbm` — L322
+- [x] `vsbsbm` — L334
+- [x] `vsbsm` — L347
+- [x] `vavlin` — L362
+- [x] `vpythg` — L376
+- [x] `vsq` — L396
+- [x] `vssq` — L409
+- [x] `vabs` — L422
+- [x] `vneg` — L432
+- [x] `vnabs` — L442
+- [x] `vfrac` — L451
+- [x] `vdist` — L460
+- [x] `distancesq` — L473
 
 ### `src/vdsp/zvecop.zig`
 
