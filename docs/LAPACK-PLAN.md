@@ -1,14 +1,18 @@
 # LAPACK binding plan
 
-Status: **in progress**. T0 complete. Every driver and computational routine
-for the linear systems, least squares, symmetric and nonsymmetric eigenvalue,
-generalized eigenvalue and SVD problems is wrapped, in every storage form —
-full, band, tridiagonal, packed and triangular-band — along with the reductions
-to condensed form, the tridiagonal eigensolvers, the Schur and QZ toolkits, and
-the expert drivers with their condition estimates.
+Status: **user-facing surface complete**. Every driver and computational
+routine for the linear systems, least squares, symmetric and nonsymmetric
+eigenvalue, generalized eigenvalue and SVD problems is wrapped, in every
+storage form — full, band, tridiagonal, packed, triangular-band and RFP —
+along with the reductions to condensed form, the tridiagonal eigensolvers, the
+Schur and QZ toolkits, the tall-skinny and blocked QR interfaces, the CS
+decomposition and the expert drivers with their condition estimates.
 
-Outstanding: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants, RFP
-storage and the CS decomposition.
+What is left is deliberately not wrapped: the `_aa`/`_rk`/`_rook`/`_2stage`
+variants, which are alternative algorithms for problems already covered; the
+unblocked kernels the blocked routines call internally; the eight deprecated
+routines; and the `la*`/`ila*` internal helpers. All of them remain reachable
+through `c` with the caveats documented there.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -313,9 +317,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `pbtf2` <sub>cdsz</sub>
 - [x] `pbtrf` <sub>cdsz</sub>
 - [x] `pbtrs` <sub>cdsz</sub>
-- [ ] `pftrf` <sub>cdsz</sub>
-- [ ] `pftri` <sub>cdsz</sub>
-- [ ] `pftrs` <sub>cdsz</sub>
+- [x] `pftrf` <sub>cdsz</sub>
+- [x] `pftri` <sub>cdsz</sub>
+- [x] `pftrs` <sub>cdsz</sub>
 - [x] `pocon` <sub>cdsz</sub>
 - [x] `poequ` <sub>cdsz</sub>
 - [x] `poequb` <sub>cdsz</sub>
@@ -375,23 +379,23 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `tbcon` <sub>cdsz</sub>
 - [x] `tbrfs` <sub>cdsz</sub>
 - [x] `tbtrs` <sub>cdsz</sub>
-- [ ] `tfsm` <sub>cdsz</sub>
-- [ ] `tftri` <sub>cdsz</sub>
-- [ ] `tfttp` <sub>cdsz</sub>
-- [ ] `tfttr` <sub>cdsz</sub>
+- [x] `tfsm` <sub>cdsz</sub>
+- [x] `tftri` <sub>cdsz</sub>
+- [x] `tfttp` <sub>cdsz</sub>
+- [x] `tfttr` <sub>cdsz</sub>
 - [x] `tpcon` <sub>cdsz</sub>
 - [x] `tprfb` <sub>cdsz</sub>
 - [x] `tprfs` <sub>cdsz</sub>
 - [x] `tptri` <sub>cdsz</sub>
 - [x] `tptrs` <sub>cdsz</sub>
-- [ ] `tpttf` <sub>cdsz</sub>
+- [x] `tpttf` <sub>cdsz</sub>
 - [x] `tpttr` <sub>cdsz</sub>
 - [x] `trcon` <sub>cdsz</sub>
 - [x] `trrfs` <sub>cdsz</sub>
 - [ ] `trti2` <sub>cdsz</sub>
 - [x] `trtri` <sub>cdsz</sub>
 - [x] `trtrs` <sub>cdsz</sub>
-- [ ] `trttf` <sub>cdsz</sub>
+- [x] `trttf` <sub>cdsz</sub>
 - [x] `trttp` <sub>cdsz</sub>
 
 ### T3 Least squares & orthogonal factorizations
@@ -435,15 +439,15 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `ggrqf` <sub>cdsz</sub>
 - [x] `opgtr` <sub>ds</sub>
 - [x] `opmtr` <sub>ds</sub>
-- [ ] `orbdb` <sub>ds</sub>
-- [ ] `orbdb1` <sub>ds</sub>
-- [ ] `orbdb2` <sub>ds</sub>
-- [ ] `orbdb3` <sub>ds</sub>
-- [ ] `orbdb4` <sub>ds</sub>
-- [ ] `orbdb5` <sub>ds</sub>
-- [ ] `orbdb6` <sub>ds</sub>
-- [ ] `orcsd` <sub>ds</sub>
-- [ ] `orcsd2by1` <sub>ds</sub>
+- [x] `orbdb` <sub>ds</sub>
+- [x] `orbdb1` <sub>ds</sub>
+- [x] `orbdb2` <sub>ds</sub>
+- [x] `orbdb3` <sub>ds</sub>
+- [x] `orbdb4` <sub>ds</sub>
+- [x] `orbdb5` <sub>ds</sub>
+- [x] `orbdb6` <sub>ds</sub>
+- [x] `orcsd` <sub>ds</sub>
+- [x] `orcsd2by1` <sub>ds</sub>
 - [ ] `org2l` <sub>ds</sub>
 - [ ] `org2r` <sub>ds</sub>
 - [x] `orgbr` <sub>ds</sub>
@@ -481,15 +485,15 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `tprfb` <sub>cdsz</sub>
 - [ ] `tzrqf` <sub>cdsz</sub>
 - [x] `tzrzf` <sub>cdsz</sub>
-- [ ] `unbdb` <sub>cz</sub>
+- [x] `unbdb` <sub>cz</sub>
 - [ ] `unbdb1` <sub>cz</sub>
 - [ ] `unbdb2` <sub>cz</sub>
 - [ ] `unbdb3` <sub>cz</sub>
 - [ ] `unbdb4` <sub>cz</sub>
 - [ ] `unbdb5` <sub>cz</sub>
 - [ ] `unbdb6` <sub>cz</sub>
-- [ ] `uncsd` <sub>cz</sub>
-- [ ] `uncsd2by1` <sub>cz</sub>
+- [x] `uncsd` <sub>cz</sub>
+- [x] `uncsd2by1` <sub>cz</sub>
 - [ ] `ung2l` <sub>cz</sub>
 - [ ] `ung2r` <sub>cz</sub>
 - [x] `ungbr` <sub>cz</sub>
@@ -668,7 +672,7 @@ prefix is two characters, not one — a naming trap for the generator.
 
 `33` base routines, `115` symbols.
 
-- [ ] `bbcsd` <sub>cdsz</sub>
+- [x] `bbcsd` <sub>cdsz</sub>
 - [ ] `combssq` <sub>ds</sub>
 - [ ] `drscl` <sub>z</sub>
 - [ ] `gegs` <sub>cdsz</sub>
@@ -687,11 +691,11 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `ggsvd3` <sub>cdsz</sub>
 - [ ] `ggsvp` <sub>cdsz</sub>
 - [ ] `ggsvp3` <sub>cdsz</sub>
-- [ ] `hfrk` <sub>cz</sub>
+- [x] `hfrk` <sub>cz</sub>
 - [x] `hgeqz` <sub>cdsz</sub>
 - [ ] `hla_transtype` <sub>c</sub>
 - [x] `rscl` <sub>ds</sub>
-- [ ] `sfrk` <sub>ds</sub>
+- [x] `sfrk` <sub>ds</sub>
 - [ ] `srscl` <sub>c</sub>
 - [x] `tgevc` <sub>cdsz</sub>
 - [ ] `tgex2` <sub>cdsz</sub>

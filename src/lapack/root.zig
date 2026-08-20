@@ -39,6 +39,10 @@
 //! - `svd.zig` - `gesvd`, `gesdd`, the bidiagonal solvers `bdsqr`, `bdsdc` and
 //!   `bdsvdx`, the range-restricted `gesvdx`, and the high-accuracy Jacobi
 //!   drivers `gesvj`, `gejsv` and `gesvdq`.
+//! - `rfp.zig` - rectangular full packed storage: the four conversions, plus
+//!   Cholesky, inversion, `trsm` and `syrk` operating on it directly.
+//! - `cs.zig` - the CS decomposition (`orcsd`, `orcsd2by1`) and its two halves
+//!   `orbdb` and `bbcsd`.
 //! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
 //! - `util.zig` - machine parameters, random matrices, plane rotations,
 //!   overflow-safe scaling, and the complex-symmetric routines CBLAS lacks.
@@ -88,6 +92,8 @@ pub const reduce = @import("reduce.zig");
 pub const tridiag = @import("tridiag.zig");
 pub const qz = @import("qz.zig");
 pub const qr_tall = @import("qr_tall.zig");
+pub const rfp = @import("rfp.zig");
+pub const cs = @import("cs.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -374,6 +380,34 @@ pub const ExpertGeneralizedSchur = qz.ExpertGeneralizedSchur;
 pub const ExpertGeneralizedEigen = qz.ExpertGeneralizedEigen;
 pub const GeneralizedReorder = qz.GeneralizedReorder;
 pub const GeneralizedSylvesterResult = qz.GeneralizedSylvesterResult;
+
+pub const trttf = rfp.trttf;
+pub const tfttr = rfp.tfttr;
+pub const tpttf = rfp.tpttf;
+pub const tfttp = rfp.tfttp;
+pub const pftrf = rfp.pftrf;
+pub const pftrs = rfp.pftrs;
+pub const pftri = rfp.pftri;
+pub const tftri = rfp.tftri;
+pub const tfsm = rfp.tfsm;
+pub const sfrk = rfp.sfrk;
+pub const hfrk = rfp.hfrk;
+pub const RfpLayout = rfp.RfpLayout;
+pub const rfpLen = rfp.rfpLen;
+
+pub const orcsd = cs.orcsd;
+pub const uncsd = cs.uncsd;
+pub const orcsd2by1 = cs.orcsd2by1;
+pub const uncsd2by1 = cs.uncsd2by1;
+pub const orbdb = cs.orbdb;
+pub const unbdb = cs.unbdb;
+pub const orbdbCase = cs.orbdbCase;
+pub const orbdb5 = cs.orbdb5;
+pub const orbdb6 = cs.orbdb6;
+pub const bbcsd = cs.bbcsd;
+pub const CsResult = cs.CsResult;
+pub const SignConvention = cs.SignConvention;
+pub const BidiagonalizeCase = cs.BidiagonalizeCase;
 
 pub const lamch = util.lamch;
 pub const ilaenv = util.ilaenv;

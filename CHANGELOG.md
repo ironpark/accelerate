@@ -95,8 +95,22 @@
   `qr.zig` gains the constrained and generalized least squares routines
   `gglse`, `ggglm`, `ggqrf` and `ggrqf`.
 
-  Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage and
-  the CS decomposition. What the wrappers add:
+  `rfp.zig` is rectangular full packed storage — the layout that is both
+  `n(n+1)/2` elements *and* usable by the blocked kernels, where plain packed
+  storage gives up the performance. The four conversions (`trttf`, `tfttr`,
+  `tpttf`, `tfttp`) plus `pftrf`/`pftrs`/`pftri`, `tftri`, `tfsm` and
+  `sfrk`/`hfrk`.
+
+  `cs.zig` is the CS decomposition: `orcsd` for a full square orthogonal
+  matrix, `orcsd2by1` for the common single-block-column case, and the two
+  halves `orbdb` and `bbcsd` they are built from, plus the `orbdb1`-`orbdb6`
+  helpers.
+
+  That completes the user-facing surface. What remains unwrapped is
+  deliberately so: the `_aa`/`_rk`/`_rook`/`_2stage` variants (alternative
+  algorithms for problems already covered), the unblocked kernels the blocked
+  routines call internally, eight deprecated routines, and the `la*`/`ila*`
+  helpers — all reachable through `c`. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -125,6 +139,18 @@
     by a conjugation. The wrapper takes it uniformly and drops it for a real
     `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
     either precision.
+  - RFP takes *two* shape flags, not one: `uplo` says which triangle the data
+    came from and `RfpLayout` says whether the rectangle itself is stored
+    transposed. They are independent, the four combinations are four different
+    arrangements of the same values, and telling `tfttr` the wrong one gives a
+    wrong matrix rather than an error. A test sorts both layouts and shows they
+    hold the same multiset in a different order.
+  - `orcsd`'s `trans` is a **storage** flag saying whether `X` is row-major, not
+    a transpose — the only place in this binding where LAPACK offers a choice of
+    layout at all.
+  - `sfrk` and `hfrk` take real `alpha` and `beta` even for a complex `T`,
+    because a Hermitian result has a real diagonal and a complex scale factor
+    would break that.
   - **`gglse` does not reliably detect a rank-deficient constraint.** Its
     documented `info = 1` is a test on a QR pivot, and an exactly duplicated row
     in `B` leaves a pivot that is small but not zero, so the call returns
