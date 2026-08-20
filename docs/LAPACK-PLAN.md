@@ -9,7 +9,7 @@ full, band, tridiagonal, packed and triangular-band — now has its condition
 estimator, equilibration, iterative refinement and expert driver.
 
 Outstanding: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants, RFP
-storage, the expert eigenvalue drivers, the generalized Schur
+storage, the generalized expert drivers (`ggevx`, `ggesx`), the generalized Schur
 family, the CS decomposition, the tall-skinny QR family and the remaining SVD
 drivers.
 
@@ -532,9 +532,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hb2st_kernels` <sub>cz</sub>
 - [x] `hbev` <sub>cz</sub>
 - [ ] `hbev_2stage` <sub>cz</sub>
-- [ ] `hbevd` <sub>cz</sub>
+- [x] `hbevd` <sub>cz</sub>
 - [ ] `hbevd_2stage` <sub>cz</sub>
-- [ ] `hbevx` <sub>cz</sub>
+- [x] `hbevx` <sub>cz</sub>
 - [ ] `hbevx_2stage` <sub>cz</sub>
 - [ ] `hbgst` <sub>cz</sub>
 - [ ] `hbgv` <sub>cz</sub>
@@ -548,7 +548,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `heevd_2stage` <sub>cz</sub>
 - [x] `heevr` <sub>cz</sub>
 - [ ] `heevr_2stage` <sub>cz</sub>
-- [ ] `heevx` <sub>cz</sub>
+- [x] `heevx` <sub>cz</sub>
 - [ ] `heevx_2stage` <sub>cz</sub>
 - [ ] `hegs2` <sub>cz</sub>
 - [ ] `hegst` <sub>cz</sub>
@@ -562,8 +562,8 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hetrd_hb2st` <sub>cz</sub>
 - [ ] `hetrd_he2hb` <sub>cz</sub>
 - [x] `hpev` <sub>cz</sub>
-- [ ] `hpevd` <sub>cz</sub>
-- [ ] `hpevx` <sub>cz</sub>
+- [x] `hpevd` <sub>cz</sub>
+- [x] `hpevx` <sub>cz</sub>
 - [ ] `hpgst` <sub>cz</sub>
 - [ ] `hpgv` <sub>cz</sub>
 - [ ] `hpgvd` <sub>cz</sub>
@@ -575,9 +575,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sb2st_kernels` <sub>ds</sub>
 - [x] `sbev` <sub>ds</sub>
 - [ ] `sbev_2stage` <sub>ds</sub>
-- [ ] `sbevd` <sub>ds</sub>
+- [x] `sbevd` <sub>ds</sub>
 - [ ] `sbevd_2stage` <sub>ds</sub>
-- [ ] `sbevx` <sub>ds</sub>
+- [x] `sbevx` <sub>ds</sub>
 - [ ] `sbevx_2stage` <sub>ds</sub>
 - [ ] `sbgst` <sub>ds</sub>
 - [ ] `sbgv` <sub>ds</sub>
@@ -585,8 +585,8 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sbgvx` <sub>ds</sub>
 - [x] `sbtrd` <sub>ds</sub>
 - [x] `spev` <sub>ds</sub>
-- [ ] `spevd` <sub>ds</sub>
-- [ ] `spevx` <sub>ds</sub>
+- [x] `spevd` <sub>ds</sub>
+- [x] `spevx` <sub>ds</sub>
 - [ ] `spgst` <sub>ds</sub>
 - [ ] `spgv` <sub>ds</sub>
 - [ ] `spgvd` <sub>ds</sub>
@@ -600,9 +600,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `steqr` <sub>cdsz</sub>
 - [x] `sterf` <sub>ds</sub>
 - [x] `stev` <sub>ds</sub>
-- [ ] `stevd` <sub>ds</sub>
-- [ ] `stevr` <sub>ds</sub>
-- [ ] `stevx` <sub>ds</sub>
+- [x] `stevd` <sub>ds</sub>
+- [x] `stevr` <sub>ds</sub>
+- [x] `stevx` <sub>ds</sub>
 - [x] `syequb` <sub>cdsz</sub>
 - [x] `syev` <sub>ds</sub>
 - [ ] `syev_2stage` <sub>ds</sub>
@@ -610,7 +610,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `syevd_2stage` <sub>ds</sub>
 - [x] `syevr` <sub>ds</sub>
 - [ ] `syevr_2stage` <sub>ds</sub>
-- [ ] `syevx` <sub>ds</sub>
+- [x] `syevx` <sub>ds</sub>
 - [ ] `syevx_2stage` <sub>ds</sub>
 - [ ] `sygs2` <sub>ds</sub>
 - [ ] `sygst` <sub>ds</sub>
@@ -633,9 +633,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `gebak` <sub>cdsz</sub>
 - [x] `gebal` <sub>cdsz</sub>
 - [x] `gees` <sub>cdsz</sub>
-- [ ] `geesx` <sub>cdsz</sub>
+- [x] `geesx` <sub>cdsz</sub>
 - [x] `geev` <sub>cdsz</sub>
-- [ ] `geevx` <sub>cdsz</sub>
+- [x] `geevx` <sub>cdsz</sub>
 - [ ] `gehd2` <sub>cdsz</sub>
 - [x] `gehrd` <sub>cdsz</sub>
 - [ ] `hsein` <sub>cdsz</sub>

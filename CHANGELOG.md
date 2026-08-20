@@ -50,8 +50,17 @@
   (divide and conquer), `stemr`/`stegr` (MRRR), `pteqr` (positive definite,
   accurate small eigenvalues) and the `stebz`/`stein` bisection pair.
 
+  The expert and divide-and-conquer eigenvalue variants: `syevx`, `spevd`,
+  `spevx`, `sbevd`, `sbevx`, `stevd`, `stevx`, `stevr` in `eigen.zig`, and
+  `geevx` and `geesx` in `eigen_gen.zig`. The last two return their condition
+  numbers as a typed result rather than as out-parameters, and `geesx`'s
+  `info = n + 2` — reordering succeeded but the cluster is no longer separable,
+  so the condition numbers may be wrong — comes back as a
+  `condition_unreliable` flag rather than as an error, since the factorization
+  itself is valid.
+
   Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
-  expert eigenvalue drivers, the generalized Schur family, the CS
+  generalized expert drivers, the generalized Schur family, the CS
   decomposition, the tall-skinny QR family and the remaining SVD drivers. What
   the wrappers add:
 

@@ -35,6 +35,7 @@ const c = @import("c.zig");
 const types = @import("types.zig");
 const info_mod = @import("info.zig");
 const work_mod = @import("work.zig");
+const reduce = @import("reduce.zig");
 
 const Int = types.Int;
 const Bool = types.Bool;
@@ -43,6 +44,7 @@ const Real = types.Real;
 const Job = types.Job;
 const Trans = types.Trans;
 const Sort = types.Sort;
+const Balance = types.Balance;
 const Error = info_mod.Error;
 const dim = types.dim;
 const assertMatrix = types.assertMatrix;
@@ -485,6 +487,247 @@ pub fn trsyl(
 }
 
 // ============================================================================
+// Expert drivers
+// ============================================================================
+
+/// Which condition numbers an expert driver should compute.
+///
+/// These are not free — `.eigenvectors` and `.both` cost roughly an extra
+/// `geev` — and they constrain the other arguments: `geevx` needs *both* sets
+/// of eigenvectors to condition-estimate eigenvalues, and `geesx` needs a sort
+/// predicate to have something to condition-estimate about.
+pub const Sense = enum(u8) {
+    none = 'N',
+    /// Condition numbers for the eigenvalues (`geevx`) or for the average of
+    /// the selected cluster (`geesx`).
+    eigenvalues = 'E',
+    /// Condition numbers for the eigenvectors (`geevx`) or for the selected
+    /// invariant subspace (`geesx`).
+    eigenvectors = 'V',
+    both = 'B',
+};
+
+/// What `geevx` computed besides the eigenvalues.
+pub const ExpertEigenResult = struct {
+    /// The window `gebal` left, 1-based inclusive. Outside it the balanced
+    /// matrix is already triangular.
+    window: reduce.Window,
+    /// The 1-norm of the balanced matrix. The condition numbers are relative to
+    /// this, so `rconde[i]` is meaningful as `matrix_norm / rconde[i]` being the
+    /// error amplification for eigenvalue `i`.
+    matrix_norm: f64,
+};
+
+/// `geev` with balancing, and condition numbers for what it computed.
+///
+/// Three things `geev` does not give you:
+///
+/// - `balance` runs `gebal` first, which can dramatically improve accuracy on a
+///   badly scaled matrix. The eigenvectors are back-transformed automatically,
+///   so unlike calling `gebal` by hand there is no `gebak` step to remember.
+/// - `rconde[i]` is the reciprocal condition number of eigenvalue `i`: small
+///   means that eigenvalue is sensitive to perturbations of the matrix.
+/// - `rcondv[i]` is the same for eigenvector `i`, which is governed by how
+///   close eigenvalue `i` is to the rest of the spectrum rather than by the
+///   matrix norm.
+///
+/// Both arrays need `n` entries and are only written when `sense` asks for
+/// them. `sense = .eigenvalues` or `.both` **requires** `jobvl` and `jobvr` to
+/// both be `.vectors` — the estimate is built from both sets — and that is
+/// asserted here rather than left to come back as an illegal argument.
+pub fn geevx(
+    comptime T: type,
+    allocator: Allocator,
+    balance: Balance,
+    jobvl: Job,
+    jobvr: Job,
+    sense: Sense,
+    n: usize,
+    a: []T,
+    lda: usize,
+    w: []Eigenvalue(T),
+    vl: []T,
+    ldvl: usize,
+    vr: []T,
+    ldvr: usize,
+    scale: []Real(T),
+    rconde: []Real(T),
+    rcondv: []Real(T),
+) Fail!ExpertEigenResult {
+    assertMatrix(a.len, n, n, lda);
+    std.debug.assert(w.len >= n);
+    std.debug.assert(scale.len >= n);
+    if (jobvl == .vectors) assertMatrix(vl.len, n, n, ldvl);
+    if (jobvr == .vectors) assertMatrix(vr.len, n, n, ldvr);
+    if (sense == .eigenvalues or sense == .both) {
+        std.debug.assert(jobvl == .vectors and jobvr == .vectors);
+        std.debug.assert(rconde.len >= n);
+    }
+    if (sense == .eigenvectors or sense == .both) std.debug.assert(rcondv.len >= n);
+
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    const ldvl_ = dim(@max(ldvl, 1));
+    const ldvr_ = dim(@max(ldvr, 1));
+    var ilo: Int = 0;
+    var ihi: Int = 0;
+    var abnrm: Real(T) = 0;
+    var info: Int = 0;
+
+    var probe: [1]T = undefined;
+    var rprobe: [1]Real(T) = undefined;
+    var iprobe: [1]Int = undefined;
+    var wq: [1]T = undefined;
+    const neg = work_mod.query;
+    if (comptime complexElement(T)) {
+        sym(T, "geevx")(opt(balance), opt(jobvl), opt(jobvr), opt(sense), ref(&n_), &probe, ref(&lda_), &probe, &probe, ref(&ldvl_), &probe, ref(&ldvr_), out(&ilo), out(&ihi), &rprobe, out(&abnrm), &rprobe, &rprobe, &wq, ref(&neg), &rprobe, out(&info));
+    } else {
+        sym(T, "geevx")(opt(balance), opt(jobvl), opt(jobvr), opt(sense), ref(&n_), &probe, ref(&lda_), &probe, &probe, &probe, ref(&ldvl_), &probe, ref(&ldvr_), out(&ilo), out(&ihi), &rprobe, out(&abnrm), &rprobe, &rprobe, &wq, ref(&neg), &iprobe, out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const lwork = dim(size);
+
+    if (comptime complexElement(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(2 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, "geevx")(opt(balance), opt(jobvl), opt(jobvr), opt(sense), ref(&n_), a.ptr, ref(&lda_), @ptrCast(w.ptr), vl.ptr, ref(&ldvl_), vr.ptr, ref(&ldvr_), out(&ilo), out(&ihi), scale.ptr, out(&abnrm), rconde.ptr, rcondv.ptr, buf.ptr, ref(&lwork), rwork.ptr, out(&info));
+    } else {
+        // Only referenced for sense V or B, where the documented size is 2n-2.
+        const iwork = try allocator.alloc(Int, @max(2 * n, 1));
+        defer allocator.free(iwork);
+        const wr = try allocator.alloc(T, @max(n, 1));
+        defer allocator.free(wr);
+        const wi = try allocator.alloc(T, @max(n, 1));
+        defer allocator.free(wi);
+        sym(T, "geevx")(opt(balance), opt(jobvl), opt(jobvr), opt(sense), ref(&n_), a.ptr, ref(&lda_), wr.ptr, wi.ptr, vl.ptr, ref(&ldvl_), vr.ptr, ref(&ldvr_), out(&ilo), out(&ihi), scale.ptr, out(&abnrm), rconde.ptr, rcondv.ptr, buf.ptr, ref(&lwork), iwork.ptr, out(&info));
+        for (0..n) |i| w[i] = .{ .re = wr[i], .im = wi[i] };
+    }
+    try info_mod.checkConvergence(info);
+    return .{
+        .window = .{ .ilo = @intCast(ilo), .ihi = @intCast(ihi) },
+        .matrix_norm = abnrm,
+    };
+}
+
+/// What `geesx` computed besides the Schur form.
+pub const ExpertSchurResult = struct {
+    /// How many eigenvalues the predicate selected.
+    selected: usize,
+    /// Reciprocal condition number of the *average* of the selected
+    /// eigenvalues. Written only when `sense` asks for it. Note this is one
+    /// number for the whole cluster, not one per eigenvalue — for a tight
+    /// cluster the individual eigenvalues can be arbitrarily ill-conditioned
+    /// while their average is not.
+    cluster_condition: f64,
+    /// Reciprocal condition number of the selected invariant subspace. Also one
+    /// number, and it measures how far the selected eigenvalues are from the
+    /// unselected ones.
+    subspace_condition: f64,
+    /// True when `info` came back as `n + 2`: the Schur form and the sort are
+    /// both valid, but roundoff made the selected eigenvalues no longer
+    /// separable, so the condition numbers may be wrong.
+    condition_unreliable: bool,
+};
+
+/// `gees` with condition numbers for the selected cluster and its subspace.
+///
+/// `sense` other than `.none` **requires** a `select` predicate — there is no
+/// cluster to condition-estimate otherwise — which is asserted here.
+///
+/// The positive `info` values are more crowded than `gees`'s:
+///
+/// | `info` | meaning |
+/// |---|---|
+/// | `1 .. n` | the QR iteration failed |
+/// | `n + 1` | the eigenvalues could not be reordered; nothing was sorted |
+/// | `n + 2` | reordering succeeded but roundoff made the cluster inseparable |
+///
+/// The last is a warning, not a failure, so it comes back as
+/// `condition_unreliable` rather than as an error.
+pub fn geesx(
+    comptime T: type,
+    allocator: Allocator,
+    jobvs: Job,
+    select: ?SelectFn(T),
+    sense: Sense,
+    n: usize,
+    a: []T,
+    lda: usize,
+    w: []Eigenvalue(T),
+    vs: []T,
+    ldvs: usize,
+) Fail!ExpertSchurResult {
+    assertMatrix(a.len, n, n, lda);
+    std.debug.assert(w.len >= n);
+    if (jobvs == .vectors) assertMatrix(vs.len, n, n, ldvs);
+    if (sense != .none) std.debug.assert(select != null);
+
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    const ldvs_ = dim(@max(ldvs, 1));
+    const sort: Sort = if (select == null) .unsorted else .sorted;
+    var sdim: Int = 0;
+    var rconde: Real(T) = 0;
+    var rcondv: Real(T) = 0;
+    var info: Int = 0;
+
+    const bwork = try allocator.alloc(Bool, @max(n, 1));
+    defer allocator.free(bwork);
+
+    var probe: [1]T = undefined;
+    var rprobe: [1]Real(T) = undefined;
+    var wq: [1]T = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    if (comptime complexElement(T)) {
+        sym(T, "geesx")(opt(jobvs), opt(sort), null, opt(sense), ref(&n_), &probe, ref(&lda_), out(&sdim), &probe, &probe, ref(&ldvs_), out(&rconde), out(&rcondv), &wq, ref(&neg), &rprobe, null, out(&info));
+    } else {
+        sym(T, "geesx")(opt(jobvs), opt(sort), null, opt(sense), ref(&n_), &probe, ref(&lda_), out(&sdim), &probe, &probe, &probe, ref(&ldvs_), out(&rconde), out(&rcondv), &wq, ref(&neg), &iq, ref(&neg), null, out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const lwork = dim(size);
+
+    const previous = select_hook;
+    defer select_hook = previous;
+    select_hook = if (select) |f| @ptrCast(f) else null;
+
+    if (comptime complexElement(T)) {
+        const callback = if (select == null) null else &Trampoline(T).complex;
+        const rwork = try allocator.alloc(Real(T), @max(2 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, "geesx")(opt(jobvs), opt(sort), callback, opt(sense), ref(&n_), a.ptr, ref(&lda_), out(&sdim), @ptrCast(w.ptr), vs.ptr, ref(&ldvs_), out(&rconde), out(&rcondv), buf.ptr, ref(&lwork), rwork.ptr, bwork.ptr, out(&info));
+    } else {
+        const callback = if (select == null) null else &Trampoline(T).real;
+        const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+        defer allocator.free(iwork);
+        const liwork = dim(iwork.len);
+        const wr = try allocator.alloc(T, @max(n, 1));
+        defer allocator.free(wr);
+        const wi = try allocator.alloc(T, @max(n, 1));
+        defer allocator.free(wi);
+        sym(T, "geesx")(opt(jobvs), opt(sort), callback, opt(sense), ref(&n_), a.ptr, ref(&lda_), out(&sdim), wr.ptr, wi.ptr, vs.ptr, ref(&ldvs_), out(&rconde), out(&rcondv), buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), bwork.ptr, out(&info));
+        for (0..n) |i| w[i] = .{ .re = wr[i], .im = wi[i] };
+    }
+
+    const unreliable = info == @as(Int, @intCast(n)) + 2;
+    if (!unreliable) try info_mod.checkConvergence(info);
+    return .{
+        .selected = @intCast(sdim),
+        .cluster_condition = rconde,
+        .subspace_condition = rcondv,
+        .condition_unreliable = unreliable,
+    };
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -752,4 +995,164 @@ test "single precision works through the same wrappers" {
     try geev(f32, testing.allocator, .values_only, .values_only, 2, &a, 2, &w, &empty, 1, &empty, 1);
 
     try testing.expectApproxEqAbs(@as(f32, 1), @abs(w[0].im), 1e-6);
+}
+
+// ============================================================================
+// Tests: expert drivers
+// ============================================================================
+
+test "geevx balances a badly scaled matrix and reports the window" {
+    const n = 3;
+    // The same matrix as a well-scaled one, with row 1 multiplied by 1e6 and
+    // column 1 divided by it - a diagonal similarity, so the eigenvalues are
+    // unchanged and balancing should undo it.
+    var a = [_]f64{
+        1,   1e-6, 0,
+        1e6, 2,    1e6,
+        0,   1e-6, 3,
+    };
+    var w: [n]Eigenvalue(f64) = undefined;
+    var vl: [n * n]f64 = undefined;
+    var vr: [n * n]f64 = undefined;
+    var scale: [n]f64 = undefined;
+    var rconde: [n]f64 = undefined;
+    var rcondv: [n]f64 = undefined;
+
+    const res = try geevx(f64, testing.allocator, .both, .vectors, .vectors, .both, n, &a, n, &w, &vl, n, &vr, n, &scale, &rconde, &rcondv);
+
+    try testing.expect(res.window.ilo >= 1 and res.window.ihi <= n);
+    try testing.expect(res.matrix_norm > 0);
+
+    // Trace is invariant: the sum of the eigenvalues is 1 + 2 + 3.
+    var sum: f64 = 0;
+    for (w) |v| sum += v.re;
+    try testing.expectApproxEqAbs(@as(f64, 6), sum, 1e-9);
+
+    // Every condition number is in (0, 1].
+    for (rconde) |v| try testing.expect(v > 0 and v <= 1 + 1e-12);
+    for (rcondv) |v| try testing.expect(v > 0);
+}
+
+test "geevx reports a small rconde for a nearly defective matrix" {
+    const n = 2;
+    // A Jordan block perturbed slightly: the two eigenvalues are extremely
+    // sensitive, which is exactly what rconde measures.
+    var a = [_]f64{ 1, 1e-14, 1, 1 };
+    var w: [n]Eigenvalue(f64) = undefined;
+    var vl: [n * n]f64 = undefined;
+    var vr: [n * n]f64 = undefined;
+    var scale: [n]f64 = undefined;
+    var rconde: [n]f64 = undefined;
+    var rcondv: [n]f64 = undefined;
+    _ = try geevx(f64, testing.allocator, .none, .vectors, .vectors, .both, n, &a, n, &w, &vl, n, &vr, n, &scale, &rconde, &rcondv);
+
+    // Well-conditioned would be near 1; this is nowhere near.
+    for (rconde) |v| try testing.expect(v < 1e-5);
+
+    // And a well-conditioned matrix, for contrast.
+    var b = [_]f64{ 1, 0, 0, 5 };
+    var rconde2: [n]f64 = undefined;
+    _ = try geevx(f64, testing.allocator, .none, .vectors, .vectors, .both, n, &b, n, &w, &vl, n, &vr, n, &scale, &rconde2, &rcondv);
+    for (rconde2) |v| try testing.expectApproxEqAbs(@as(f64, 1), v, 1e-12);
+}
+
+test "geevx with sense = .none skips the condition estimates" {
+    const n = 3;
+    var a = [_]f64{ 1, 0, 0, 2, 3, 0, 4, 5, 6 };
+    var w: [n]Eigenvalue(f64) = undefined;
+    var vl: [1]f64 = undefined;
+    var vr: [1]f64 = undefined;
+    var scale: [n]f64 = undefined;
+    var none: [0]f64 = undefined;
+
+    // No eigenvectors are needed when nothing is being estimated - the
+    // constraint that ties sense to jobvl/jobvr only bites for .eigenvalues.
+    _ = try geevx(f64, testing.allocator, .none, .values_only, .values_only, .none, n, &a, n, &w, &vl, 1, &vr, 1, &scale, &none, &none);
+
+    // Upper triangular: the eigenvalues are the diagonal.
+    var found = [_]bool{false} ** 3;
+    for (w) |v| {
+        for ([_]f64{ 1, 3, 6 }, 0..) |expected, i| {
+            if (@abs(v.re - expected) < 1e-12 and @abs(v.im) < 1e-12) found[i] = true;
+        }
+    }
+    for (found) |f| try testing.expect(f);
+}
+
+fn selectNegativeReal(value: Eigenvalue(f64)) bool {
+    return value.re < 0;
+}
+
+test "geesx reports the condition of the selected cluster" {
+    const n = 4;
+    // Block diagonal with a well-separated stable pair and unstable pair.
+    var a = [_]f64{
+        -1, 0,  0, 0,
+        0,  -2, 0, 0,
+        0,  0,  3, 0,
+        0,  0,  0, 4,
+    };
+    var w: [n]Eigenvalue(f64) = undefined;
+    var vs: [n * n]f64 = undefined;
+
+    const res = try geesx(f64, testing.allocator, .vectors, selectNegativeReal, .both, n, &a, n, &w, &vs, n);
+
+    try testing.expectEqual(@as(usize, 2), res.selected);
+    try testing.expect(!res.condition_unreliable);
+    // Diagonal and well separated, so both conditions are excellent.
+    try testing.expect(res.cluster_condition > 0.5);
+    try testing.expect(res.subspace_condition > 0.5);
+}
+
+test "geesx's subspace condition falls when the selected eigenvalues approach the rest" {
+    const n = 2;
+    var far = [_]f64{ -1, 0, 0, 1 };
+    var w: [n]Eigenvalue(f64) = undefined;
+    var vs: [n * n]f64 = undefined;
+    const separated = try geesx(f64, testing.allocator, .vectors, selectNegativeReal, .eigenvectors, n, &far, n, &w, &vs, n);
+
+    // The same problem with an off-diagonal coupling the two.
+    var coupled = [_]f64{ -1e-8, 0, 1, 1e-8 };
+    const close = try geesx(f64, testing.allocator, .vectors, selectNegativeReal, .eigenvectors, n, &coupled, n, &w, &vs, n);
+
+    try testing.expectEqual(@as(usize, 1), separated.selected);
+    try testing.expectEqual(@as(usize, 1), close.selected);
+    try testing.expect(close.subspace_condition < separated.subspace_condition);
+}
+
+test "geesx without a predicate still factors, and selects nothing" {
+    const n = 3;
+    var a = [_]f64{ 1, 2, 0, 3, 4, 1, 0, 2, 5 };
+    var w: [n]Eigenvalue(f64) = undefined;
+    var vs: [n * n]f64 = undefined;
+
+    const res = try geesx(f64, testing.allocator, .vectors, null, .none, n, &a, n, &w, &vs, n);
+    try testing.expectEqual(@as(usize, 0), res.selected);
+
+    // a now holds the quasi-triangular Schur form: nothing below the first
+    // subdiagonal.
+    for (0..n) |j| for (0..n) |i| {
+        if (i > j + 1) try testing.expectApproxEqAbs(@as(f64, 0), a[i + j * n], 1e-12);
+    };
+}
+
+test "geesx on a complex matrix takes rwork where the real one takes iwork" {
+    const Z = Complex(f64);
+    const n = 3;
+    var a = [_]Z{
+        Z.init(-1, 0), Z.init(0, 0), Z.init(0, 0),
+        Z.init(0, 0),  Z.init(2, 1), Z.init(0, 0),
+        Z.init(0, 0),  Z.init(0, 0), Z.init(3, 0),
+    };
+    var w: [n]Eigenvalue(Z) = undefined;
+    var vs: [n * n]Z = undefined;
+
+    const S = struct {
+        fn negative(value: Eigenvalue(Z)) bool {
+            return value.re < 0;
+        }
+    };
+    const res = try geesx(Z, testing.allocator, .vectors, S.negative, .both, n, &a, n, &w, &vs, n);
+    try testing.expectEqual(@as(usize, 1), res.selected);
+    try testing.expectApproxEqAbs(@as(f64, -1), w[0].re, 1e-12);
 }

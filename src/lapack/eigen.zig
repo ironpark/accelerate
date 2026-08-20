@@ -528,6 +528,485 @@ pub fn sygv(
 pub const hegv = sygv;
 
 // ============================================================================
+// Expert and divide-and-conquer variants
+// ============================================================================
+
+/// The four loosely-coupled arguments a `Selection` stands in for, unpacked.
+const Window = struct {
+    range: Range,
+    vl: f64,
+    vu: f64,
+    il: Int,
+    iu: Int,
+
+    fn from(selection: Selection, n: usize) Window {
+        var w: Window = .{ .range = .all, .vl = 0, .vu = 0, .il = 1, .iu = @max(dim(n), 1) };
+        switch (selection) {
+            .all => {},
+            .interval => |iv| {
+                std.debug.assert(iv.low < iv.high);
+                w.range = .interval;
+                w.vl = iv.low;
+                w.vu = iv.high;
+            },
+            .indices => |ix| {
+                std.debug.assert(ix.first >= 1 and ix.first <= ix.last and ix.last <= n);
+                w.range = .indices;
+                w.il = dim(ix.first);
+                w.iu = dim(ix.last);
+            },
+        }
+        return w;
+    }
+};
+
+/// A subset of the eigenvalues of a dense symmetric matrix, by bisection and
+/// inverse iteration.
+///
+/// The older expert driver; `syevr` computes the same thing by MRRR and is
+/// usually both faster and more accurate. The reason to reach for this one is
+/// `ifail`: when a vector does not converge, this reports *which*, where
+/// `syevr` reports only that something went wrong.
+///
+/// `ifail` needs `n` entries and receives the 1-based indices of the vectors
+/// that failed. `error.NoConvergence` means at least one did; `lastInfo()` is
+/// the count.
+///
+/// `abstol` is the absolute tolerance on each eigenvalue; pass `0` for the
+/// default, or `2 * util.lamch(T, .safe_min)` for the most accurate answer
+/// bisection can give.
+pub fn syevx(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    selection: Selection,
+    uplo: Uplo,
+    n: usize,
+    a: []T,
+    lda: usize,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+    abstol: Real(T),
+    ifail: []Int,
+) Fail!EigResult {
+    assertMatrix(a.len, n, n, lda);
+    std.debug.assert(w.len >= n);
+    std.debug.assert(ifail.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sy", "he", "evx");
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: Real(T) = @floatCast(win.vl);
+    const vu: Real(T) = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    const iwork = try allocator.alloc(Int, @max(5 * n, 1));
+    defer allocator.free(iwork);
+
+    var probe: [1]T = undefined;
+    var rprobe: [1]Real(T) = undefined;
+    var wq: [1]T = undefined;
+    const neg = work_mod.query;
+    if (comptime complexScratch(T)) {
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), &probe, ref(&lda_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), &rprobe, &probe, ref(&ldz_), &wq, ref(&neg), &rprobe, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), &probe, ref(&lda_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), &rprobe, &probe, ref(&ldz_), &wq, ref(&neg), iwork.ptr, ifail.ptr, out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const lwork = dim(size);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(7 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), a.ptr, ref(&lda_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), rwork.ptr, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), a.ptr, ref(&lda_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), iwork.ptr, ifail.ptr, out(&info));
+    }
+    try info_mod.checkConvergence(info);
+    return .{ .found = @intCast(found) };
+}
+
+/// `syevx` under its complex name.
+pub const heevx = syevx;
+
+/// `spev` by divide and conquer.
+pub fn spevd(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    uplo: Uplo,
+    n: usize,
+    ap: []T,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+) Fail!void {
+    std.debug.assert(ap.len >= packedLen(n));
+    std.debug.assert(w.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sp", "hp", "evd");
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    var info: Int = 0;
+
+    var wq: [1]T = undefined;
+    var rq: [1]Real(T) = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    if (comptime complexScratch(T)) {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ap.ptr, w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &rq, ref(&neg), &iq, ref(&neg), out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ap.ptr, w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &iq, ref(&neg), out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+    defer allocator.free(iwork);
+    const lwork = dim(size);
+    const liwork = dim(iwork.len);
+
+    if (comptime complexScratch(T)) {
+        const rsize: usize = @intCast(@max(work_mod.sizeFrom(Real(T), rq[0]), 1));
+        const rwork = try allocator.alloc(Real(T), rsize);
+        defer allocator.free(rwork);
+        const lrwork = dim(rsize);
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ap.ptr, w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), rwork.ptr, ref(&lrwork), iwork.ptr, ref(&liwork), out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ap.ptr, w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), out(&info));
+    }
+    return info_mod.checkConvergence(info);
+}
+
+/// `spevd` under its complex name.
+pub const hpevd = spevd;
+
+/// `spev` restricted to a subset of the spectrum. See `syevx` for `abstol` and
+/// `ifail`.
+pub fn spevx(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    selection: Selection,
+    uplo: Uplo,
+    n: usize,
+    ap: []T,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+    abstol: Real(T),
+    ifail: []Int,
+) Fail!EigResult {
+    std.debug.assert(ap.len >= packedLen(n));
+    std.debug.assert(w.len >= n);
+    std.debug.assert(ifail.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sp", "hp", "evx");
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: Real(T) = @floatCast(win.vl);
+    const vu: Real(T) = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    const iwork = try allocator.alloc(Int, @max(5 * n, 1));
+    defer allocator.free(iwork);
+
+    // Fixed sizes, no query: 8n reals, or 2n complex plus 7n reals.
+    const buf = try allocator.alloc(T, @max(if (comptime complexScratch(T)) 2 * n else 8 * n, 1));
+    defer allocator.free(buf);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(7 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), ap.ptr, ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, rwork.ptr, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), ap.ptr, ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, iwork.ptr, ifail.ptr, out(&info));
+    }
+    try info_mod.checkConvergence(info);
+    return .{ .found = @intCast(found) };
+}
+
+/// `spevx` under its complex name.
+pub const hpevx = spevx;
+
+/// `sbev` by divide and conquer.
+pub fn sbevd(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    uplo: Uplo,
+    n: usize,
+    kd: usize,
+    ab: []T,
+    ldab: usize,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+) Fail!void {
+    std.debug.assert(ldab >= kd + 1);
+    std.debug.assert(w.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sb", "hb", "evd");
+    const n_ = dim(n);
+    const kd_ = dim(kd);
+    const ldab_ = dim(ldab);
+    const ldz_ = dim(@max(ldz, 1));
+    var info: Int = 0;
+
+    var wq: [1]T = undefined;
+    var rq: [1]Real(T) = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    if (comptime complexScratch(T)) {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &rq, ref(&neg), &iq, ref(&neg), out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &iq, ref(&neg), out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+    defer allocator.free(iwork);
+    const lwork = dim(size);
+    const liwork = dim(iwork.len);
+
+    if (comptime complexScratch(T)) {
+        const rsize: usize = @intCast(@max(work_mod.sizeFrom(Real(T), rq[0]), 1));
+        const rwork = try allocator.alloc(Real(T), rsize);
+        defer allocator.free(rwork);
+        const lrwork = dim(rsize);
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), rwork.ptr, ref(&lrwork), iwork.ptr, ref(&liwork), out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), out(&info));
+    }
+    return info_mod.checkConvergence(info);
+}
+
+/// `sbevd` under its complex name.
+pub const hbevd = sbevd;
+
+/// `sbev` restricted to a subset of the spectrum.
+///
+/// The extra `q`/`ldq` array is where the band-to-tridiagonal reduction's
+/// orthogonal factor goes. It is only referenced when `job = .vectors`, and it
+/// is an output — this routine has no way to reuse one you already have, unlike
+/// `sbgv`.
+pub fn sbevx(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    selection: Selection,
+    uplo: Uplo,
+    n: usize,
+    kd: usize,
+    ab: []T,
+    ldab: usize,
+    q: []T,
+    ldq: usize,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+    abstol: Real(T),
+    ifail: []Int,
+) Fail!EigResult {
+    std.debug.assert(ldab >= kd + 1);
+    std.debug.assert(w.len >= n);
+    std.debug.assert(ifail.len >= n);
+    std.debug.assert(ldq >= 1);
+    if (job == .vectors) {
+        assertMatrix(q.len, n, n, ldq);
+        assertMatrix(z.len, n, n, ldz);
+    }
+
+    const name = comptime herm(T, "sb", "hb", "evx");
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const kd_ = dim(kd);
+    const ldab_ = dim(ldab);
+    const ldq_ = dim(ldq);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: Real(T) = @floatCast(win.vl);
+    const vu: Real(T) = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    const iwork = try allocator.alloc(Int, @max(5 * n, 1));
+    defer allocator.free(iwork);
+    const buf = try allocator.alloc(T, @max(if (comptime complexScratch(T)) n else 7 * n, 1));
+    defer allocator.free(buf);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(7 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), q.ptr, ref(&ldq_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, rwork.ptr, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), q.ptr, ref(&ldq_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, iwork.ptr, ifail.ptr, out(&info));
+    }
+    try info_mod.checkConvergence(info);
+    return .{ .found = @intCast(found) };
+}
+
+/// `sbevx` under its complex name.
+pub const hbevx = sbevx;
+
+/// `stev` by divide and conquer. Real only, like `stev`.
+pub fn stevd(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    n: usize,
+    d: []T,
+    e: []T,
+    z: []T,
+    ldz: usize,
+) Fail!void {
+    requireRealTridiagonal(T, "stevd");
+    std.debug.assert(d.len >= n);
+    if (n > 1) std.debug.assert(e.len >= n - 1);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    var info: Int = 0;
+
+    var wq: [1]T = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    sym(T, "stevd")(opt(job), ref(&n_), d.ptr, e.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &iq, ref(&neg), out(&info));
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+    defer allocator.free(iwork);
+    const lwork = dim(size);
+    const liwork = dim(iwork.len);
+
+    sym(T, "stevd")(opt(job), ref(&n_), d.ptr, e.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), out(&info));
+    return info_mod.checkConvergence(info);
+}
+
+/// `stev` restricted to a subset of the spectrum, by bisection and inverse
+/// iteration. Real only.
+pub fn stevx(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    selection: Selection,
+    n: usize,
+    d: []T,
+    e: []T,
+    w: []T,
+    z: []T,
+    ldz: usize,
+    abstol: T,
+    ifail: []Int,
+) Fail!EigResult {
+    requireRealTridiagonal(T, "stevx");
+    std.debug.assert(d.len >= n);
+    if (n > 1) std.debug.assert(e.len >= n - 1);
+    std.debug.assert(w.len >= n and ifail.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: T = @floatCast(win.vl);
+    const vu: T = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    const buf = try allocator.alloc(T, @max(5 * n, 1));
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @max(5 * n, 1));
+    defer allocator.free(iwork);
+
+    sym(T, "stevx")(opt(job), opt(win.range), ref(&n_), d.ptr, e.ptr, ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, iwork.ptr, ifail.ptr, out(&info));
+    try info_mod.checkConvergence(info);
+    return .{ .found = @intCast(found) };
+}
+
+/// `stev` restricted to a subset of the spectrum, by MRRR. Real only.
+///
+/// The tridiagonal counterpart of `syevr`, and the best default when a subset
+/// is wanted: it needs no reorthogonalization, where `stevx` degrades on a
+/// tight cluster. `isuppz` receives two indices per vector bounding its nonzero
+/// rows and needs `2 * max(1, n)` entries.
+pub fn stevr(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    selection: Selection,
+    n: usize,
+    d: []T,
+    e: []T,
+    w: []T,
+    z: []T,
+    ldz: usize,
+    isuppz: []Int,
+    abstol: T,
+) Fail!EigResult {
+    requireRealTridiagonal(T, "stevr");
+    std.debug.assert(d.len >= n);
+    if (n > 1) std.debug.assert(e.len >= n - 1);
+    std.debug.assert(w.len >= n);
+    if (job == .vectors) std.debug.assert(isuppz.len >= 2 * @max(n, 1));
+
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: T = @floatCast(win.vl);
+    const vu: T = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    var wq: [1]T = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    sym(T, "stevr")(opt(job), opt(win.range), ref(&n_), d.ptr, e.ptr, ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), isuppz.ptr, &wq, ref(&neg), &iq, ref(&neg), out(&info));
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+    defer allocator.free(iwork);
+    const lwork = dim(size);
+    const liwork = dim(iwork.len);
+
+    sym(T, "stevr")(opt(job), opt(win.range), ref(&n_), d.ptr, e.ptr, ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), isuppz.ptr, buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), out(&info));
+    try info_mod.checkConvergence(info);
+    return .{ .found = @intCast(found) };
+}
+
+fn requireRealTridiagonal(comptime T: type, comptime routine: []const u8) void {
+    switch (T) {
+        f32, f64 => {},
+        else => @compileError(routine ++ " is real-only; for " ++ @typeName(T) ++
+            " reduce to a real tridiagonal first, or use the hb* band routines with kd = 1"),
+    }
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -809,4 +1288,210 @@ test "single precision works through the same wrappers" {
     try syev(f32, testing.allocator, .values_only, .upper, 2, &a, 2, &w);
     try testing.expectApproxEqAbs(@as(f32, 1), w[0], 1e-5);
     try testing.expectApproxEqAbs(@as(f32, 3), w[1], 1e-5);
+}
+
+// ============================================================================
+// Tests: expert and divide-and-conquer variants
+// ============================================================================
+
+/// A symmetric 4x4 with well-separated eigenvalues, used by every test below so
+/// the variants can be checked against each other.
+const expert4 = [_]f64{
+    6, 1, 0, 0,
+    1, 5, 1, 0,
+    0, 1, 4, 1,
+    0, 0, 1, 3,
+};
+
+/// The eigenvalues of `expert4`, from `syev` — the driver already covered by
+/// the tests above, so the variants are compared against something known good
+/// rather than against numbers written down here.
+fn expert4Eigenvalues() ![4]f64 {
+    var a = expert4;
+    var w: [4]f64 = undefined;
+    try syev(f64, testing.allocator, .values_only, .upper, 4, &a, 4, &w);
+    return w;
+}
+
+test "syevx computes a selected index range and reports no failures" {
+    const reference = try expert4Eigenvalues();
+
+    var a = expert4;
+    var w: [4]f64 = undefined;
+    var z: [4 * 4]f64 = undefined;
+    var ifail: [4]Int = undefined;
+    const res = try syevx(f64, testing.allocator, .vectors, .{ .indices = .{ .first = 2, .last = 3 } }, .upper, 4, &a, 4, &w, &z, 4, 0, &ifail);
+
+    try testing.expectEqual(@as(usize, 2), res.found);
+    for (0..2) |i| try testing.expectApproxEqAbs(reference[i + 1], w[i], 1e-12);
+
+    // With every vector converged, ifail is not written past found, so only
+    // the return value says the call succeeded.
+    for (0..res.found) |j| {
+        var norm: f64 = 0;
+        for (0..4) |i| norm += z[i + j * 4] * z[i + j * 4];
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-12);
+    }
+}
+
+test "syevx and syevr agree on an interval selection" {
+    const reference = try expert4Eigenvalues();
+    // An interval that contains exactly the two middle eigenvalues.
+    const low = (reference[0] + reference[1]) / 2;
+    const high = (reference[2] + reference[3]) / 2;
+
+    var ax = expert4;
+    var wx: [4]f64 = undefined;
+    var zx: [4 * 4]f64 = undefined;
+    var ifail: [4]Int = undefined;
+    const rx = try syevx(f64, testing.allocator, .values_only, .{ .interval = .{ .low = low, .high = high } }, .upper, 4, &ax, 4, &wx, &zx, 4, 0, &ifail);
+
+    var ar = expert4;
+    var wr: [4]f64 = undefined;
+    var zr: [4 * 4]f64 = undefined;
+    const rr = try syevr(f64, testing.allocator, .values_only, .{ .interval = .{ .low = low, .high = high } }, .upper, 4, &ar, 4, &wr, &zr, 4, 0);
+
+    try testing.expectEqual(@as(usize, 2), rx.found);
+    try testing.expectEqual(rx.found, rr.found);
+    for (0..rx.found) |i| try testing.expectApproxEqAbs(wx[i], wr[i], 1e-12);
+}
+
+test "heevx takes 7n rwork where syevx takes none" {
+    const Z = Complex(f64);
+    const a0 = [_]Z{
+        Z.init(4, 0), Z.init(1, -1), Z.init(0, 0),
+        Z.init(1, 1), Z.init(5, 0),  Z.init(0, -2),
+        Z.init(0, 0), Z.init(0, 2),  Z.init(6, 0),
+    };
+    var a = a0;
+    var w: [3]f64 = undefined;
+    var z: [3 * 3]Z = undefined;
+    var ifail: [3]Int = undefined;
+    const res = try heevx(Z, testing.allocator, .vectors, .all, .upper, 3, &a, 3, &w, &z, 3, 0, &ifail);
+
+    try testing.expectEqual(@as(usize, 3), res.found);
+    // Hermitian: the trace is the sum of the eigenvalues.
+    var sum: f64 = 0;
+    for (w) |v| sum += v;
+    try testing.expectApproxEqAbs(@as(f64, 15), sum, 1e-12);
+    try testing.expect(w[0] < w[1] and w[1] < w[2]);
+}
+
+test "spevd and spevx agree with spev in packed storage" {
+    const reference = try expert4Eigenvalues();
+    var ap0: [10]f64 = undefined;
+    var at: usize = 0;
+    for (0..4) |j| for (0..j + 1) |i| {
+        ap0[at] = expert4[i + j * 4];
+        at += 1;
+    };
+
+    var ap_d = ap0;
+    var w_d: [4]f64 = undefined;
+    var z_d: [16]f64 = undefined;
+    try spevd(f64, testing.allocator, .vectors, .upper, 4, &ap_d, &w_d, &z_d, 4);
+    for (reference, w_d) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    var ap_x = ap0;
+    var w_x: [4]f64 = undefined;
+    var z_x: [16]f64 = undefined;
+    var ifail: [4]Int = undefined;
+    const res = try spevx(f64, testing.allocator, .vectors, .all, .upper, 4, &ap_x, &w_x, &z_x, 4, 0, &ifail);
+    try testing.expectEqual(@as(usize, 4), res.found);
+    for (reference, w_x) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "sbevd and sbevx agree with sbev in band storage" {
+    const reference = try expert4Eigenvalues();
+    // kd = 1, upper band: row kd + i - j.
+    const ab0 = [_]f64{ 0, 6, 1, 5, 1, 4, 1, 3 };
+
+    var ab_d = ab0;
+    var w_d: [4]f64 = undefined;
+    var z_d: [16]f64 = undefined;
+    try sbevd(f64, testing.allocator, .vectors, .upper, 4, 1, &ab_d, 2, &w_d, &z_d, 4);
+    for (reference, w_d) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    var ab_x = ab0;
+    var q: [16]f64 = undefined;
+    var w_x: [4]f64 = undefined;
+    var z_x: [16]f64 = undefined;
+    var ifail: [4]Int = undefined;
+    const res = try sbevx(f64, testing.allocator, .vectors, .{ .indices = .{ .first = 1, .last = 4 } }, .upper, 4, 1, &ab_x, 2, &q, 4, &w_x, &z_x, 4, 0, &ifail);
+    try testing.expectEqual(@as(usize, 4), res.found);
+    for (reference, w_x) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "sbevx writes its reduction factor into q" {
+    const ab0 = [_]f64{ 0, 6, 1, 5, 1, 4, 1, 3 };
+    var ab = ab0;
+    var q = [_]f64{-1} ** 16;
+    var w: [4]f64 = undefined;
+    var z: [16]f64 = undefined;
+    var ifail: [4]Int = undefined;
+    _ = try sbevx(f64, testing.allocator, .vectors, .all, .upper, 4, 1, &ab, 2, &q, 4, &w, &z, 4, 0, &ifail);
+
+    // q is an output, not a workspace: it comes back orthogonal, and the poison
+    // is gone.
+    for (0..4) |j| {
+        var norm: f64 = 0;
+        for (0..4) |i| norm += q[i + j * 4] * q[i + j * 4];
+        try testing.expectApproxEqAbs(@as(f64, 1), norm, 1e-12);
+    }
+}
+
+test "stevd, stevx and stevr agree with stev" {
+    const d0 = [_]f64{ 6, 5, 4, 3 };
+    const e0 = [_]f64{ 1, 1, 1 };
+
+    var d_ref = d0;
+    var e_ref = e0;
+    var z_ref: [16]f64 = undefined;
+    try stev(f64, testing.allocator, .values_only, 4, &d_ref, &e_ref, &z_ref, 1);
+
+    var d_d = d0;
+    var e_d = e0;
+    var z_d: [16]f64 = undefined;
+    try stevd(f64, testing.allocator, .vectors, 4, &d_d, &e_d, &z_d, 4);
+    for (d_ref, d_d) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    var d_x = d0;
+    var e_x = e0;
+    var w_x: [4]f64 = undefined;
+    var z_x: [16]f64 = undefined;
+    var ifail: [4]Int = undefined;
+    const rx = try stevx(f64, testing.allocator, .vectors, .all, 4, &d_x, &e_x, &w_x, &z_x, 4, 0, &ifail);
+    try testing.expectEqual(@as(usize, 4), rx.found);
+    for (d_ref, w_x) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    var d_r = d0;
+    var e_r = e0;
+    var w_r: [4]f64 = undefined;
+    var z_r: [16]f64 = undefined;
+    var isuppz: [8]Int = undefined;
+    const rr = try stevr(f64, testing.allocator, .vectors, .all, 4, &d_r, &e_r, &w_r, &z_r, 4, &isuppz, 0);
+    try testing.expectEqual(@as(usize, 4), rr.found);
+    for (d_ref, w_r) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "stevr's isuppz bounds the nonzero rows of each vector" {
+    // A matrix with a zero off-diagonal splits, so each eigenvector is nonzero
+    // in only one half - which is what isuppz reports.
+    var d = [_]f64{ 1, 2, 10, 20 };
+    var e = [_]f64{ 1, 0, 1 };
+    var w: [4]f64 = undefined;
+    var z: [16]f64 = undefined;
+    var isuppz: [8]Int = undefined;
+    const res = try stevr(f64, testing.allocator, .vectors, .all, 4, &d, &e, &w, &z, 4, &isuppz, 0);
+
+    try testing.expectEqual(@as(usize, 4), res.found);
+    for (0..4) |j| {
+        const lo: usize = @intCast(isuppz[2 * j]);
+        const hi: usize = @intCast(isuppz[2 * j + 1]);
+        try testing.expect(lo >= 1 and hi <= 4 and lo <= hi);
+        // Everything outside the support is zero.
+        for (0..4) |i| {
+            if (i + 1 < lo or i + 1 > hi) try testing.expectApproxEqAbs(@as(f64, 0), z[i + j * 4], 1e-14);
+        }
+    }
 }

@@ -26,9 +26,11 @@
 //! - `qr.zig` - the QR/LQ/QL/RQ factorizations, forming and applying `Q`,
 //!   column-pivoted QR, and the four least squares drivers.
 //! - `eigen.zig` - the symmetric/Hermitian eigenvalue drivers, dense, packed,
-//!   band, tridiagonal and generalized.
+//!   band, tridiagonal and generalized, including the expert (`*evx`) and
+//!   divide-and-conquer (`*evd`) variants.
 //! - `eigen_gen.zig` - the nonsymmetric and generalized eigenproblems:
-//!   `geev`, `gees`, `ggev`, and the Sylvester solver `trsyl`.
+//!   `geev`, `gees`, `ggev`, their expert forms `geevx` and `geesx`, and the
+//!   Sylvester solver `trsyl`.
 //! - `svd.zig` - `gesvd` and `gesdd`.
 //! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
 //! - `util.zig` - machine parameters, random matrices, plane rotations,
@@ -174,7 +176,21 @@ pub const hbev = eigen.hbev;
 pub const stev = eigen.stev;
 pub const sygv = eigen.sygv;
 pub const hegv = eigen.hegv;
+pub const syevx = eigen.syevx;
+pub const heevx = eigen.heevx;
+pub const spevd = eigen.spevd;
+pub const hpevd = eigen.hpevd;
+pub const spevx = eigen.spevx;
+pub const hpevx = eigen.hpevx;
+pub const sbevd = eigen.sbevd;
+pub const hbevd = eigen.hbevd;
+pub const sbevx = eigen.sbevx;
+pub const hbevx = eigen.hbevx;
+pub const stevd = eigen.stevd;
+pub const stevx = eigen.stevx;
+pub const stevr = eigen.stevr;
 pub const Selection = eigen.Selection;
+pub const EigResult = eigen.EigResult;
 pub const GeneralizedKind = eigen.GeneralizedKind;
 
 pub const gesvd = svd.gesvd;
@@ -184,6 +200,11 @@ pub const geev = eigen_gen.geev;
 pub const gees = eigen_gen.gees;
 pub const ggev = eigen_gen.ggev;
 pub const trsyl = eigen_gen.trsyl;
+pub const geevx = eigen_gen.geevx;
+pub const geesx = eigen_gen.geesx;
+pub const Sense = eigen_gen.Sense;
+pub const ExpertEigenResult = eigen_gen.ExpertEigenResult;
+pub const ExpertSchurResult = eigen_gen.ExpertSchurResult;
 pub const unpackVectors = eigen_gen.unpackVectors;
 pub const Eigenvalue = eigen_gen.Eigenvalue;
 pub const GeneralizedEigenvalue = eigen_gen.GeneralizedEigenvalue;
