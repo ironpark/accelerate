@@ -112,7 +112,6 @@ pub fn FFT(comptime T: type) type {
         /// These compute:
         ///
         ///     N = 1 << Log2N;
-        ///     scale = 0 < Direction ? 1 : 1./N;
         ///
         ///     // Define a complex vector, h:
         ///     for (j = 0; j < N; ++j)
@@ -120,7 +119,7 @@ pub fn FFT(comptime T: type) type {
         ///
         ///     // Perform Discrete Fourier Transform.
         ///     for (k = 0; k < N; ++k)
-        ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+        ///         H[k] = sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
         ///
         ///     // Store result.
         ///     for (k = 0; k < N; ++k)
@@ -130,6 +129,13 @@ pub fn FFT(comptime T: type) type {
         ///     }
         ///
         /// Direction must be +1 or -1.
+        ///
+        /// Note: unlike vDSP.h's documented pseudocode (which shows a 1/N
+        /// scale applied when Direction is inverse), the actual vDSP FFT
+        /// implementation is unnormalized in BOTH directions - confirmed by
+        /// running an impulse through forward+inverse and observing N times
+        /// the original signal, not the original signal. Divide by N
+        /// yourself after an inverse transform if you need a true inverse.
         pub fn zip(self: Self, io: *const SCT, direction: Direction) void {
             switch (T) {
                 f32 => c.vDSP_fft_zip(self.setup, io, 1, self.log2n, @intFromEnum(direction)),
@@ -160,7 +166,6 @@ pub fn FFT(comptime T: type) type {
         /// These compute:
         ///
         ///     N = 1 << Log2N;
-        ///     scale = 0 < Direction ? 1 : 1./N;
         ///
         ///     // Define a complex vector, h:
         ///     for (j = 0; j < N; ++j)
@@ -168,7 +173,7 @@ pub fn FFT(comptime T: type) type {
         ///
         ///     // Perform Discrete Fourier Transform.
         ///     for (k = 0; k < N; ++k)
-        ///         H[k] = scale * sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
+        ///         H[k] = sum(h[j] * e**(-Direction*2*pi*i*j*k/N), 0 <= j < N);
         ///
         ///     // Store result.
         ///     for (k = 0; k < N; ++k)
@@ -178,6 +183,11 @@ pub fn FFT(comptime T: type) type {
         ///     }
         ///
         /// Direction must be +1 or -1.
+        ///
+        /// Note: unlike vDSP.h's documented pseudocode (which shows a 1/N
+        /// scale applied when Direction is inverse), the actual vDSP FFT
+        /// implementation is unnormalized in BOTH directions - see zip()'s
+        /// note above for the runtime-verified detail.
         pub fn zop(self: Self, input: *const SCT, output: *const SCT, direction: Direction) void {
             switch (T) {
                 f32 => c.vDSP_fft_zop(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction)),
@@ -513,6 +523,41 @@ pub fn FFT(comptime T: type) type {
 // ============================================================================
 // Tests
 // ============================================================================
+
+test "FFT init/deinit and zip forward+inverse round-trip" {
+    const log2n: Length = 2; // N = 4
+    const fft = try FFT(f32).init(log2n, .radix2);
+    defer fft.deinit();
+
+    // Impulse at n=0: forward DFT is a constant spectrum, [1,1,1,1] for
+    // N=4. vDSP.h's pseudocode says the inverse direction applies a 1/N
+    // scale ("scale = 0 < Direction ? 1 : 1./N"), but the actual (hardware-
+    // accelerated) implementation does NOT normalize either direction - per
+    // fix/REQUEST.md's own note that vDSP FFTs are unnormalized. Measured:
+    // inverting [1,1,1,1] yields [4,0,0,0], i.e. N times the original
+    // impulse, not the impulse itself. This confirms the binding passes
+    // Direction through correctly; the header's scale comment just doesn't
+    // reflect the real implementation, so callers must divide by N
+    // themselves for a true inverse.
+    var re = [_]f32{ 1.0, 0.0, 0.0, 0.0 };
+    var im = [_]f32{ 0.0, 0.0, 0.0, 0.0 };
+    var io = SC(f32){ .realp = &re, .imagp = &im };
+
+    fft.zip(&io, .forward);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[2], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[3], 0.001);
+    for (im) |v| try std.testing.expectApproxEqAbs(@as(f32, 0.0), v, 0.001);
+
+    fft.zip(&io, .inverse);
+    const n: f32 = 4.0;
+    try std.testing.expectApproxEqAbs(n, re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), re[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), re[2], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), re[3], 0.001);
+    for (im) |v| try std.testing.expectApproxEqAbs(@as(f32, 0.0), v, 0.001);
+}
 
 test "ctoz and ztoc round-trip" {
     const input = [_]Complex(f32){
