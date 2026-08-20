@@ -322,6 +322,76 @@ pub fn gemqrt(
     return info_mod.checkArgs(info);
 }
 
+/// LQ with the block reflector returned explicitly. The `geqrt` counterpart.
+///
+/// `mb` is the block size, at most `min(rows, cols)`. `t` receives the
+/// `mb x min(rows, cols)` block reflector, which `gemlqt` applies.
+pub fn gelqt(
+    comptime T: type,
+    allocator: Allocator,
+    rows: usize,
+    cols: usize,
+    mb: usize,
+    a: []T,
+    lda: usize,
+    t: []T,
+    ldt: usize,
+) Fail!void {
+    assertMatrix(a.len, rows, cols, lda);
+    const k = @min(rows, cols);
+    std.debug.assert(mb >= 1 and mb <= k);
+    assertMatrix(t.len, mb, k, ldt);
+
+    const work = try allocator.alloc(T, @max(mb * rows, 1));
+    defer allocator.free(work);
+
+    const m_ = dim(rows);
+    const n_ = dim(cols);
+    const mb_ = dim(mb);
+    const lda_ = dim(@max(lda, 1));
+    const ldt_ = dim(@max(ldt, 1));
+    var info: Int = 0;
+
+    sym(T, "gelqt")(ref(&m_), ref(&n_), ref(&mb_), a.ptr, ref(&lda_), t.ptr, ref(&ldt_), work.ptr, out(&info));
+    return info_mod.checkArgs(info);
+}
+
+/// Applies a `gelqt` block reflector to `c`. The `gemqrt` counterpart.
+pub fn gemlqt(
+    comptime T: type,
+    allocator: Allocator,
+    side: Side,
+    trans: QTrans,
+    rows: usize,
+    cols: usize,
+    k: usize,
+    mb: usize,
+    v: []const T,
+    ldv: usize,
+    t: []const T,
+    ldt: usize,
+    cm: []T,
+    ldc: usize,
+) Fail!void {
+    assertMatrix(cm.len, rows, cols, ldc);
+    std.debug.assert(mb >= 1 and mb <= k);
+
+    const work = try allocator.alloc(T, @max(mb * (if (side == .left) cols else rows), 1));
+    defer allocator.free(work);
+
+    const m_ = dim(rows);
+    const n_ = dim(cols);
+    const k_ = dim(k);
+    const mb_ = dim(mb);
+    const ldv_ = dim(@max(ldv, 1));
+    const ldt_ = dim(@max(ldt, 1));
+    const ldc_ = dim(@max(ldc, 1));
+    var info: Int = 0;
+
+    sym(T, "gemlqt")(opt(side), qtrans(T, trans), ref(&m_), ref(&n_), ref(&k_), ref(&mb_), v.ptr, ref(&ldv_), t.ptr, ref(&ldt_), cm.ptr, ref(&ldc_), work.ptr, out(&info));
+    return info_mod.checkArgs(info);
+}
+
 /// QR of a triangular-pentagonal block stacked under an existing `R`.
 ///
 /// The blocked-QR update step: `a` holds the `n x n` upper triangular factor so
@@ -1097,6 +1167,36 @@ test "the complex tall-skinny path picks the C transpose" {
             }
             try testing.expectApproxEqAbs(original[i + j * m].re, acc.re, 1e-11);
             try testing.expectApproxEqAbs(original[i + j * m].im, acc.im, 1e-11);
+        }
+    }
+}
+
+test "gelqt and gemlqt are the LQ counterparts of geqrt and gemqrt" {
+    const m = 2;
+    const n = 6;
+    // The transpose of `tall`.
+    var a: [m * n]f64 = undefined;
+    for (0..n) |j| for (0..m) |i| {
+        a[i + j * m] = tall[j + i * 6];
+    };
+    const original = a;
+
+    var t: [2 * 2]f64 = undefined;
+    try gelqt(f64, testing.allocator, m, n, 2, &a, m, &t, 2);
+
+    var q = [_]f64{0} ** (n * n);
+    for (0..n) |i| q[i + i * n] = 1;
+    try gemlqt(f64, testing.allocator, .left, .no_trans, n, n, m, 2, &a, m, &t, 2, &q, n);
+
+    // L Q reconstructs the original, with L the lower triangle of the leading
+    // m x m block.
+    for (0..n) |j| {
+        for (0..m) |i| {
+            var acc: f64 = 0;
+            for (0..m) |k| {
+                if (k <= i) acc += a[i + k * m] * q[k + j * n];
+            }
+            try testing.expectApproxEqAbs(original[i + j * m], acc, 1e-11);
         }
     }
 }

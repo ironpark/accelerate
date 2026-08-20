@@ -405,7 +405,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `gelq` <sub>cdsz</sub>
 - [ ] `gelq2` <sub>cdsz</sub>
 - [x] `gelqf` <sub>cdsz</sub>
-- [ ] `gelqt` <sub>cdsz</sub>
+- [x] `gelqt` <sub>cdsz</sub>
 - [ ] `gelqt3` <sub>cdsz</sub>
 - [x] `gels` <sub>cdsz</sub>
 - [x] `gelsd` <sub>cdsz</sub>
@@ -414,7 +414,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `gelsx` <sub>cdsz</sub>
 - [x] `gelsy` <sub>cdsz</sub>
 - [x] `gemlq` <sub>cdsz</sub>
-- [ ] `gemlqt` <sub>cdsz</sub>
+- [x] `gemlqt` <sub>cdsz</sub>
 - [x] `gemqr` <sub>cdsz</sub>
 - [x] `gemqrt` <sub>cdsz</sub>
 - [ ] `geql2` <sub>cdsz</sub>
