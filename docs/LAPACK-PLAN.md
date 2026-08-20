@@ -1,6 +1,6 @@
 # LAPACK binding plan
 
-Status: **planning**. Nothing under `src/lapack/` exists yet.
+Status: **in progress**. T0 complete; T1 simple drivers complete, expert drivers outstanding.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -186,13 +186,13 @@ Counts are base routines / total symbols.
 
 ### T0 Foundation
 
-- [ ] `tools/gen_lapack.py` — parse `lapack.h`, emit `c.zig`
-- [ ] `src/lapack/types.zig` — `Int`, `Bool` (8 bytes under ILP64, see 2.2), `alias_suffix`, `Complex`, option enums
-- [ ] `src/lapack/c.zig` — 2032 externs + all-symbols link test
-- [ ] `cladiv`/`zladiv` override + regression test pinning the by-value ABI (see 2.4)
-- [ ] `src/lapack/info.zig` — `info` → error mapping
-- [ ] `src/lapack/work.zig` — `lwork = -1` query helper
-- [ ] wire into `src/root.zig`, `README.md` module table, `CHANGELOG.md`
+- [x] `tools/gen_lapack.py` — parse `lapack.h`, emit `c.zig`
+- [x] `src/lapack/types.zig` — `Int`, `Bool` (8 bytes under ILP64, see 2.2), `alias_suffix`, `Complex`, option enums
+- [x] `src/lapack/c.zig` — 2032 externs + all-symbols link test
+- [x] `cladiv`/`zladiv` override + regression test pinning the by-value ABI (see 2.4)
+- [x] `src/lapack/info.zig` — `info` → error mapping
+- [x] `src/lapack/work.zig` — `lwork = -1` query helper
+- [x] wire into `src/root.zig`, `README.md` module table, `CHANGELOG.md`
 
 ### T1 Linear systems — drivers
 
@@ -206,33 +206,33 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `cgesv` <sub>z</sub>
 - [ ] `cposv` <sub>z</sub>
 - [ ] `csum1` <sub>s</sub>
-- [ ] `gbsv` <sub>cdsz</sub>
+- [x] `gbsv` <sub>cdsz</sub>
 - [ ] `gbsvx` <sub>cdsz</sub>
-- [ ] `gesv` <sub>cdsz</sub>
+- [x] `gesv` <sub>cdsz</sub>
 - [ ] `gesvx` <sub>cdsz</sub>
-- [ ] `gtsv` <sub>cdsz</sub>
+- [x] `gtsv` <sub>cdsz</sub>
 - [ ] `gtsvx` <sub>cdsz</sub>
-- [ ] `hesv` <sub>cz</sub>
+- [x] `hesv` <sub>cz</sub>
 - [ ] `hesv_aa` <sub>cz</sub>
 - [ ] `hesv_aa_2stage` <sub>cz</sub>
 - [ ] `hesv_rk` <sub>cz</sub>
 - [ ] `hesv_rook` <sub>cz</sub>
 - [ ] `hesvx` <sub>cz</sub>
-- [ ] `hpsv` <sub>cz</sub>
+- [x] `hpsv` <sub>cz</sub>
 - [ ] `hpsvx` <sub>cz</sub>
-- [ ] `pbsv` <sub>cdsz</sub>
+- [x] `pbsv` <sub>cdsz</sub>
 - [ ] `pbsvx` <sub>cdsz</sub>
-- [ ] `posv` <sub>cdsz</sub>
+- [x] `posv` <sub>cdsz</sub>
 - [ ] `posvx` <sub>cdsz</sub>
-- [ ] `ppsv` <sub>cdsz</sub>
+- [x] `ppsv` <sub>cdsz</sub>
 - [ ] `ppsvx` <sub>cdsz</sub>
-- [ ] `ptsv` <sub>cdsz</sub>
+- [x] `ptsv` <sub>cdsz</sub>
 - [ ] `ptsvx` <sub>cdsz</sub>
-- [ ] `sgesv` <sub>d</sub>
-- [ ] `sposv` <sub>d</sub>
-- [ ] `spsv` <sub>cdsz</sub>
+- [x] `sgesv` <sub>d</sub>
+- [x] `sposv` <sub>d</sub>
+- [x] `spsv` <sub>cdsz</sub>
 - [ ] `spsvx` <sub>cdsz</sub>
-- [ ] `sysv` <sub>cdsz</sub>
+- [x] `sysv` <sub>cdsz</sub>
 - [ ] `sysv_aa` <sub>cdsz</sub>
 - [ ] `sysv_aa_2stage` <sub>cdsz</sub>
 - [ ] `sysv_rk` <sub>cdsz</sub>
