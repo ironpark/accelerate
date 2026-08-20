@@ -87,22 +87,22 @@
 
 ### `src/vdsp/dft.zig`
 
-- [ ] `DFT` — L36
-- [ ] `DFT(T).init` — L48
-- [ ] `DFT(T).initShared` — L58
-- [ ] `DFT(T).deinit` — L68
-- [ ] `DFT(T).exec` — L76
-- [ ] `RealDFT` — L88
-- [ ] `RealDFT(T).init` — L100
-- [ ] `RealDFT(T).deinit` — L110
-- [ ] `RealDFT(T).exec` — L118
-- [ ] `DCT.init` — L132
-- [ ] `DCT.deinit` — L136
-- [ ] `DCT.exec` — L140
-- [ ] `InterleavedDFT` — L147
-- [ ] `InterleavedDFT(T).init` — L160
-- [ ] `InterleavedDFT(T).deinit` — L171
-- [ ] `InterleavedDFT(T).exec` — L179
+- [x] `DFT` — L36
+- [x] `DFT(T).init` — L48
+- [x] `DFT(T).initShared` — L58
+- [x] `DFT(T).deinit` — L68
+- [x] `DFT(T).exec` — L76
+- [x] `RealDFT` — L88
+- [x] `RealDFT(T).init` — L100
+- [x] `RealDFT(T).deinit` — L110
+- [x] `RealDFT(T).exec` — L118
+- [x] `DCT.init` — L132
+- [x] `DCT.deinit` — L136
+- [x] `DCT.exec` — L140
+- [x] `InterleavedDFT` — L147
+- [x] `InterleavedDFT(T).init` — L160
+- [x] `InterleavedDFT(T).deinit` — L171
+- [x] `InterleavedDFT(T).exec` — L179
 
 ### `src/vdsp/dotp.zig`
 
