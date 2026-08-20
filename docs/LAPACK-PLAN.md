@@ -4,8 +4,8 @@ Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
 computational routines complete; the T3 orthogonal factorizations and least
 squares drivers complete. The T4 symmetric eigenvalue drivers and the two main
 T6 SVD drivers complete. The T5/T7 nonsymmetric and generalized eigenproblems
-complete. Expert drivers, iterative refinement, the `_aa`/`_rk`/`_rook`
-variants, RFP storage and the CS decomposition outstanding.
+complete, as is T8. Expert drivers, iterative refinement, the
+`_aa`/`_rk`/`_rook` variants, RFP storage and the CS decomposition outstanding.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -687,7 +687,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hfrk` <sub>cz</sub>
 - [ ] `hgeqz` <sub>cdsz</sub>
 - [ ] `hla_transtype` <sub>c</sub>
-- [ ] `rscl` <sub>ds</sub>
+- [x] `rscl` <sub>ds</sub>
 - [ ] `sfrk` <sub>ds</sub>
 - [ ] `srscl` <sub>c</sub>
 - [ ] `tgevc` <sub>cdsz</sub>
@@ -707,11 +707,11 @@ prefix is two characters, not one — a naming trap for the generator.
 **complex symmetric** — not Hermitian — and have no CBLAS equivalent. They are
 a genuine addition over the BLAS module, not a duplicate of it.
 
-- [ ] `isnan` <sub>ds</sub>
+- [x] `isnan` <sub>ds</sub>
 - [ ] `lacn2` <sub>cdsz</sub>
 - [ ] `lacon` <sub>cdsz</sub>
 - [x] `lacpy` <sub>cdsz</sub>
-- [ ] `lamch` <sub>ds</sub>
+- [x] `lamch` <sub>ds</sub>
 - [x] `langb` <sub>cdsz</sub>
 - [x] `lange` <sub>cdsz</sub>
 - [ ] `langt` <sub>cdsz</sub>
@@ -734,19 +734,19 @@ a genuine addition over the BLAS module, not a duplicate of it.
 - [ ] `larft` <sub>cdsz</sub>
 - [ ] `larfx` <sub>cdsz</sub>
 - [ ] `largv` <sub>cdsz</sub>
-- [ ] `larnv` <sub>cdsz</sub>
-- [ ] `lartg` <sub>cdsz</sub>
+- [x] `larnv` <sub>cdsz</sub>
+- [x] `lartg` <sub>cdsz</sub>
 - [ ] `laruv` <sub>ds</sub>
-- [ ] `lascl` <sub>cdsz</sub>
+- [x] `lascl` <sub>cdsz</sub>
 - [x] `laset` <sub>cdsz</sub>
-- [ ] `lasrt` <sub>ds</sub>
+- [x] `lasrt` <sub>ds</sub>
 - [ ] `lauu2` <sub>cdsz</sub>
 - [ ] `lauum` <sub>cdsz</sub>
-- [ ] `rot` <sub>cz</sub>
-- [ ] `spmv` <sub>cz</sub>
-- [ ] `spr` <sub>cz</sub>
-- [ ] `symv` <sub>cz</sub>
-- [ ] `syr` <sub>cz</sub>
+- [x] `rot` <sub>cz</sub>
+- [x] `spmv` <sub>cz</sub>
+- [x] `spr` <sub>cz</sub>
+- [x] `symv` <sub>cz</sub>
+- [x] `syr` <sub>cz</sub>
 
 ### T9 Internal auxiliary (`la*`) — raw externs only
 
@@ -774,7 +774,7 @@ completeness so the generator's coverage can be audited against this file.
 - [ ] `iladiag`
 - [ ] `iladlc`
 - [ ] `iladlr`
-- [ ] `ilaenv`
+- [x] `ilaenv`
 - [ ] `ilaenv2stage`
 - [ ] `ilaprec`
 - [ ] `ilaslc`
