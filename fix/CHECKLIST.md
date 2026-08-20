@@ -14,19 +14,19 @@
 - [x] `Biquad(T).init` — L38
 - [x] `Biquad(T).deinit` — L56
 - [x] `Biquad(T).apply` — L72
-- [ ] `Biquad(T).setCoefficientsDouble` — L84 (callable `pub const`)
-- [ ] `Biquad(T).setCoefficientsSingle` — L97 (callable `pub const`)
-- [ ] `Biquadm` — L112
-- [ ] `Biquadm(T).init` — L134
-- [ ] `Biquadm(T).deinit` — L148
-- [ ] `Biquadm(T).apply` — L157
-- [ ] `Biquadm(T).resetState` — L166
+- [x] `Biquad(T).setCoefficientsDouble` — L84 (callable `pub const`)
+- [x] `Biquad(T).setCoefficientsSingle` — L97 (callable `pub const`)
+- [x] `Biquadm` — L112
+- [x] `Biquadm(T).init` — L134
+- [x] `Biquadm(T).deinit` — L148
+- [x] `Biquadm(T).apply` — L157
+- [x] `Biquadm(T).resetState` — L166
 - [x] `Biquadm(T).copyState` — L176
-- [ ] `Biquadm(T).setCoefficientsDouble` — L187
-- [ ] `Biquadm(T).setCoefficientsSingle` — L198
-- [ ] `Biquadm(T).setTargetsDouble` — L209
-- [ ] `Biquadm(T).setTargetsSingle` — L220
-- [ ] `Biquadm(T).setActiveFilters` — L229
+- [x] `Biquadm(T).setCoefficientsDouble` — L187
+- [x] `Biquadm(T).setCoefficientsSingle` — L198
+- [x] `Biquadm(T).setTargetsDouble` — L209
+- [x] `Biquadm(T).setTargetsSingle` — L220
+- [x] `Biquadm(T).setActiveFilters` — L229
 
 ### `src/vdsp/clip.zig`
 
