@@ -1,6 +1,8 @@
 # LAPACK binding plan
 
-Status: **in progress**. T0 complete; T1 simple drivers complete, expert drivers outstanding.
+Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
+computational routines complete; expert drivers, iterative refinement and the
+`_aa`/`_rk`/`_rook` variants outstanding.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -249,25 +251,25 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `gbequb` <sub>cdsz</sub>
 - [ ] `gbrfs` <sub>cdsz</sub>
 - [ ] `gbtf2` <sub>cdsz</sub>
-- [ ] `gbtrf` <sub>cdsz</sub>
-- [ ] `gbtrs` <sub>cdsz</sub>
-- [ ] `gecon` <sub>cdsz</sub>
-- [ ] `geequ` <sub>cdsz</sub>
+- [x] `gbtrf` <sub>cdsz</sub>
+- [x] `gbtrs` <sub>cdsz</sub>
+- [x] `gecon` <sub>cdsz</sub>
+- [x] `geequ` <sub>cdsz</sub>
 - [ ] `geequb` <sub>cdsz</sub>
 - [ ] `gerfs` <sub>cdsz</sub>
 - [ ] `gesc2` <sub>cdsz</sub>
 - [ ] `getc2` <sub>cdsz</sub>
 - [ ] `getf2` <sub>cdsz</sub>
-- [ ] `getrf` <sub>cdsz</sub>
+- [x] `getrf` <sub>cdsz</sub>
 - [ ] `getrf2` <sub>cdsz</sub>
-- [ ] `getri` <sub>cdsz</sub>
-- [ ] `getrs` <sub>cdsz</sub>
+- [x] `getri` <sub>cdsz</sub>
+- [x] `getrs` <sub>cdsz</sub>
 - [ ] `gtcon` <sub>cdsz</sub>
 - [ ] `gtrfs` <sub>cdsz</sub>
-- [ ] `gttrf` <sub>cdsz</sub>
-- [ ] `gttrs` <sub>cdsz</sub>
+- [x] `gttrf` <sub>cdsz</sub>
+- [x] `gttrs` <sub>cdsz</sub>
 - [ ] `gtts2` <sub>cdsz</sub>
-- [ ] `hecon` <sub>cz</sub>
+- [x] `hecon` <sub>cz</sub>
 - [ ] `hecon_3` <sub>cz</sub>
 - [ ] `hecon_rook` <sub>cz</sub>
 - [ ] `heequb` <sub>cz</sub>
@@ -276,18 +278,18 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hetf2` <sub>cz</sub>
 - [ ] `hetf2_rk` <sub>cz</sub>
 - [ ] `hetf2_rook` <sub>cz</sub>
-- [ ] `hetrf` <sub>cz</sub>
+- [x] `hetrf` <sub>cz</sub>
 - [ ] `hetrf_aa` <sub>cz</sub>
 - [ ] `hetrf_aa_2stage` <sub>cz</sub>
 - [ ] `hetrf_rk` <sub>cz</sub>
 - [ ] `hetrf_rook` <sub>cz</sub>
-- [ ] `hetri` <sub>cz</sub>
+- [x] `hetri` <sub>cz</sub>
 - [ ] `hetri2` <sub>cz</sub>
 - [ ] `hetri2x` <sub>cz</sub>
 - [ ] `hetri_3` <sub>cz</sub>
 - [ ] `hetri_3x` <sub>cz</sub>
 - [ ] `hetri_rook` <sub>cz</sub>
-- [ ] `hetrs` <sub>cz</sub>
+- [x] `hetrs` <sub>cz</sub>
 - [ ] `hetrs2` <sub>cz</sub>
 - [ ] `hetrs_3` <sub>cz</sub>
 - [ ] `hetrs_aa` <sub>cz</sub>
@@ -295,47 +297,47 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hetrs_rook` <sub>cz</sub>
 - [ ] `hpcon` <sub>cz</sub>
 - [ ] `hprfs` <sub>cz</sub>
-- [ ] `hptrf` <sub>cz</sub>
-- [ ] `hptri` <sub>cz</sub>
-- [ ] `hptrs` <sub>cz</sub>
+- [x] `hptrf` <sub>cz</sub>
+- [x] `hptri` <sub>cz</sub>
+- [x] `hptrs` <sub>cz</sub>
 - [ ] `pbcon` <sub>cdsz</sub>
 - [ ] `pbequ` <sub>cdsz</sub>
 - [ ] `pbrfs` <sub>cdsz</sub>
 - [ ] `pbstf` <sub>cdsz</sub>
 - [ ] `pbtf2` <sub>cdsz</sub>
-- [ ] `pbtrf` <sub>cdsz</sub>
-- [ ] `pbtrs` <sub>cdsz</sub>
+- [x] `pbtrf` <sub>cdsz</sub>
+- [x] `pbtrs` <sub>cdsz</sub>
 - [ ] `pftrf` <sub>cdsz</sub>
 - [ ] `pftri` <sub>cdsz</sub>
 - [ ] `pftrs` <sub>cdsz</sub>
-- [ ] `pocon` <sub>cdsz</sub>
+- [x] `pocon` <sub>cdsz</sub>
 - [ ] `poequ` <sub>cdsz</sub>
 - [ ] `poequb` <sub>cdsz</sub>
 - [ ] `porfs` <sub>cdsz</sub>
 - [ ] `potf2` <sub>cdsz</sub>
-- [ ] `potrf` <sub>cdsz</sub>
+- [x] `potrf` <sub>cdsz</sub>
 - [ ] `potrf2` <sub>cdsz</sub>
-- [ ] `potri` <sub>cdsz</sub>
-- [ ] `potrs` <sub>cdsz</sub>
+- [x] `potri` <sub>cdsz</sub>
+- [x] `potrs` <sub>cdsz</sub>
 - [ ] `ppcon` <sub>cdsz</sub>
 - [ ] `ppequ` <sub>cdsz</sub>
 - [ ] `pprfs` <sub>cdsz</sub>
-- [ ] `pptrf` <sub>cdsz</sub>
-- [ ] `pptri` <sub>cdsz</sub>
-- [ ] `pptrs` <sub>cdsz</sub>
+- [x] `pptrf` <sub>cdsz</sub>
+- [x] `pptri` <sub>cdsz</sub>
+- [x] `pptrs` <sub>cdsz</sub>
 - [ ] `pstf2` <sub>cdsz</sub>
-- [ ] `pstrf` <sub>cdsz</sub>
+- [x] `pstrf` <sub>cdsz</sub>
 - [ ] `ptcon` <sub>cdsz</sub>
 - [ ] `ptrfs` <sub>cdsz</sub>
-- [ ] `pttrf` <sub>cdsz</sub>
-- [ ] `pttrs` <sub>cdsz</sub>
+- [x] `pttrf` <sub>cdsz</sub>
+- [x] `pttrs` <sub>cdsz</sub>
 - [ ] `ptts2` <sub>cdsz</sub>
 - [ ] `spcon` <sub>cdsz</sub>
 - [ ] `sprfs` <sub>cdsz</sub>
-- [ ] `sptrf` <sub>cdsz</sub>
-- [ ] `sptri` <sub>cdsz</sub>
-- [ ] `sptrs` <sub>cdsz</sub>
-- [ ] `sycon` <sub>cdsz</sub>
+- [x] `sptrf` <sub>cdsz</sub>
+- [x] `sptri` <sub>cdsz</sub>
+- [x] `sptrs` <sub>cdsz</sub>
+- [x] `sycon` <sub>cdsz</sub>
 - [ ] `sycon_3` <sub>cdsz</sub>
 - [ ] `sycon_rook` <sub>cdsz</sub>
 - [ ] `syconv` <sub>cdsz</sub>
@@ -347,18 +349,18 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sytf2` <sub>cdsz</sub>
 - [ ] `sytf2_rk` <sub>cdsz</sub>
 - [ ] `sytf2_rook` <sub>cdsz</sub>
-- [ ] `sytrf` <sub>cdsz</sub>
+- [x] `sytrf` <sub>cdsz</sub>
 - [ ] `sytrf_aa` <sub>cdsz</sub>
 - [ ] `sytrf_aa_2stage` <sub>cdsz</sub>
 - [ ] `sytrf_rk` <sub>cdsz</sub>
 - [ ] `sytrf_rook` <sub>cdsz</sub>
-- [ ] `sytri` <sub>cdsz</sub>
+- [x] `sytri` <sub>cdsz</sub>
 - [ ] `sytri2` <sub>cdsz</sub>
 - [ ] `sytri2x` <sub>cdsz</sub>
 - [ ] `sytri_3` <sub>cdsz</sub>
 - [ ] `sytri_3x` <sub>cdsz</sub>
 - [ ] `sytri_rook` <sub>cdsz</sub>
-- [ ] `sytrs` <sub>cdsz</sub>
+- [x] `sytrs` <sub>cdsz</sub>
 - [ ] `sytrs2` <sub>cdsz</sub>
 - [ ] `sytrs_3` <sub>cdsz</sub>
 - [ ] `sytrs_aa` <sub>cdsz</sub>
@@ -366,7 +368,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sytrs_rook` <sub>cdsz</sub>
 - [ ] `tbcon` <sub>cdsz</sub>
 - [ ] `tbrfs` <sub>cdsz</sub>
-- [ ] `tbtrs` <sub>cdsz</sub>
+- [x] `tbtrs` <sub>cdsz</sub>
 - [ ] `tfsm` <sub>cdsz</sub>
 - [ ] `tftri` <sub>cdsz</sub>
 - [ ] `tfttp` <sub>cdsz</sub>
@@ -374,17 +376,17 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `tpcon` <sub>cdsz</sub>
 - [ ] `tprfb` <sub>cdsz</sub>
 - [ ] `tprfs` <sub>cdsz</sub>
-- [ ] `tptri` <sub>cdsz</sub>
-- [ ] `tptrs` <sub>cdsz</sub>
+- [x] `tptri` <sub>cdsz</sub>
+- [x] `tptrs` <sub>cdsz</sub>
 - [ ] `tpttf` <sub>cdsz</sub>
-- [ ] `tpttr` <sub>cdsz</sub>
-- [ ] `trcon` <sub>cdsz</sub>
+- [x] `tpttr` <sub>cdsz</sub>
+- [x] `trcon` <sub>cdsz</sub>
 - [ ] `trrfs` <sub>cdsz</sub>
 - [ ] `trti2` <sub>cdsz</sub>
-- [ ] `trtri` <sub>cdsz</sub>
-- [ ] `trtrs` <sub>cdsz</sub>
+- [x] `trtri` <sub>cdsz</sub>
+- [x] `trtrs` <sub>cdsz</sub>
 - [ ] `trttf` <sub>cdsz</sub>
-- [ ] `trttp` <sub>cdsz</sub>
+- [x] `trttp` <sub>cdsz</sub>
 
 ### T3 Least squares & orthogonal factorizations
 
@@ -705,22 +707,22 @@ a genuine addition over the BLAS module, not a duplicate of it.
 - [ ] `isnan` <sub>ds</sub>
 - [ ] `lacn2` <sub>cdsz</sub>
 - [ ] `lacon` <sub>cdsz</sub>
-- [ ] `lacpy` <sub>cdsz</sub>
+- [x] `lacpy` <sub>cdsz</sub>
 - [ ] `lamch` <sub>ds</sub>
-- [ ] `langb` <sub>cdsz</sub>
-- [ ] `lange` <sub>cdsz</sub>
+- [x] `langb` <sub>cdsz</sub>
+- [x] `lange` <sub>cdsz</sub>
 - [ ] `langt` <sub>cdsz</sub>
 - [ ] `lanhb` <sub>cz</sub>
-- [ ] `lanhe` <sub>cz</sub>
-- [ ] `lanhp` <sub>cz</sub>
-- [ ] `lanht` <sub>cz</sub>
+- [x] `lanhe` <sub>cz</sub>
+- [x] `lanhp` <sub>cz</sub>
+- [x] `lanht` <sub>cz</sub>
 - [ ] `lansb` <sub>cdsz</sub>
-- [ ] `lansp` <sub>cdsz</sub>
-- [ ] `lanst` <sub>ds</sub>
-- [ ] `lansy` <sub>cdsz</sub>
+- [x] `lansp` <sub>cdsz</sub>
+- [x] `lanst` <sub>ds</sub>
+- [x] `lansy` <sub>cdsz</sub>
 - [ ] `lantb` <sub>cdsz</sub>
 - [ ] `lantp` <sub>cdsz</sub>
-- [ ] `lantr` <sub>cdsz</sub>
+- [x] `lantr` <sub>cdsz</sub>
 - [ ] `lapmr` <sub>cdsz</sub>
 - [ ] `lapmt` <sub>cdsz</sub>
 - [ ] `larf` <sub>cdsz</sub>
@@ -733,7 +735,7 @@ a genuine addition over the BLAS module, not a duplicate of it.
 - [ ] `lartg` <sub>cdsz</sub>
 - [ ] `laruv` <sub>ds</sub>
 - [ ] `lascl` <sub>cdsz</sub>
-- [ ] `laset` <sub>cdsz</sub>
+- [x] `laset` <sub>cdsz</sub>
 - [ ] `lasrt` <sub>ds</sub>
 - [ ] `lauu2` <sub>cdsz</sub>
 - [ ] `lauum` <sub>cdsz</sub>
