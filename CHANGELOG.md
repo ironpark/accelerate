@@ -26,7 +26,8 @@
   eigenproblems in `eigen_gen.zig` (`geev`, `gees`, `ggev`, `trsyl`); and the
   utilities and complex-symmetric routines in `util.zig` (`lamch`, `ilaenv`,
   `larnv`, `lartg`, `lascl`, `lasrt`, `lacgv`, `ladiv`, `rscl`, `symv`, `syr`,
-  `spmv`, `spr`). Not yet wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
+  `spmv`, `spr`); and iterative refinement with error bounds in `refine.zig`
+  (`gerfs`, `porfs`, `syrfs`, `herfs`, `trrfs`). Not yet wrapped: the expert drivers (`gesvx`, `geevx`, `geesx` and friends),
   iterative refinement (`gerfs`, `porfs`), the `_aa`/`_rk`/`_rook` variants,
   RFP storage, the CS decomposition, and the remaining SVD drivers. What the
   wrappers add:
@@ -198,6 +199,19 @@
     letters (complex vector, real scalar), so the one-letter prefix lookup used
     everywhere else does not reach them.
 
+  - `refine.zig` answers the question every solver leaves open: how much of the
+    computed `x` is signal. `berr` is a computed quantity - the smallest
+    relative perturbation of `A` and `b` for which `x` is exact - and sits near
+    machine epsilon for any sane solve. `ferr` is an *estimate* of the relative
+    forward error, built from a condition bound, and is usually pessimistic. A
+    test on a nearly singular system pins the distinction: `berr` stays below
+    1e-14 because the solver did its job, while `ferr` exceeds 1e-8 because the
+    problem itself does not determine `x`.
+
+    These take the original matrix *and* its factorization, so the matrix has to
+    be copied (`norms.lacpy`) before factoring - the factor routines overwrite
+    their input, and there would otherwise be nothing to refine against.
+
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
   type. 156 extern declarations, generated from `cblas_new.h` rather than
@@ -318,7 +332,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 366 tests covering the four modules above, including struct-layout
+- 374 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
