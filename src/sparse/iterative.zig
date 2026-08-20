@@ -200,7 +200,7 @@ pub fn Iterative(comptime T: type) type {
         /// transpose applied for LSMR.
         fn matrixOperator(a: Sparse, accumulate: bool, trans: Transpose, x: Dense, y: Dense) void {
             const target = if (trans == .no_trans) a else a.transposed();
-            target.multiply(1, x, y, accumulate) catch {
+            target.multiply(types.one(T), x, y, accumulate) catch {
                 // The shapes were validated before the solve started, so a
                 // failure here would mean Sparse changed its mind mid-solve.
                 // There is no way to propagate out of a C callback; leave the
@@ -818,5 +818,37 @@ test "multi-RHS iterative solve" {
     }
     for ([_]f64{ 1, 0, 0, 0 }, x[4..8]) |want, got| {
         try testing.expectApproxEqAbs(want, got, 1e-8);
+    }
+}
+
+test "conjugate gradient on a complex Hermitian system" {
+    // The iterative solvers are generic over the element type the same way the
+    // direct ones are, and CG's requirement becomes Hermitian positive
+    // definite rather than symmetric positive definite. This is the 3x3 from
+    // factor.zig, solved without a factorization.
+    const Z = types.Complex(f64);
+    const starts = [_]c_long{ 0, 2, 4, 5 };
+    const rows = [_]c_int{ 0, 1, 1, 2, 2 };
+    const vals = [_]Z{ Z.init(4, 0), Z.init(1, -1), Z.init(3, 0), Z.init(0, -2), Z.init(5, 0) };
+    const a = matrix.Sparse(Z).init(3, 3, &starts, &rows, &vals, .{
+        .attributes = .{ .kind = .hermitian, .triangle = .lower },
+    });
+
+    var b = [_]Z{ Z.init(6, 2), Z.init(7, 5), Z.init(15, -4) };
+    var x = [_]Z{Z.init(0, 0)} ** 3;
+
+    const status = try Iterative(Z).conjugateGradient(
+        a,
+        matrix.Dense(Z).fromSlice(&b),
+        matrix.Dense(Z).fromSlice(&x),
+        .{ .rtol = 1e-12 },
+        null,
+    );
+    try testing.expectEqual(IterativeStatus.converged, status);
+
+    for (0..3) |i| {
+        const want: f64 = @floatFromInt(i + 1);
+        try testing.expectApproxEqAbs(want, x[i].real, 1e-8);
+        try testing.expectApproxEqAbs(@as(f64, 0), x[i].imag, 1e-8);
     }
 }

@@ -51,7 +51,7 @@ pub fn Subfactor(comptime T: type) type {
             // Attribute defaults come straight from SparseCreateSubfactor:
             // ordinary/lower unless the subfactor is triangular, and R is the
             // only upper-triangular one.
-            var attributes = types.Attributes{ .triangle = .lower, .kind = .ordinary };
+            var attributes = types.AttributesFor(T){ .triangle = .lower, .kind = .ordinary };
             switch (which) {
                 .l => attributes.kind = .triangular,
                 .r, .rp => {
@@ -466,4 +466,37 @@ test "subfactors work for f32 as well" {
     for (TestMatrix.solution(f32), x) |want, got| {
         try testing.expectApproxEqAbs(want, got, 1e-4);
     }
+}
+
+test "LU exposes P, Q, Sr and Sc, and refuses L, D, R" {
+    // The LU subfactor table is not the QR one with LU spellings added:
+    // `SparseCreateSubfactor` gives LU the permutations and the two scalings
+    // but no L or U at all, and reuses `.q` for the *column* permutation
+    // rather than an orthogonal factor. Requires macOS 15.5.
+    const starts = [_]c_long{ 0, 2, 5, 8, 10 };
+    const rows = [_]c_int{ 0, 1, 0, 1, 2, 1, 2, 3, 2, 3 };
+    const vals = [_]f64{ 4, 1, 1, 3, 2, 1, 5, 1, 1, 2 };
+    const a = matrix.Sparse(f64).init(4, 4, &starts, &rows, &vals, .{});
+
+    var fac = try factor.Factorization(f64).init(.lu_tpp, a, .{});
+    defer fac.deinit();
+
+    inline for (.{ types.Subfactor.p, .q, .sr, .sc }) |which| {
+        var sub = try Subfactor(f64).init(which, &fac);
+        defer sub.deinit();
+        try testing.expectEqual(which, sub.contents());
+    }
+    inline for (.{ types.Subfactor.l, .d, .s, .r, .rp, .plps }) |which| {
+        try testing.expectError(SparseError.ParameterError, Subfactor(f64).init(which, &fac));
+    }
+}
+
+test "Sr and Sc are rejected for a non-LU factorization" {
+    const vals = matrix.TestMatrix.values(f64);
+    const a = matrix.TestMatrix.matrix(f64, &vals);
+    var fac = try factor.Factorization(f64).init(.ldlt, a, .{});
+    defer fac.deinit();
+
+    try testing.expectError(SparseError.ParameterError, Subfactor(f64).init(.sr, &fac));
+    try testing.expectError(SparseError.ParameterError, Subfactor(f64).init(.sc, &fac));
 }

@@ -22,18 +22,34 @@
 //! try f.solve(allocator, &b, &x);   // x == { 1, 2, 3, 4 }
 //! ```
 //!
-//! Supports `f32` and `f64`.
+//! Supports `f32`, `f64`, `Complex(f32)` and `Complex(f64)`.
 //!
 //! ## Scope
 //!
-//! * **Direct methods** - Cholesky, `LDL^T` (four pivoting modes), QR, with
-//!   refactorization and inertia.
+//! * **Direct methods** - Cholesky, `LDL^T` (four pivoting modes), QR and LU
+//!   (four pivoting modes), with refactorization and inertia.
 //! * **Subfactors** - `L`, `D`, `P`, `S`, `Q`, `R` extracted and applied
 //!   individually.
 //! * **Iterative methods** - conjugate gradient, GMRES and LSMR, over either a
 //!   stored matrix or a caller-supplied matrix-free operator, with built-in or
 //!   user preconditioners.
 //! * Sparse-times-dense multiplication and coordinate-to-block-CSC conversion.
+//! * **Complex matrices**, including Hermitian factorizations. Note that the
+//!   complex element types carry `AttributesComplex`, not `Attributes`: the C
+//!   struct widens `kind` to make room for `.hermitian`, so the two layouts
+//!   are not interchangeable and `AttributesFor(T)` picks between them.
+//!
+//! ## Deployment targets
+//!
+//! Most of this is macOS 10.13 and later, but three pieces are newer, and
+//! calling one on an older system traps inside vecLib rather than returning a
+//! status:
+//!
+//! | Feature | Requires |
+//! |---|---|
+//! | LU (`.lu`, `.lu_unpivoted`, `.lu_spp`, `.lu_tpp`), `updateLu`, subfactors `.sr`/`.sc` | macOS 15.5 |
+//! | Complex Hermitian factorization | macOS 15.5 |
+//! | Complex *symmetric* (`A = A^T`) factorization | macOS 26.0 |
 //!
 //! Not bound: the manual `SparseIterate` stepping interface, and the
 //! deprecated opaque API in `Sparse/BLAS.h`.
@@ -58,7 +74,12 @@ pub const subfactor = @import("subfactor.zig");
 pub const iterative = @import("iterative.zig");
 pub const block = @import("block.zig");
 
-// -- Matrix types --
+// -- Element and matrix types --
+pub const Complex = types.Complex;
+pub const isComplex = types.isComplex;
+pub const Real = types.Real;
+pub const one = types.one;
+pub const zero = types.zero;
 pub const Sparse = matrix.Sparse;
 pub const Dense = matrix.Dense;
 
@@ -80,7 +101,10 @@ pub const Transpose = iterative.Transpose;
 
 // -- Enumerations --
 pub const Attributes = types.Attributes;
+pub const AttributesComplex = types.AttributesComplex;
+pub const AttributesFor = types.AttributesFor;
 pub const Kind = types.Kind;
+pub const KindComplex = types.KindComplex;
 pub const Triangle = types.Triangle;
 pub const FactorizationType = types.FactorizationType;
 pub const Order = types.Order;

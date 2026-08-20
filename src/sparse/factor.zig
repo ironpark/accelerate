@@ -80,7 +80,14 @@ pub fn Factorization(comptime T: type) type {
             scaling: types.Scaling = .default,
             /// Explicit scaling factors, used when `scaling == .user`. Also
             /// receives the computed scaling when non-null.
-            user_scaling: ?[]T = null,
+            ///
+            /// Real even for a complex matrix. `Solve.h` types this as
+            /// `void *` and never says what it points at; the element type
+            /// here follows `_SPARSE_REAL_SIZE`, which sizes every other
+            /// complex buffer as twice the real one - i.e. treats the complex
+            /// case as real data - and matches a diagonal scaling being a
+            /// magnitude. Unverified against a running solver.
+            user_scaling: ?[]types.Real(T) = null,
             /// Threshold for partial pivoting, clamped by Sparse to [0, 0.5].
             /// Null uses Apple's per-type recommendation: 0.01 for `f64`, 0.1
             /// for `f32`.
@@ -124,12 +131,22 @@ pub fn Factorization(comptime T: type) type {
         /// module docs.
         pub fn init(algorithm: FactorizationType, a: Sparse, options: Options) SparseError!Self {
             if (algorithm.isSymmetric()) {
-                if (a.attributes.kind != .symmetric) return SparseError.ParameterError;
+                // For a complex matrix `SparseFactor` accepts either kind and
+                // routes Hermitian to its own entry point; for a real one only
+                // `.symmetric` exists.
+                const kind_ok = if (comptime types.isComplex(T))
+                    a.attributes.kind == .symmetric or a.attributes.kind == .hermitian
+                else
+                    a.attributes.kind == .symmetric;
+                if (!kind_ok) return SparseError.ParameterError;
                 if (a.row_count != a.column_count) return SparseError.ParameterError;
                 // COLAMD orders A^T A and is meaningless for a symmetric
                 // factorization; Sparse rejects it rather than silently coping.
                 if (options.order == .colamd) return SparseError.ParameterError;
             }
+            // LU is square-only. `SparseFactorLU` traps on a rectangular
+            // matrix rather than reporting it.
+            if (algorithm.isLu() and a.row_count != a.column_count) return SparseError.ParameterError;
             if (a.column_count == 0) return SparseError.ParameterError;
             if (options.order == .user) {
                 if (options.user_order) |o| {
@@ -142,10 +159,22 @@ pub fn Factorization(comptime T: type) type {
             const raw_a = a.raw();
 
             types.clearReportedError();
-            const result = if (algorithm.isSymmetric())
-                f.factorSymmetric(algorithm, &raw_a, &sf, &nf)
+            const result = if (algorithm.isLu())
+                f.factorLU(algorithm, &raw_a, &sf, &nf)
+            else if (!algorithm.isSymmetric())
+                f.factorQR(algorithm, &raw_a, &sf, &nf)
+            else if (comptime types.isComplex(T))
+                // Complex symmetric (`A = A^T`) and complex Hermitian
+                // (`A = A^H`) are genuinely different problems with separate
+                // entry points. Hermitian arrived in macOS 15.5; complex
+                // symmetric needs macOS 26, and calling it on anything older
+                // traps inside vecLib.
+                (if (a.attributes.kind == .hermitian)
+                    f.factorHermitian(algorithm, &raw_a, &sf, &nf)
+                else
+                    f.factorSymmetric(algorithm, &raw_a, &sf, &nf))
             else
-                f.factorQR(algorithm, &raw_a, &sf, &nf);
+                f.factorSymmetric(algorithm, &raw_a, &sf, &nf);
             try types.takeReportedError();
 
             // Two statuses, checked separately: the symbolic phase can fail on
@@ -279,11 +308,17 @@ pub fn Factorization(comptime T: type) type {
         /// caller chooses; it is fixed by the symbolic factorization.
         pub fn refactorWorkspaceSize(self: Self) usize {
             const s = self.raw.symbolicFactorization;
-            return switch (T) {
+            // `SparseOpaqueSymbolicFactorization` carries only the two *real*
+            // sizes. For a complex element type Apple's `_SPARSE_REAL_SIZE`
+            // macro doubles the matching real one, which is where the factor
+            // of two comes from - there is no `workspaceSize_Complex_Double`
+            // field to read instead.
+            const real = switch (types.Real(T)) {
                 f64 => s.workspaceSize_Double,
                 f32 => s.workspaceSize_Float,
                 else => unreachable,
             };
+            return if (comptime types.isComplex(T)) real * 2 else real;
         }
 
         /// Recomputes the numeric factorization for a matrix with the *same*
@@ -319,11 +354,54 @@ pub fn Factorization(comptime T: type) type {
             const raw_a = a.raw();
 
             types.clearReportedError();
-            if (self.kind().isSymmetric()) {
-                f.refactorSymmetric(&raw_a, &self.raw, &nf, workspace.ptr);
-            } else {
+            if (self.kind().isLu()) {
+                f.refactorLU(&raw_a, &self.raw, &nf, workspace.ptr);
+            } else if (!self.kind().isSymmetric()) {
                 f.refactorQR(&raw_a, &self.raw, &nf, workspace.ptr);
+            } else if (comptime types.isComplex(T)) {
+                if (a.attributes.kind == .hermitian) {
+                    f.refactorHermitian(&raw_a, &self.raw, &nf, workspace.ptr);
+                } else {
+                    f.refactorSymmetric(&raw_a, &self.raw, &nf, workspace.ptr);
+                }
+            } else {
+                f.refactorSymmetric(&raw_a, &self.raw, &nf, workspace.ptr);
             }
+            try types.takeReportedError();
+            try types.check(self.raw.status);
+        }
+
+        /// Partially refactorizes after a few columns of `A` changed.
+        ///
+        /// `SparseUpdateFactor`. Where `refactor` redoes the whole numeric
+        /// factorization, this redoes only the parts that depend on the
+        /// columns named in `updated_indices`, which for a sparse update of a
+        /// few columns is much cheaper.
+        ///
+        /// LU only, and specifically the three explicitly-pivoted spellings -
+        /// `.lu` itself, the alias, is rejected. `update` must have the same
+        /// sparsity pattern as the matrix originally factored.
+        pub fn updateLu(self: *Self, updated_indices: []const c_int, update: Sparse) SparseError!void {
+            switch (self.kind()) {
+                .lu_unpivoted, .lu_spp, .lu_tpp => {},
+                else => return SparseError.ParameterError,
+            }
+
+            const s = self.raw.symbolicFactorization;
+            // The same four checks SPARSE_CHECK_MATCH_SYMB_FACTOR makes; a
+            // mismatch would trap rather than report.
+            if (update.row_count != @as(usize, @intCast(s.rowCount))) return SparseError.ParameterError;
+            if (update.column_count != @as(usize, @intCast(s.columnCount))) return SparseError.ParameterError;
+            if (update.block_size != s.blockSize) return SparseError.ParameterError;
+            if (update.attributes.transpose != s.attributes.transpose) return SparseError.ParameterError;
+
+            types.clearReportedError();
+            f.updatePartialRefactorLU(
+                &self.raw,
+                @intCast(updated_indices.len),
+                updated_indices.ptr,
+                update.raw(),
+            );
             try types.takeReportedError();
             try types.check(self.raw.status);
         }
@@ -334,6 +412,10 @@ pub fn Factorization(comptime T: type) type {
         /// make the computed inertia sensitive to `Options.zero_tolerance`, so
         /// treat it as a numerical result rather than an exact one.
         pub fn inertia(self: Self) SparseError!Inertia {
+            if (comptime types.isComplex(T)) {
+                @compileError("inertia is defined for real symmetric factorizations only; " ++
+                    "vecLib exports no complex SparseGetInertia");
+            }
             switch (self.kind()) {
                 .ldlt, .ldlt_unpivoted, .ldlt_sbk, .ldlt_tpp => {},
                 else => return SparseError.ParameterError,
@@ -708,4 +790,256 @@ test "refactorWithWorkspace reuses one buffer across a sequence of value updates
             try testing.expectApproxEqAbs(want, got, 1e-10);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// LU
+// ---------------------------------------------------------------------------
+
+/// A deliberately non-symmetric 4x4, in full CSC:
+///
+///     [ 4  1  0  0 ]
+///     [ 1  3  1  0 ]
+///     [ 0  2  5  1 ]
+///     [ 0  0  1  2 ]
+///
+/// `a[2][1] = 2` against `a[1][2] = 1` is what makes it non-symmetric, and so
+/// makes it a matrix LU can factor and Cholesky/LDL^T cannot.
+const LuMatrix = struct {
+    const column_starts = [_]c_long{ 0, 2, 5, 8, 10 };
+    const row_indices = [_]c_int{ 0, 1, 0, 1, 2, 1, 2, 3, 2, 3 };
+    fn values(comptime T: type) [10]T {
+        return .{ 4, 1, 1, 3, 2, 1, 5, 1, 1, 2 };
+    }
+    /// `A * [1, 2, 3, 4]^T`.
+    fn rhs(comptime T: type) [4]T {
+        return .{ 6, 10, 23, 11 };
+    }
+    fn solution(comptime T: type) [4]T {
+        return .{ 1, 2, 3, 4 };
+    }
+    fn make(comptime T: type, vals: []const T) matrix.Sparse(T) {
+        return matrix.Sparse(T).init(4, 4, &column_starts, &row_indices, vals, .{});
+    }
+};
+
+test "LU factors a non-symmetric matrix and solves, all four pivoting modes" {
+    // Requires macOS 15.5; on an older system vecLib traps rather than
+    // returning a status, so there is no graceful degradation to test.
+    inline for (.{ f64, f32 }) |T| {
+        inline for (.{ FactorizationType.lu, .lu_unpivoted, .lu_spp, .lu_tpp }) |algorithm| {
+            const vals = LuMatrix.values(T);
+            const a = LuMatrix.make(T, &vals);
+            var fac = try Factorization(T).init(algorithm, a, .{});
+            defer fac.deinit();
+
+            // Measured: `.lu` is not stored as itself. The symbolic factor
+            // records `.lu_tpp`, which is what Solve.h means by "Default LU
+            // factorization (currently LU with TPP)". Everything downstream -
+            // `updateLu`, `Subfactor.isValidFor` - sees the resolved value,
+            // never the alias.
+            const expected_kind = if (algorithm == .lu) FactorizationType.lu_tpp else algorithm;
+            try testing.expectEqual(expected_kind, fac.kind());
+
+            var b = LuMatrix.rhs(T);
+            var x = [_]T{0} ** 4;
+            try fac.solve(testing.allocator, &b, &x);
+
+            const want = LuMatrix.solution(T);
+            for (0..4) |i| try testing.expectApproxEqAbs(want[i], x[i], tol(T));
+        }
+    }
+}
+
+test "Cholesky rejects the non-symmetric matrix LU accepts" {
+    // The complement of the test above: the same matrix, and the reason LU
+    // needed binding at all. `.ordinary` is not `.symmetric`, and `init`
+    // catches that before Sparse can trap on it.
+    const vals = LuMatrix.values(f64);
+    const a = LuMatrix.make(f64, &vals);
+    try testing.expectError(SparseError.ParameterError, Factorization(f64).init(.cholesky, a, .{}));
+}
+
+test "LU is rejected for a rectangular matrix" {
+    // 3x2, structurally fine, but LU is square-only and SparseFactorLU would
+    // trap rather than report.
+    const starts = [_]c_long{ 0, 2, 4 };
+    const rows = [_]c_int{ 0, 1, 1, 2 };
+    const vals = [_]f64{ 1, 2, 3, 4 };
+    const a = matrix.Sparse(f64).init(3, 2, &starts, &rows, &vals, .{});
+    try testing.expectError(SparseError.ParameterError, Factorization(f64).init(.lu, a, .{}));
+}
+
+test "inertia is rejected for an LU factorization" {
+    const vals = LuMatrix.values(f64);
+    const a = LuMatrix.make(f64, &vals);
+    var fac = try Factorization(f64).init(.lu_tpp, a, .{});
+    defer fac.deinit();
+    try testing.expectError(SparseError.ParameterError, fac.inertia());
+}
+
+test "LU refactor reuses the symbolic analysis for new values" {
+    const vals = LuMatrix.values(f64);
+    const a = LuMatrix.make(f64, &vals);
+    var fac = try Factorization(f64).init(.lu_tpp, a, .{});
+    defer fac.deinit();
+
+    // Same pattern, every value doubled: the solution of A' x = b is half
+    // what it was, which a stale numeric factor would not produce.
+    var doubled: [10]f64 = undefined;
+    for (vals, 0..) |v, i| doubled[i] = v * 2;
+    const a2 = LuMatrix.make(f64, &doubled);
+    try fac.refactor(testing.allocator, a2, .{});
+
+    var b = LuMatrix.rhs(f64);
+    var x = [_]f64{0} ** 4;
+    try fac.solve(testing.allocator, &b, &x);
+
+    const want = LuMatrix.solution(f64);
+    for (0..4) |i| try testing.expectApproxEqAbs(want[i] / 2, x[i], tol(f64));
+}
+
+test "updateLu is LU-only and refactors after a column change" {
+    {
+        // Rejected for a factorization that is not LU. SparseUpdateFactor
+        // handles only the three pivoted LU spellings, and since `.lu`
+        // resolves to `.lu_tpp` at factor time, every LU reaches it.
+        const vals = TestMatrix.values(f64);
+        const a = TestMatrix.matrix(f64, &vals);
+        var fac = try Factorization(f64).init(.cholesky, a, .{});
+        defer fac.deinit();
+        const idx = [_]c_int{0};
+        try testing.expectError(SparseError.ParameterError, fac.updateLu(&idx, a));
+    }
+    {
+        const vals = LuMatrix.values(f64);
+        const a = LuMatrix.make(f64, &vals);
+        var fac = try Factorization(f64).init(.lu_tpp, a, .{});
+        defer fac.deinit();
+
+        var updated = LuMatrix.values(f64);
+        updated[0] = 8; // a[0][0]: 4 -> 8, which lives in column 0
+        const a2 = LuMatrix.make(f64, &updated);
+        const changed = [_]c_int{0};
+        try fac.updateLu(&changed, a2);
+
+        // Solve against the updated matrix's own right-hand side. With
+        // a[0][0] = 8, A * [1,2,3,4]^T has first entry 8 + 2 = 10.
+        var b = LuMatrix.rhs(f64);
+        b[0] = 10;
+        var x = [_]f64{0} ** 4;
+        try fac.solve(testing.allocator, &b, &x);
+
+        const want = LuMatrix.solution(f64);
+        for (0..4) |i| try testing.expectApproxEqAbs(want[i], x[i], tol(f64));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Complex
+// ---------------------------------------------------------------------------
+
+/// A 3x3 Hermitian positive-definite matrix, lower triangle in CSC:
+///
+///     [  4     1+i    0   ]
+///     [ 1-i     3    2i   ]
+///     [  0    -2i     5   ]
+///
+/// Leading minors 4, 10 and 34 are all positive, so Cholesky succeeds.
+const HermitianMatrix = struct {
+    const column_starts = [_]c_long{ 0, 2, 4, 5 };
+    const row_indices = [_]c_int{ 0, 1, 1, 2, 2 };
+    fn values(comptime R: type) [5]types.Complex(R) {
+        const Z = types.Complex(R);
+        // Column-major over the lower triangle: (0,0), (1,0), (1,1), (2,1), (2,2).
+        return .{ Z.init(4, 0), Z.init(1, -1), Z.init(3, 0), Z.init(0, -2), Z.init(5, 0) };
+    }
+    /// `A * [1, 2, 3]^T`.
+    fn rhs(comptime R: type) [3]types.Complex(R) {
+        const Z = types.Complex(R);
+        return .{ Z.init(6, 2), Z.init(7, 5), Z.init(15, -4) };
+    }
+    fn make(comptime R: type, vals: []const types.Complex(R)) matrix.Sparse(types.Complex(R)) {
+        return matrix.Sparse(types.Complex(R)).init(3, 3, &column_starts, &row_indices, vals, .{
+            .attributes = .{ .kind = .hermitian, .triangle = .lower },
+        });
+    }
+};
+
+test "complex Hermitian Cholesky factors and solves" {
+    // Requires macOS 15.5. Complex *symmetric* (kind .symmetric, A = A^T) is
+    // a different entry point that needs macOS 26 and is deliberately not
+    // exercised here.
+    inline for (.{ f64, f32 }) |R| {
+        const Z = types.Complex(R);
+        const vals = HermitianMatrix.values(R);
+        const a = HermitianMatrix.make(R, &vals);
+
+        var fac = try Factorization(Z).init(.cholesky, a, .{});
+        defer fac.deinit();
+
+        var b = HermitianMatrix.rhs(R);
+        var x = [_]Z{Z.init(0, 0)} ** 3;
+        try fac.solve(testing.allocator, &b, &x);
+
+        for (0..3) |i| {
+            const want: R = @floatFromInt(i + 1);
+            try testing.expectApproxEqAbs(want, x[i].real, tol(R));
+            try testing.expectApproxEqAbs(@as(R, 0), x[i].imag, tol(R));
+        }
+    }
+}
+
+test "complex LDL^T solves the same Hermitian system" {
+    const Z = types.Complex(f64);
+    const vals = HermitianMatrix.values(f64);
+    const a = HermitianMatrix.make(f64, &vals);
+
+    var fac = try Factorization(Z).init(.ldlt, a, .{});
+    defer fac.deinit();
+
+    var b = HermitianMatrix.rhs(f64);
+    var x = [_]Z{Z.init(0, 0)} ** 3;
+    try fac.solve(testing.allocator, &b, &x);
+
+    for (0..3) |i| {
+        const want: f64 = @floatFromInt(i + 1);
+        try testing.expectApproxEqAbs(want, x[i].real, tol(f64));
+        try testing.expectApproxEqAbs(@as(f64, 0), x[i].imag, tol(f64));
+    }
+}
+
+test "complex LU factors a non-Hermitian matrix" {
+    const Z = types.Complex(f64);
+    // The real LU matrix with an imaginary part added to one off-diagonal, so
+    // it is neither Hermitian nor symmetric.
+    const starts = LuMatrix.column_starts;
+    const rows = LuMatrix.row_indices;
+    var vals: [10]Z = undefined;
+    const real_vals = LuMatrix.values(f64);
+    for (real_vals, 0..) |v, i| vals[i] = Z.init(v, 0);
+    vals[4] = Z.init(2, 1); // a[2][1] = 2 + i
+
+    const a = matrix.Sparse(Z).init(4, 4, &starts, &rows, &vals, .{});
+    var fac = try Factorization(Z).init(.lu_tpp, a, .{});
+    defer fac.deinit();
+
+    // b = A * [1, 2, 3, 4]^T. Only row 2 changes from the real case: the
+    // 2 + i entry multiplies x[1] = 2, adding 2i.
+    var b = [_]Z{ Z.init(6, 0), Z.init(10, 0), Z.init(23, 2), Z.init(11, 0) };
+    var x = [_]Z{Z.init(0, 0)} ** 4;
+    try fac.solve(testing.allocator, &b, &x);
+
+    for (0..4) |i| {
+        const want: f64 = @floatFromInt(i + 1);
+        try testing.expectApproxEqAbs(want, x[i].real, tol(f64));
+        try testing.expectApproxEqAbs(@as(f64, 0), x[i].imag, tol(f64));
+    }
+}
+
+test "complex factorization rejects an ordinary matrix for a symmetric algorithm" {
+    const Z = types.Complex(f64);
+    const vals = HermitianMatrix.values(f64);
+    const a = matrix.Sparse(Z).init(3, 3, &HermitianMatrix.column_starts, &HermitianMatrix.row_indices, &vals, .{});
+    try testing.expectError(SparseError.ParameterError, Factorization(Z).init(.cholesky, a, .{}));
 }

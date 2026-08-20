@@ -20,6 +20,10 @@ const SparseError = types.SparseError;
 pub fn Dense(comptime T: type) type {
     return struct {
         const Self = @This();
+        /// `SparseAttributes_t` for a real `T`, `SparseAttributesComplex_t`
+        /// for a complex one. The two have different bit layouts, so this is
+        /// not cosmetic.
+        const Attrs = types.AttributesFor(T);
 
         data: []T,
         row_count: usize,
@@ -27,7 +31,7 @@ pub fn Dense(comptime T: type) type {
         /// Distance between the starts of consecutive columns. At least
         /// `row_count`; larger when the matrix is a window onto a wider one.
         column_stride: usize,
-        attributes: Attributes = .{},
+        attributes: Attrs = .{},
 
         /// A single column vector over `data`.
         pub fn fromSlice(data: []T) Self {
@@ -100,6 +104,7 @@ pub fn Dense(comptime T: type) type {
 pub fn Sparse(comptime T: type) type {
     return struct {
         const Self = @This();
+        const Attrs = types.AttributesFor(T);
 
         /// Number of *block* rows. The matrix has `row_count * block_size`
         /// scalar rows.
@@ -114,7 +119,7 @@ pub fn Sparse(comptime T: type) type {
         /// `block_size * block_size` values per stored block, each block
         /// column-major.
         values: []const T,
-        attributes: Attributes = .{},
+        attributes: Attrs = .{},
         block_size: u8 = 1,
 
         /// Non-null only for a matrix returned by `fromCoordinate`. Sparse
@@ -129,7 +134,7 @@ pub fn Sparse(comptime T: type) type {
         owned_storage: ?[]align(16) u8 = null,
 
         pub const Options = struct {
-            attributes: Attributes = .{},
+            attributes: Attrs = .{},
             block_size: u8 = 1,
         };
 
@@ -296,10 +301,27 @@ pub fn Sparse(comptime T: type) type {
         }
 
         /// A view of the same storage with the transpose flag flipped.
+        ///
+        /// For a complex matrix this is the plain transpose `A^T`; use
+        /// `conjugateTransposed` for `A^H`.
         pub fn transposed(self: Self) Self {
             var out = self;
             out.attributes.transpose = !self.attributes.transpose;
             // The view does not own the storage; only the original does.
+            out.owned_storage = null;
+            return out;
+        }
+
+        /// A view of the same storage representing `A^H`. Complex only:
+        /// `SparseAttributes_t` has no `conjugate_transpose` bit, and for a
+        /// real matrix `A^H` is `A^T` anyway.
+        pub fn conjugateTransposed(self: Self) Self {
+            if (comptime !types.isComplex(T)) {
+                @compileError("conjugateTransposed requires a complex element type; use transposed()");
+            }
+            var out = self;
+            out.attributes.transpose = !self.attributes.transpose;
+            out.attributes.conjugate_transpose = true;
             out.owned_storage = null;
             return out;
         }
@@ -514,4 +536,77 @@ test "deinit is a no-op on a borrowed view" {
     a.deinit(testing.allocator);
     a.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 7), a.blockCount());
+}
+
+test "complex sparse-times-dense multiply" {
+    // Complex scalars cross this boundary by value (`alpha`) as well as by
+    // pointer (the data arrays), and `float _Complex` / `double _Complex` are
+    // classified by the ABI the same way a two-element float struct is. If
+    // that were wrong, `alpha` would arrive garbled and this would not just be
+    // off by a rounding step.
+    const Z = types.Complex(f64);
+
+    //     [ 1+i   0   ]
+    //     [  2   3-2i ]
+    const starts = [_]c_long{ 0, 2, 3 };
+    const rows = [_]c_int{ 0, 1, 1 };
+    const vals = [_]Z{ Z.init(1, 1), Z.init(2, 0), Z.init(3, -2) };
+    const a = Sparse(Z).init(2, 2, &starts, &rows, &vals, .{});
+
+    var x = [_]Z{ Z.init(1, 0), Z.init(0, 1) };
+    var y = [_]Z{ Z.init(0, 0), Z.init(0, 0) };
+
+    // alpha = 2, so y = 2 * A * x.
+    try a.multiply(Z.init(2, 0), Dense(Z).fromSlice(&x), Dense(Z).fromSlice(&y), false);
+
+    // A*x row 0: (1+i)*1        = 1 + i        -> doubled: 2 + 2i
+    // A*x row 1: 2*1 + (3-2i)*i = 2 + 3i + 2   -> 4 + 3i  -> doubled: 8 + 6i
+    try testing.expectApproxEqAbs(@as(f64, 2), y[0].real, 1e-12);
+    try testing.expectApproxEqAbs(@as(f64, 2), y[0].imag, 1e-12);
+    try testing.expectApproxEqAbs(@as(f64, 8), y[1].real, 1e-12);
+    try testing.expectApproxEqAbs(@as(f64, 6), y[1].imag, 1e-12);
+
+    // A complex alpha, to distinguish "passed by value correctly" from
+    // "happened to be real".
+    @memset(&y, Z.init(0, 0));
+    try a.multiply(Z.init(0, 1), Dense(Z).fromSlice(&x), Dense(Z).fromSlice(&y), false);
+    // i * (1 + i) = -1 + i;  i * (4 + 3i) = -3 + 4i
+    try testing.expectApproxEqAbs(@as(f64, -1), y[0].real, 1e-12);
+    try testing.expectApproxEqAbs(@as(f64, 1), y[0].imag, 1e-12);
+    try testing.expectApproxEqAbs(@as(f64, -3), y[1].real, 1e-12);
+    try testing.expectApproxEqAbs(@as(f64, 4), y[1].imag, 1e-12);
+}
+
+test "complex fromCoordinate builds block-CSC and sums duplicates" {
+    const Z = types.Complex(f64);
+    const rows = [_]c_int{ 0, 1, 1, 1 };
+    const cols = [_]c_int{ 0, 0, 1, 1 };
+    // The last two are the same coordinate and must be summed, not overwritten.
+    const vals = [_]Z{ Z.init(1, 1), Z.init(2, 0), Z.init(3, -2), Z.init(1, 1) };
+
+    var a = try Sparse(Z).fromCoordinate(testing.allocator, 2, 2, &rows, &cols, &vals, .{});
+    defer a.deinit(testing.allocator);
+
+    try testing.expectEqual(@as(usize, 3), a.blockCount());
+    try testing.expectEqualSlices(c_int, &.{ 0, 1 }, a.columnRows(0));
+    try testing.expectEqualSlices(c_int, &.{1}, a.columnRows(1));
+    // (3 - 2i) + (1 + i) = 4 - i
+    try testing.expectApproxEqAbs(@as(f64, 4), a.values[2].real, 1e-12);
+    try testing.expectApproxEqAbs(@as(f64, -1), a.values[2].imag, 1e-12);
+}
+
+test "conjugateTransposed sets both flags, transposed sets only one" {
+    const Z = types.Complex(f64);
+    const starts = [_]c_long{ 0, 1 };
+    const rows = [_]c_int{0};
+    const vals = [_]Z{Z.init(1, 1)};
+    const a = Sparse(Z).init(1, 1, &starts, &rows, &vals, .{});
+
+    const t = a.transposed();
+    try testing.expect(t.attributes.transpose);
+    try testing.expect(!t.attributes.conjugate_transpose);
+
+    const h = a.conjugateTransposed();
+    try testing.expect(h.attributes.transpose);
+    try testing.expect(h.attributes.conjugate_transpose);
 }

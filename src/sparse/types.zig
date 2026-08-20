@@ -76,6 +76,120 @@ pub const Attributes = packed struct(u32) {
     _padding: u16 = 0,
 };
 
+/// What kind of matrix a *complex* structure describes.
+///
+/// `SparseAttributesComplex_t` widens `kind` from two bits to three so that
+/// `.hermitian` can be added; the real and complex attribute layouts are
+/// therefore not interchangeable, and neither are these two enums.
+pub const KindComplex = enum(u3) {
+    ordinary = 0,
+    triangular = 1,
+    unit_triangular = 2,
+    /// `A = A^T`. Note this is the *un*-conjugated transpose, and is a much
+    /// later addition than the rest: factorizing one needs macOS 26.
+    symmetric = 3,
+    /// `A = A^H`. The complex analogue of `.symmetric` and the one to reach
+    /// for by default; available from macOS 15.5.
+    hermitian = 7,
+};
+
+/// `SparseAttributesComplex_t`.
+///
+/// Not simply `Attributes` with an extra field: `kind` is three bits here
+/// against two there, which shifts everything above it. Passing one where the
+/// other is expected would misread `kind` and `_allocated_by_sparse` both, so
+/// the two are distinct types and `AttributesFor` picks between them.
+pub const AttributesComplex = packed struct(u32) {
+    /// If set, the matrix is implicitly transposed wherever it is used.
+    transpose: bool = false,
+    triangle: Triangle = .upper,
+    kind: KindComplex = .ordinary,
+    /// When `transpose` is set, selects `A^H` over `A^T`. Ignored otherwise.
+    conjugate_transpose: bool = false,
+    /// Reserved by Apple; must be zero.
+    _reserved: u9 = 0,
+    /// See `Attributes._allocated_by_sparse`.
+    _allocated_by_sparse: bool = false,
+    _padding: u16 = 0,
+};
+
+// ============================================================================
+// Element types
+// ============================================================================
+
+/// A complex element, matching C's `float _Complex` / `double _Complex`
+/// layout: real part first, imaginary second, no padding.
+///
+/// Sparse passes complex scalars by value (`SparseMultiply`'s `alpha`, for
+/// one). On both arm64 and x86-64 a two-element float struct and a `_Complex`
+/// of the same element type are classified identically by the ABI, so this is
+/// the right shape to hand across the boundary as well as the right shape in
+/// memory.
+pub fn Complex(comptime R: type) type {
+    return extern struct {
+        const Self = @This();
+
+        real: R,
+        imag: R = 0,
+
+        pub fn init(real: R, imag: R) Self {
+            return .{ .real = real, .imag = imag };
+        }
+
+        pub fn conjugate(self: Self) Self {
+            return .{ .real = self.real, .imag = -self.imag };
+        }
+
+        pub fn add(a: Self, b: Self) Self {
+            return .{ .real = a.real + b.real, .imag = a.imag + b.imag };
+        }
+
+        pub fn mul(a: Self, b: Self) Self {
+            return .{
+                .real = a.real * b.real - a.imag * b.imag,
+                .imag = a.real * b.imag + a.imag * b.real,
+            };
+        }
+
+        pub fn abs(self: Self) R {
+            return @sqrt(self.real * self.real + self.imag * self.imag);
+        }
+    };
+}
+
+/// The multiplicative identity for element type `T`. A plain `1` literal does
+/// not coerce to `Complex(R)`, so generic code that needs a unit scalar - the
+/// iterative solvers' matrix operator, for one - goes through this.
+pub fn one(comptime T: type) T {
+    return if (comptime isComplex(T)) .{ .real = 1, .imag = 0 } else 1;
+}
+
+/// The additive identity, for the same reason as `one`.
+pub fn zero(comptime T: type) T {
+    return if (comptime isComplex(T)) .{ .real = 0, .imag = 0 } else 0;
+}
+
+/// Whether `T` is one of the two complex element types.
+pub fn isComplex(comptime T: type) bool {
+    return T == Complex(f32) or T == Complex(f64);
+}
+
+/// The underlying real type: `f32` for `f32` and `Complex(f32)`, and likewise
+/// for `f64`.
+pub fn Real(comptime T: type) type {
+    return switch (T) {
+        f32, f64 => T,
+        Complex(f32) => f32,
+        Complex(f64) => f64,
+        else => @compileError("Sparse element type must be f32, f64, Complex(f32) or Complex(f64)"),
+    };
+}
+
+/// The attributes struct that goes with element type `T`.
+pub fn AttributesFor(comptime T: type) type {
+    return if (isComplex(T)) AttributesComplex else Attributes;
+}
+
 // ============================================================================
 // Enumerations
 // ============================================================================
@@ -100,14 +214,40 @@ pub const FactorizationType = enum(u8) {
     /// QR without storing `Q`, i.e. `A^T A = R^T R`.
     cholesky_at_a = 41,
 
-    /// Whether this factorization requires a symmetric matrix.
+    // -- LU, for square matrices with no symmetry --
+    //
+    // These are the only factorizations here that place no structural demand
+    // on the matrix: no symmetry, no positive-definiteness. They arrived in
+    // macOS 15.5 / iOS 18.5, several releases after the rest, and calling one
+    // on an older system traps inside vecLib rather than returning a status.
+
+    /// Default LU, currently `.lu_tpp`.
+    lu = 80,
+    /// LU with no numerical pivoting. Fastest and least stable; a zero pivot
+    /// is a hard failure rather than something to permute around.
+    lu_unpivoted = 81,
+    /// LU with partial pivoting restricted to within supernodes.
+    lu_spp = 82,
+    /// LU with threshold partial pivoting.
+    lu_tpp = 83,
+
+    /// Whether this factorization requires a symmetric (or, for a complex
+    /// matrix, Hermitian) input.
     ///
-    /// Mirrors the dispatch in `SparseFactor()`: `.qr` and `.cholesky_at_a` go
-    /// to the QR entry point, everything else to the symmetric one.
+    /// Mirrors the dispatch in `SparseFactor()`: QR and LU have their own
+    /// entry points, and everything else goes to the symmetric one.
     pub fn isSymmetric(self: FactorizationType) bool {
         return switch (self) {
-            .qr, .cholesky_at_a => false,
+            .qr, .cholesky_at_a, .lu, .lu_unpivoted, .lu_spp, .lu_tpp => false,
             else => true,
+        };
+    }
+
+    /// Whether this is one of the LU factorizations.
+    pub fn isLu(self: FactorizationType) bool {
+        return switch (self) {
+            .lu, .lu_unpivoted, .lu_spp, .lu_tpp => true,
+            else => false,
         };
     }
 };
@@ -165,6 +305,10 @@ pub const Subfactor = enum(u8) {
     r = 7,
     /// `RP`. QR and `.cholesky_at_a` only.
     rp = 8,
+    /// Row scaling `S_r`. Pivoted LU only. macOS 15.5 and later.
+    sr = 9,
+    /// Column scaling `S_c`. Pivoted LU only. macOS 15.5 and later.
+    sc = 10,
 
     /// Which factorization types this subfactor can be extracted from.
     /// Mirrors the switch in `SparseCreateSubfactor`.
@@ -180,8 +324,20 @@ pub const Subfactor = enum(u8) {
                 .ldlt, .ldlt_unpivoted, .ldlt_sbk, .ldlt_tpp => true,
                 else => false,
             },
-            .q => kind == .qr,
+            // `Q` is the one subfactor LU and QR share: for LU it is the
+            // column permutation, not an orthogonal factor. `.lu` is absent
+            // because `SparseCreateSubfactor` names only the three pivoted
+            // spellings - which costs nothing, since a factorization
+            // requested as `.lu` records itself as `.lu_tpp`.
+            .q => switch (kind) {
+                .qr, .lu_unpivoted, .lu_spp, .lu_tpp => true,
+                else => false,
+            },
             .r, .rp => kind == .qr or kind == .cholesky_at_a,
+            .sr, .sc => switch (kind) {
+                .lu_unpivoted, .lu_spp, .lu_tpp => true,
+                else => false,
+            },
         };
     }
 };
@@ -310,6 +466,75 @@ test "Attributes matches the C bitfield layout" {
     try std.testing.expectEqual(@as(u32, 1 << 15), @as(u32, @bitCast(allocated)));
 
     try std.testing.expectEqual(Attributes{}, @as(Attributes, @bitCast(@as(u32, 0))));
+}
+
+test "AttributesComplex is not Attributes with a field added" {
+    // `kind` is three bits here against two there, so everything above it
+    // shifts. `conjugate_transpose` occupies the bit that `_reserved` starts
+    // at in the real layout, and `_allocated_by_sparse` stays at bit 15 only
+    // because `_reserved` narrows to compensate. Bit-pattern assertions
+    // rather than field-order trust.
+    try std.testing.expectEqual(@as(usize, 4), @sizeOf(AttributesComplex));
+
+    const lower_herm = AttributesComplex{ .kind = .hermitian, .triangle = .lower };
+    // kind = 7 in bits 2..4, triangle = 1 in bit 1.
+    try std.testing.expectEqual(@as(u32, 0b11110), @as(u32, @bitCast(lower_herm)));
+
+    const conj = AttributesComplex{ .transpose = true, .conjugate_transpose = true };
+    // transpose = bit 0, conjugate_transpose = bit 5.
+    try std.testing.expectEqual(@as(u32, 0b100001), @as(u32, @bitCast(conj)));
+
+    const allocated = AttributesComplex{ ._allocated_by_sparse = true };
+    try std.testing.expectEqual(@as(u32, 1 << 15), @as(u32, @bitCast(allocated)));
+
+    // The same nominal attributes give different bit patterns in the two
+    // layouts once `kind` is non-zero, which is why the structs cannot be
+    // cast into each other.
+    const real_sym = Attributes{ .kind = .symmetric };
+    const complex_sym = AttributesComplex{ .kind = .symmetric };
+    try std.testing.expectEqual(@as(u32, 0b1100), @as(u32, @bitCast(real_sym)));
+    try std.testing.expectEqual(@as(u32, 0b1100), @as(u32, @bitCast(complex_sym)));
+    // ... they agree for `.symmetric` (3 fits either width) and diverge as
+    // soon as a bit above `kind` is set.
+    const real_alloc_sym = Attributes{ .kind = .symmetric, ._allocated_by_sparse = true };
+    const complex_conj_sym = AttributesComplex{ .kind = .symmetric, .conjugate_transpose = true };
+    try std.testing.expect(@as(u32, @bitCast(real_alloc_sym)) != @as(u32, @bitCast(complex_conj_sym)));
+}
+
+test "Complex arithmetic helpers" {
+    const Z = Complex(f64);
+    const a = Z.init(1, 2);
+    const b = Z.init(3, -1);
+    try std.testing.expectEqual(Z.init(4, 1), a.add(b));
+    // (1 + 2i)(3 - i) = 3 - i + 6i - 2i^2 = 5 + 5i
+    try std.testing.expectEqual(Z.init(5, 5), a.mul(b));
+    try std.testing.expectEqual(Z.init(1, -2), a.conjugate());
+    try std.testing.expectApproxEqAbs(@as(f64, 5), Z.init(3, 4).abs(), 1e-12);
+
+    try std.testing.expect(isComplex(Z));
+    try std.testing.expect(!isComplex(f64));
+    try std.testing.expectEqual(f64, Real(Z));
+    try std.testing.expectEqual(f32, Real(Complex(f32)));
+    try std.testing.expectEqual(f64, Real(f64));
+    try std.testing.expectEqual(AttributesComplex, AttributesFor(Z));
+    try std.testing.expectEqual(Attributes, AttributesFor(f64));
+}
+
+test "FactorizationType classifies LU" {
+    for ([_]FactorizationType{ .lu, .lu_unpivoted, .lu_spp, .lu_tpp }) |t| {
+        try std.testing.expect(t.isLu());
+        // LU is the one family that is neither symmetric nor QR: it places no
+        // structural demand on the matrix at all.
+        try std.testing.expect(!t.isSymmetric());
+    }
+    for ([_]FactorizationType{ .cholesky, .ldlt, .ldlt_tpp }) |t| {
+        try std.testing.expect(!t.isLu());
+        try std.testing.expect(t.isSymmetric());
+    }
+    for ([_]FactorizationType{ .qr, .cholesky_at_a }) |t| {
+        try std.testing.expect(!t.isLu());
+        try std.testing.expect(!t.isSymmetric());
+    }
 }
 
 test "enum values match the C header" {
