@@ -124,29 +124,29 @@
 - [x] `FFT(T).init` — L84
 - [x] `FFT(T).deinit` — L98
 - [x] `FFT(T).zip` — L132
-- [ ] `FFT(T).zipt` — L148
-- [ ] `FFT(T).zop` — L180
-- [ ] `FFT(T).zopt` — L196
-- [ ] `FFT(T).zrip` — L217
-- [ ] `FFT(T).zript` — L232
-- [ ] `FFT(T).zrop` — L251
-- [ ] `FFT(T).zropt` — L266
-- [ ] `FFT(T).zip2d` — L279
+- [x] `FFT(T).zipt` — L148
+- [x] `FFT(T).zop` — L180
+- [x] `FFT(T).zopt` — L196
+- [x] `FFT(T).zrip` — L217
+- [x] `FFT(T).zript` — L232
+- [x] `FFT(T).zrop` — L251
+- [x] `FFT(T).zropt` — L266
+- [x] `FFT(T).zip2d` — L279
 - [x] `FFT(T).zipt2d` — L294
-- [ ] `FFT(T).zop2d` — L305
+- [x] `FFT(T).zop2d` — L305
 - [x] `FFT(T).zopt2d` — L320
-- [ ] `FFT(T).zrip2d` — L339
-- [ ] `FFT(T).zript2d` — L354
-- [ ] `FFT(T).zrop2d` — L371
-- [ ] `FFT(T).zropt2d` — L386
-- [ ] `FFT(T).mzip` — L401
-- [ ] `FFT(T).mzipt` — L415
-- [ ] `FFT(T).mzop` — L428
-- [ ] `FFT(T).mzopt` — L442
-- [ ] `FFT(T).mzrip` — L457
-- [ ] `FFT(T).mzript` — L472
-- [ ] `FFT(T).mzrop` — L487
-- [ ] `FFT(T).mzropt` — L502
+- [x] `FFT(T).zrip2d` — L339
+- [x] `FFT(T).zript2d` — L354
+- [x] `FFT(T).zrop2d` — L371
+- [x] `FFT(T).zropt2d` — L386
+- [x] `FFT(T).mzip` — L401
+- [x] `FFT(T).mzipt` — L415
+- [x] `FFT(T).mzop` — L428
+- [x] `FFT(T).mzopt` — L442
+- [x] `FFT(T).mzrip` — L457
+- [x] `FFT(T).mzript` — L472
+- [x] `FFT(T).mzrop` — L487
+- [x] `FFT(T).mzropt` — L502
 
 ### `src/vdsp/fixed_fft.zig`
 
