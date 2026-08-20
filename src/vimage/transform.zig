@@ -432,10 +432,10 @@ pub fn floodFill_Planar16U(src_dest: *const vImage_Buffer, seed_x: vImagePixelCo
 
 /// Fill a connected component of an ARGB8888 image with a new value.
 pub fn floodFill_ARGB8888(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_8888, connectivity: c_int, flags: vImage_Flags) vImage_Error {
-    return c.vImageFloodFill_ARGB8888(src_dest, null, seed_x, seed_y, new_value, connectivity, flags);
+    return c.vImageFloodFill_ARGB8888(src_dest, null, seed_x, seed_y, &new_value, connectivity, flags);
 }
 
 /// Fill a connected component of an ARGB16U image with a new value.
 pub fn floodFill_ARGB16U(src_dest: *const vImage_Buffer, seed_x: vImagePixelCount, seed_y: vImagePixelCount, new_value: Pixel_ARGB_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error {
-    return c.vImageFloodFill_ARGB16U(src_dest, null, seed_x, seed_y, new_value, connectivity, flags);
+    return c.vImageFloodFill_ARGB16U(src_dest, null, seed_x, seed_y, &new_value, connectivity, flags);
 }

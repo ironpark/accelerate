@@ -540,5 +540,5 @@ pub extern fn vImageMultiDimensionalInterpolatedLookupTable_Planar16Q12(srcs: [*
 
 pub extern fn vImageFloodFill_Planar8(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: Pixel_8, connectivity: c_int, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageFloodFill_Planar16U(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: Pixel_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageFloodFill_ARGB8888(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: Pixel_8888, connectivity: c_int, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageFloodFill_ARGB16U(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: Pixel_ARGB_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFloodFill_ARGB8888(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: *const Pixel_8888, connectivity: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFloodFill_ARGB16U(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: *const Pixel_ARGB_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error;
