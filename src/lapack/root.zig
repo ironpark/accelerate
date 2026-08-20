@@ -25,11 +25,15 @@
 //!   equilibration, in full, packed and band storage.
 //! - `qr.zig` - the QR/LQ/QL/RQ factorizations, forming and applying `Q`,
 //!   column-pivoted QR, and the four least squares drivers.
+//! - `eigen.zig` - the symmetric/Hermitian eigenvalue drivers, dense, packed,
+//!   band, tridiagonal and generalized.
+//! - `svd.zig` - `gesvd` and `gesdd`.
 //! - `norms.zig` - the `lan*` matrix norms, `lacpy` and `laset`.
 //!
 //! Not yet wrapped: the *expert* drivers (`gesvx` and friends), the iterative
 //! refinement routines (`gerfs`, `porfs`, ...), the `_aa`/`_rk`/`_rook`
-//! factorization variants, RFP storage, the eigenvalue problems and the SVD.
+//! factorization variants, RFP storage, the nonsymmetric and generalized
+//! eigenproblems, and the remaining SVD drivers (`gesvdx`, `gejsv`, `gesvdq`).
 //!
 //! Until a routine has a wrapper it is reachable through `c`, with the caveats
 //! documented there: every argument by pointer, no bounds checking, `info`
@@ -45,6 +49,8 @@ pub const linear = @import("linear.zig");
 pub const norms = @import("norms.zig");
 pub const factor = @import("factor.zig");
 pub const qr = @import("qr.zig");
+pub const eigen = @import("eigen.zig");
+pub const svd = @import("svd.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -110,6 +116,25 @@ pub const gelsd = qr.gelsd;
 pub const gelss = qr.gelss;
 pub const gelsy = qr.gelsy;
 pub const QTrans = qr.QTrans;
+
+pub const syev = eigen.syev;
+pub const heev = eigen.heev;
+pub const syevd = eigen.syevd;
+pub const heevd = eigen.heevd;
+pub const syevr = eigen.syevr;
+pub const heevr = eigen.heevr;
+pub const spev = eigen.spev;
+pub const hpev = eigen.hpev;
+pub const sbev = eigen.sbev;
+pub const hbev = eigen.hbev;
+pub const stev = eigen.stev;
+pub const sygv = eigen.sygv;
+pub const hegv = eigen.hegv;
+pub const Selection = eigen.Selection;
+pub const GeneralizedKind = eigen.GeneralizedKind;
+
+pub const gesvd = svd.gesvd;
+pub const gesdd = svd.gesdd;
 
 pub const lange = norms.lange;
 pub const lansy = norms.lansy;

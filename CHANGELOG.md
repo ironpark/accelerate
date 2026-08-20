@@ -19,10 +19,13 @@
   the `lan*` norms plus `lacpy`/`laset` in `norms.zig`; and the orthogonal
   factorizations and least squares drivers in `qr.zig` (`geqrf`, `gelqf`,
   `geqlf`, `gerqf`, `geqp3`, `orgqr`/`ungqr`, `ormqr`/`unmqr` and the LQ/QL/RQ
-  equivalents, `gels`, `gelsd`, `gelss`, `gelsy`). Not yet wrapped: the expert
-  drivers (`gesvx` and friends), iterative refinement (`gerfs`, `porfs`), the
-  `_aa`/`_rk`/`_rook` variants, RFP storage, the eigenvalue problems and the
-  SVD. What the wrappers add:
+  equivalents, `gels`, `gelsd`, `gelss`, `gelsy`); the symmetric/Hermitian
+  eigenvalue drivers in `eigen.zig` (`syev`, `syevd`, `syevr`, `spev`, `sbev`,
+  `stev`, `sygv`, each with its `he*`/`hp*`/`hb*` complex counterpart); and
+  `gesvd`/`gesdd` in `svd.zig`. Not yet wrapped: the expert drivers (`gesvx`
+  and friends), iterative refinement (`gerfs`, `porfs`), the `_aa`/`_rk`/`_rook`
+  variants, RFP storage, the nonsymmetric and generalized eigenproblems, and
+  the remaining SVD drivers. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -117,6 +120,30 @@
     rather than a condition estimate. All three behaviours are pinned by tests
     and called out in the doc comments; the tests were written expecting the
     opposite and were corrected to match what the routines actually do.
+
+  - `sy*` and `he*` are exposed as one name for the *eigenvalue* routines, the
+    same way `or*`/`un*` are - `syev(Complex(f64), ...)` calls `zheev`. This is
+    deliberately **not** done for the linear solvers, where `sysv` and `hesv`
+    both exist for complex elements and solve different problems. There is no
+    complex-symmetric eigensolver in LAPACK at all, so with one interpretation
+    available the unification loses nothing; with two it would hide a real
+    choice.
+  - Eigenvalues and singular values come back as `[]Real(T)`, so a
+    `Complex(f64)` problem yields `[]f64`. Both are real by construction and
+    the signature now says so.
+  - `syevr`'s five loosely-coupled range arguments (`range`, `vl`, `vu`, `il`,
+    `iu`, where the two that matter depend on the first) collapse into a
+    `Selection` union: `.all`, `.interval`, or `.indices`.
+  - `sygv` overloads `info > 0`: up to `n` it means the iteration did not
+    converge, above `n` it means the Cholesky factorization of `B` failed at
+    minor `info - n`, i.e. `B` was not positive definite. Both surface as
+    `error.NoConvergence`, so the doc comment says to read `lastInfo()` and a
+    test pins the `> n` case.
+  - Eigendecompositions are tested by `A v = lambda v` and SVDs by
+    `U S V^H = A`, never by comparing vectors against written-down values -
+    signs and phases are arbitrary. One test specifically checks that `vt` is
+    used as `V^H` rather than `V`, on an asymmetric matrix where the two
+    differ.
 
 - **`blas` module - the full CBLAS surface.** Levels 1, 2 and 3 over `f32`,
   `f64`, `Complex(f32)` and `Complex(f64)`, selected by a comptime element
@@ -238,7 +265,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 310 tests covering the four modules above, including struct-layout
+- 335 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
