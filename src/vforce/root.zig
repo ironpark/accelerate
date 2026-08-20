@@ -184,15 +184,16 @@ pub fn pow(comptime T: type, exp_vec: []const T, base: []const T, out: []T) void
     }
 }
 
-/// Power (positive bases only): out[i] = base[i] ^ exp[i]
-/// base values must be positive; faster than pow for this case.
-pub fn pows(comptime T: type, exp_vec: []const T, base: []const T, out: []T) void {
-    std.debug.assert(base.len >= exp_vec.len);
-    std.debug.assert(out.len >= exp_vec.len);
-    var n = toLen(exp_vec.len);
+/// Power with a scalar exponent (positive bases only): out[i] = base[i] ^ exp.
+/// `exp` is a single scalar applied to every element of `base`, not a
+/// per-element vector - faster than `pow` for this case.
+pub fn pows(comptime T: type, exponent: T, base: []const T, out: []T) void {
+    std.debug.assert(out.len >= base.len);
+    var n = toLen(base.len);
+    var exp_var = exponent;
     switch (T) {
-        f32 => c.vvpowsf(out.ptr, exp_vec.ptr, base.ptr, &n),
-        f64 => c.vvpows(out.ptr, exp_vec.ptr, base.ptr, &n),
+        f32 => c.vvpowsf(out.ptr, @as([*]const f32, @ptrCast(&exp_var)), base.ptr, &n),
+        f64 => c.vvpows(out.ptr, @as([*]const f64, @ptrCast(&exp_var)), base.ptr, &n),
         else => @compileError("pows requires f32 or f64"),
     }
 }
@@ -632,3 +633,29 @@ test "tanh" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 0.7616), out[1], 0.001);
 }
+
+test "pows applies a single scalar exponent to every base element" {
+    // vForce.h:467-486: vvpowsf/vvpows document `y` as "Input scalar,
+    // exponent in calculation" (singular), unlike vvpowf/vvpow's `y` which
+    // is documented as a full per-element input vector. Runtime-confirmed
+    // by calling with junk values past index 0 in what would be an
+    // element-wise exponent array: the output only reflects exp_vec[0],
+    // proving the C function reads a single scalar through the pointer,
+    // not an N-element vector. The wrapper's signature was changed from
+    // `exp_vec: []const T` to a plain scalar `exp: T` to make this honest -
+    // the old slice-typed signature silently ignored all but the first
+    // element, a footgun a caller could not detect from the type alone.
+    const base = [_]f32{ 2.0, 3.0, 4.0 };
+    var out: [3]f32 = undefined;
+    pows(f32, 3.0, &base, &out);
+    try std.testing.expectApproxEqRel(@as(f32, 8.0), out[0], 1e-4); // 2^3
+    try std.testing.expectApproxEqRel(@as(f32, 27.0), out[1], 1e-4); // 3^3
+    try std.testing.expectApproxEqRel(@as(f32, 64.0), out[2], 1e-4); // 4^3
+
+    // Different scalar exponent, still asymmetric bases, cross-checks pow's
+    // dedicated (per-element) test doesn't accidentally alias this one.
+    var out2: [3]f64 = undefined;
+    const base64 = [_]f64{ 5.0, 6.0, 7.0 };
+    pows(f64, 2.0, &base64, &out2);
+    try std.testing.expectApproxEqRel(@as(f64, 25.0), out2[0], 1e-9);
+    try std.testing.expectApproxEqRel(@as(f64, 36.0), out2[1], 1e-9);
