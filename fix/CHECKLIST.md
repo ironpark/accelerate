@@ -182,29 +182,29 @@
 
 ### `src/vdsp/reduction.zig`
 
-- [ ] `ValueIndex` — L6
-- [ ] `NormResult` — L10
+- [x] `ValueIndex` — L6
+- [x] `NormResult` — L10
 - [ ] `sve` — L19
-- [ ] `svesq` — L32
+- [x] `svesq` — L32
 - [x] `sve_svesq` — L46
-- [ ] `svemg` — L60
-- [ ] `meanv` — L75
-- [ ] `meamgv` — L88
-- [ ] `measqv` — L101
-- [ ] `rmsqv` — L114
-- [ ] `maxv` — L129
-- [ ] `maxvi` — L143
-- [ ] `maxmgv` — L157
-- [ ] `maxmgvi` — L171
-- [ ] `minv` — L187
-- [ ] `minvi` — L201
-- [ ] `minmgv` — L215
-- [ ] `minmgvi` — L229
-- [ ] `normalize` — L251
-- [ ] `mmov` — L272
-- [ ] `mvessq` — L285
-- [ ] `nzcros` — L309
-- [ ] `svs` — L325
+- [x] `svemg` — L60
+- [x] `meanv` — L75
+- [x] `meamgv` — L88
+- [x] `measqv` — L101
+- [x] `rmsqv` — L114
+- [x] `maxv` — L129
+- [x] `maxvi` — L143
+- [x] `maxmgv` — L157
+- [x] `maxmgvi` — L171
+- [x] `minv` — L187
+- [x] `minvi` — L201
+- [x] `minmgv` — L215
+- [x] `minmgvi` — L229
+- [x] `normalize` — L251
+- [x] `mmov` — L272
+- [x] `mvessq` — L285
+- [x] `nzcros` — L309
+- [x] `svs` — L325
 
 ### `src/vdsp/types.zig`
 

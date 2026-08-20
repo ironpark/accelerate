@@ -337,6 +337,12 @@ test "sve" {
     try std.testing.expectApproxEqAbs(@as(f32, 10.0), sve(f32, &a), 0.001);
 }
 
+test "svesq" {
+    const a = [_]f32{ -10.0, 3.0, -2.0, 4.0 };
+    // 100 + 9 + 4 + 16 = 129
+    try std.testing.expectApproxEqAbs(@as(f32, 129.0), svesq(f32, &a), 0.001);
+}
+
 test "sve_svesq" {
     const a = [_]f32{ 1.0, 2.0, 3.0, 4.0 };
     const result = sve_svesq(f32, &a);
@@ -350,4 +356,82 @@ test "maxv and minv" {
     const a = [_]f32{ 3.0, 1.0, 4.0, 1.0, 5.0 };
     try std.testing.expectApproxEqAbs(@as(f32, 5.0), maxv(f32, &a), 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), minv(f32, &a), 0.001);
+}
+
+test "svemg, meanv, meamgv, measqv, rmsqv" {
+    const a = [_]f32{ -10.0, 3.0, -2.0, 4.0 };
+    // sum|A| = 10+3+2+4 = 19
+    try std.testing.expectApproxEqAbs(@as(f32, 19.0), svemg(f32, &a), 0.001);
+    // sum(A)/N = -5/4 = -1.25
+    try std.testing.expectApproxEqAbs(@as(f32, -1.25), meanv(f32, &a), 0.001);
+    // sum|A|/N = 19/4 = 4.75
+    try std.testing.expectApproxEqAbs(@as(f32, 4.75), meamgv(f32, &a), 0.001);
+    // sum(A^2)/N = 129/4 = 32.25
+    try std.testing.expectApproxEqAbs(@as(f32, 32.25), measqv(f32, &a), 0.001);
+    // sqrt(32.25)
+    try std.testing.expectApproxEqAbs(@as(f32, 5.67891), rmsqv(f32, &a), 0.001);
+}
+
+test "maxvi and maxmgvi distinguish signed value from magnitude" {
+    // -10 has the largest magnitude but 4 has the largest signed value -
+    // this distinguishes an argument-order/formula bug from a magnitude bug.
+    const a = [_]f32{ -10.0, 3.0, -2.0, 4.0 };
+    const max_result = maxvi(f32, &a);
+    try std.testing.expectApproxEqAbs(@as(f32, 4.0), max_result.value, 0.001);
+    try std.testing.expectEqual(@as(Length, 3), max_result.index);
+
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), maxmgv(f32, &a), 0.001);
+    const maxmg_result = maxmgvi(f32, &a);
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), maxmg_result.value, 0.001);
+    try std.testing.expectEqual(@as(Length, 0), maxmg_result.index);
+}
+
+test "minvi, minmgv, minmgvi" {
+    const a = [_]f32{ -10.0, 3.0, -2.0, 4.0 };
+    const min_result = minvi(f32, &a);
+    try std.testing.expectApproxEqAbs(@as(f32, -10.0), min_result.value, 0.001);
+    try std.testing.expectEqual(@as(Length, 0), min_result.index);
+
+    // Smallest magnitude is |-2| = 2, at index 2.
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), minmgv(f32, &a), 0.001);
+    const minmg_result = minmgvi(f32, &a);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), minmg_result.value, 0.001);
+    try std.testing.expectEqual(@as(Length, 2), minmg_result.index);
+}
+
+test "normalize" {
+    const a = [_]f32{ -10.0, 3.0, -2.0, 4.0 };
+    var out: [4]f32 = undefined;
+    const result = normalize(f32, &a, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.25), result.mean, 0.001);
+    // std_dev = sqrt(measqv - mean^2) = sqrt(32.25 - 1.5625) = sqrt(30.6875)
+    try std.testing.expectApproxEqAbs(@as(f32, 5.5397), result.std_dev, 0.001);
+    for (0..4) |i| {
+        try std.testing.expectApproxEqAbs((a[i] - result.mean) / result.std_dev, out[i], 0.001);
+    }
+}
+
+test "mmov" {
+    // A is 2 rows x 2 "used" cols with row stride TA=2 (tightly packed).
+    // C has row stride TC=3 (padded), pre-zeroed so the padding is visible.
+    const a = [_]f32{ 1.0, 2.0, 3.0, 4.0 };
+    var out = [_]f32{ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+    mmov(f32, &a, &out, 2, 2, 2, 3);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 1.0, 2.0, 0.0, 3.0, 4.0, 0.0 }, &out);
+}
+
+test "mvessq and svs" {
+    // A[n]*|A[n]|: -10*10=-100, 3*3=9, -2*2=-4, 4*4=16; sum = -79.
+    const a = [_]f32{ -10.0, 3.0, -2.0, 4.0 };
+    try std.testing.expectApproxEqAbs(@as(f32, -79.0), svs(f32, &a), 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -19.75), mvessq(f32, &a), 0.001);
+}
+
+test "nzcros" {
+    // Sign sequence: -,+,-,+ -> 3 changes total (S=3). With B=2, the 2nd
+    // change occurs between A[1] and A[2], so crossing index n=2.
+    const a = [_]f32{ -10.0, 3.0, -2.0, 4.0 };
+    const result = nzcros(f32, &a, 2);
+    try std.testing.expectEqual(@as(Length, 2), result.crossing);
+    try std.testing.expectEqual(@as(Length, 2), result.count);
 }
