@@ -2,8 +2,10 @@
 
 Status: **in progress**. T0 complete. T1 simple drivers and the mainstream T2
 computational routines complete; the T3 orthogonal factorizations and least
-squares drivers complete. Expert drivers, iterative refinement, the
-`_aa`/`_rk`/`_rook` variants, eigenproblems and SVD outstanding.
+squares drivers complete. The T4 symmetric eigenvalue drivers and the two main
+T6 SVD drivers complete. Expert drivers, iterative refinement, the
+`_aa`/`_rk`/`_rook` variants, and the T5/T7 nonsymmetric and generalized
+eigenproblems outstanding.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -522,7 +524,7 @@ prefix is two characters, not one — a naming trap for the generator.
 
 - [ ] `disna` <sub>ds</sub>
 - [ ] `hb2st_kernels` <sub>cz</sub>
-- [ ] `hbev` <sub>cz</sub>
+- [x] `hbev` <sub>cz</sub>
 - [ ] `hbev_2stage` <sub>cz</sub>
 - [ ] `hbevd` <sub>cz</sub>
 - [ ] `hbevd_2stage` <sub>cz</sub>
@@ -534,17 +536,17 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hbgvx` <sub>cz</sub>
 - [ ] `hbtrd` <sub>cz</sub>
 - [ ] `heequb` <sub>cz</sub>
-- [ ] `heev` <sub>cz</sub>
+- [x] `heev` <sub>cz</sub>
 - [ ] `heev_2stage` <sub>cz</sub>
-- [ ] `heevd` <sub>cz</sub>
+- [x] `heevd` <sub>cz</sub>
 - [ ] `heevd_2stage` <sub>cz</sub>
-- [ ] `heevr` <sub>cz</sub>
+- [x] `heevr` <sub>cz</sub>
 - [ ] `heevr_2stage` <sub>cz</sub>
 - [ ] `heevx` <sub>cz</sub>
 - [ ] `heevx_2stage` <sub>cz</sub>
 - [ ] `hegs2` <sub>cz</sub>
 - [ ] `hegst` <sub>cz</sub>
-- [ ] `hegv` <sub>cz</sub>
+- [x] `hegv` <sub>cz</sub>
 - [ ] `hegv_2stage` <sub>cz</sub>
 - [ ] `hegvd` <sub>cz</sub>
 - [ ] `hegvx` <sub>cz</sub>
@@ -553,7 +555,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hetrd_2stage` <sub>cz</sub>
 - [ ] `hetrd_hb2st` <sub>cz</sub>
 - [ ] `hetrd_he2hb` <sub>cz</sub>
-- [ ] `hpev` <sub>cz</sub>
+- [x] `hpev` <sub>cz</sub>
 - [ ] `hpevd` <sub>cz</sub>
 - [ ] `hpevx` <sub>cz</sub>
 - [ ] `hpgst` <sub>cz</sub>
@@ -565,7 +567,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `opmtr` <sub>ds</sub>
 - [ ] `pteqr` <sub>cdsz</sub>
 - [ ] `sb2st_kernels` <sub>ds</sub>
-- [ ] `sbev` <sub>ds</sub>
+- [x] `sbev` <sub>ds</sub>
 - [ ] `sbev_2stage` <sub>ds</sub>
 - [ ] `sbevd` <sub>ds</sub>
 - [ ] `sbevd_2stage` <sub>ds</sub>
@@ -576,7 +578,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sbgvd` <sub>ds</sub>
 - [ ] `sbgvx` <sub>ds</sub>
 - [ ] `sbtrd` <sub>ds</sub>
-- [ ] `spev` <sub>ds</sub>
+- [x] `spev` <sub>ds</sub>
 - [ ] `spevd` <sub>ds</sub>
 - [ ] `spevx` <sub>ds</sub>
 - [ ] `spgst` <sub>ds</sub>
@@ -591,22 +593,22 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `stemr` <sub>cdsz</sub>
 - [ ] `steqr` <sub>cdsz</sub>
 - [ ] `sterf` <sub>ds</sub>
-- [ ] `stev` <sub>ds</sub>
+- [x] `stev` <sub>ds</sub>
 - [ ] `stevd` <sub>ds</sub>
 - [ ] `stevr` <sub>ds</sub>
 - [ ] `stevx` <sub>ds</sub>
 - [ ] `syequb` <sub>cdsz</sub>
-- [ ] `syev` <sub>ds</sub>
+- [x] `syev` <sub>ds</sub>
 - [ ] `syev_2stage` <sub>ds</sub>
-- [ ] `syevd` <sub>ds</sub>
+- [x] `syevd` <sub>ds</sub>
 - [ ] `syevd_2stage` <sub>ds</sub>
-- [ ] `syevr` <sub>ds</sub>
+- [x] `syevr` <sub>ds</sub>
 - [ ] `syevr_2stage` <sub>ds</sub>
 - [ ] `syevx` <sub>ds</sub>
 - [ ] `syevx_2stage` <sub>ds</sub>
 - [ ] `sygs2` <sub>ds</sub>
 - [ ] `sygst` <sub>ds</sub>
-- [ ] `sygv` <sub>ds</sub>
+- [x] `sygv` <sub>ds</sub>
 - [ ] `sygv_2stage` <sub>ds</sub>
 - [ ] `sygvd` <sub>ds</sub>
 - [ ] `sygvx` <sub>ds</sub>
@@ -651,8 +653,8 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `gebd2` <sub>cdsz</sub>
 - [ ] `gebrd` <sub>cdsz</sub>
 - [ ] `gejsv` <sub>cdsz</sub>
-- [ ] `gesdd` <sub>cdsz</sub>
-- [ ] `gesvd` <sub>cdsz</sub>
+- [x] `gesdd` <sub>cdsz</sub>
+- [x] `gesvd` <sub>cdsz</sub>
 - [ ] `gesvdq` <sub>cdsz</sub>
 - [ ] `gesvdx` <sub>cdsz</sub>
 - [ ] `gesvj` <sub>cdsz</sub>
