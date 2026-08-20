@@ -172,7 +172,7 @@ pub fn logb(comptime T: type, x: []const T, out: []T) void {
 // Power
 // ============================================================================
 
-/// Power: out[i] = exp[i] ^ base[i]
+/// Power: out[i] = base[i] ^ exp[i]
 pub fn pow(comptime T: type, exp_vec: []const T, base: []const T, out: []T) void {
     std.debug.assert(base.len >= exp_vec.len);
     std.debug.assert(out.len >= exp_vec.len);
