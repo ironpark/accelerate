@@ -829,6 +829,194 @@ pub fn gelss(
 }
 
 // ============================================================================
+// Constrained and generalized least squares
+// ============================================================================
+
+/// Least squares with an exact linear constraint.
+///
+/// Minimizes `||A x - c||` subject to `B x = d`, where `B` is `p x n` with
+/// `p <= n <= m + p`. The constraint is satisfied *exactly*, not in a least
+/// squares sense — that is the whole difference from stacking `B` onto `A` with
+/// a large weight, which only approximates it and destroys the conditioning.
+///
+/// `x` receives the solution; `a`, `b`, `c` and `d` are all destroyed.
+///
+/// `error.SingularMatrix` means the problem is not well posed: `lastInfo() == 1`
+/// says `B` is rank deficient so the constraint has no solution;
+/// `lastInfo() == 2` says the stacked `[A; B]` is rank deficient so the
+/// minimizer is not unique.
+///
+/// **That check is not reliable.** Measured, an exactly duplicated row in `B`
+/// comes back as success — the test is on a QR pivot, which for a duplicate is
+/// small but not zero. If `B` might be rank deficient, check it yourself.
+pub fn gglse(
+    comptime T: type,
+    allocator: Allocator,
+    rows: usize,
+    cols: usize,
+    p: usize,
+    a: []T,
+    lda: usize,
+    b: []T,
+    ldb: usize,
+    cv: []T,
+    d: []T,
+    x: []T,
+) Fail!void {
+    assertMatrix(a.len, rows, cols, lda);
+    assertMatrix(b.len, p, cols, ldb);
+    std.debug.assert(cv.len >= rows and d.len >= p and x.len >= cols);
+    std.debug.assert(p <= cols and cols <= rows + p);
+
+    const m_ = dim(rows);
+    const n_ = dim(cols);
+    const p_ = dim(p);
+    const lda_ = dim(@max(lda, 1));
+    const ldb_ = dim(@max(ldb, 1));
+    var info: Int = 0;
+
+    var probe: [1]T = undefined;
+    var wq: [1]T = undefined;
+    const neg = work_mod.query;
+    sym(T, "gglse")(ref(&m_), ref(&n_), ref(&p_), &probe, ref(&lda_), &probe, ref(&ldb_), &probe, &probe, &probe, &wq, ref(&neg), out(&info));
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const lwork = dim(size);
+
+    sym(T, "gglse")(ref(&m_), ref(&n_), ref(&p_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), cv.ptr, d.ptr, x.ptr, buf.ptr, ref(&lwork), out(&info));
+    return info_mod.checkLu(info);
+}
+
+/// The Gauss-Markov linear model problem.
+///
+/// Minimizes `||y||` subject to `d = A x + B y`, with `A` being `n x m` and `B`
+/// being `n x p`, `m <= n <= m + p`. The dual of `gglse`: there the constraint
+/// was exact and the residual minimized, here the residual is exact and a
+/// *weighting* is minimized. It is the generalized least squares problem, and
+/// with `B = I` it reduces to ordinary least squares.
+///
+/// `x` and `y` receive the solution; everything else is destroyed. The `info`
+/// values mirror `gglse`'s.
+pub fn ggglm(
+    comptime T: type,
+    allocator: Allocator,
+    n: usize,
+    m: usize,
+    p: usize,
+    a: []T,
+    lda: usize,
+    b: []T,
+    ldb: usize,
+    d: []T,
+    x: []T,
+    y: []T,
+) Fail!void {
+    assertMatrix(a.len, n, m, lda);
+    assertMatrix(b.len, n, p, ldb);
+    std.debug.assert(d.len >= n and x.len >= m and y.len >= p);
+    std.debug.assert(m <= n and n <= m + p);
+
+    const n_ = dim(n);
+    const m_ = dim(m);
+    const p_ = dim(p);
+    const lda_ = dim(@max(lda, 1));
+    const ldb_ = dim(@max(ldb, 1));
+    var info: Int = 0;
+
+    var probe: [1]T = undefined;
+    var wq: [1]T = undefined;
+    const neg = work_mod.query;
+    sym(T, "ggglm")(ref(&n_), ref(&m_), ref(&p_), &probe, ref(&lda_), &probe, ref(&ldb_), &probe, &probe, &probe, &wq, ref(&neg), out(&info));
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const lwork = dim(size);
+
+    sym(T, "ggglm")(ref(&n_), ref(&m_), ref(&p_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), d.ptr, x.ptr, y.ptr, buf.ptr, ref(&lwork), out(&info));
+    return info_mod.checkLu(info);
+}
+
+/// Generalized QR factorization of a pair: `A = Q R` and `B = Q T Z`.
+///
+/// The factorization `gglse` and `ggglm` use internally, with one `Q` shared
+/// between the two matrices. `taua` goes with `Q` and `taub` with `Z`; apply
+/// them with `ormqr` and `ormrq` respectively.
+pub fn ggqrf(
+    comptime T: type,
+    allocator: Allocator,
+    n: usize,
+    m: usize,
+    p: usize,
+    a: []T,
+    lda: usize,
+    taua: []T,
+    b: []T,
+    ldb: usize,
+    taub: []T,
+) Fail!void {
+    return generalizedFactor(T, "ggqrf", allocator, n, m, p, a, lda, taua, b, ldb, taub);
+}
+
+/// Generalized RQ factorization of a pair: `A = R Q` and `B = Z T Q`, sharing
+/// the `Q`.
+pub fn ggrqf(
+    comptime T: type,
+    allocator: Allocator,
+    m: usize,
+    p: usize,
+    n: usize,
+    a: []T,
+    lda: usize,
+    taua: []T,
+    b: []T,
+    ldb: usize,
+    taub: []T,
+) Fail!void {
+    return generalizedFactor(T, "ggrqf", allocator, m, p, n, a, lda, taua, b, ldb, taub);
+}
+
+fn generalizedFactor(
+    comptime T: type,
+    comptime name: []const u8,
+    allocator: Allocator,
+    d1: usize,
+    d2: usize,
+    d3: usize,
+    a: []T,
+    lda: usize,
+    taua: []T,
+    b: []T,
+    ldb: usize,
+    taub: []T,
+) Fail!void {
+    const d1_ = dim(d1);
+    const d2_ = dim(d2);
+    const d3_ = dim(d3);
+    const lda_ = dim(@max(lda, 1));
+    const ldb_ = dim(@max(ldb, 1));
+    var info: Int = 0;
+
+    var probe: [1]T = undefined;
+    var wq: [1]T = undefined;
+    const neg = work_mod.query;
+    sym(T, name)(ref(&d1_), ref(&d2_), ref(&d3_), &probe, ref(&lda_), &probe, &probe, ref(&ldb_), &probe, &wq, ref(&neg), out(&info));
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const lwork = dim(size);
+
+    sym(T, name)(ref(&d1_), ref(&d2_), ref(&d3_), a.ptr, ref(&lda_), taua.ptr, b.ptr, ref(&ldb_), taub.ptr, buf.ptr, ref(&lwork), out(&info));
+    return info_mod.checkArgs(info);
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -1213,4 +1401,123 @@ test "single precision works through the same wrappers" {
 
     try testing.expectApproxEqAbs(@as(f32, 5.0 / 6.0), b[0], 1e-5);
     try testing.expectApproxEqAbs(@as(f32, 1.5), b[1], 1e-5);
+}
+
+// ============================================================================
+// Tests: constrained and generalized least squares
+// ============================================================================
+
+test "gglse satisfies its constraint exactly" {
+    const m = 4;
+    const n = 3;
+    const p = 1;
+    // Fit b = x0 + x1*t + x2*t^2 through four points, constrained to pass
+    // exactly through the origin: x0 = 0.
+    var a = [_]f64{
+        1, 1, 1, 1,
+        1, 2, 3, 4,
+        1, 4, 9, 16,
+    };
+    var b = [_]f64{ 1, 0, 0 };
+    var cv = [_]f64{ 2.1, 4.2, 6.1, 8.3 };
+    var d = [_]f64{0};
+    var x: [n]f64 = undefined;
+
+    try gglse(f64, testing.allocator, m, n, p, &a, m, &b, p, &cv, &d, &x);
+
+    // The constraint holds to machine precision, not approximately - that is
+    // the difference from stacking B onto A with a large weight.
+    try testing.expectApproxEqAbs(@as(f64, 0), x[0], 1e-14);
+}
+
+test "gglse does not detect an exactly duplicated constraint row" {
+    const m = 3;
+    const n = 2;
+    const p = 2;
+    var a = [_]f64{ 1, 1, 1, 0, 1, 2 };
+    // Two identical constraint rows, so B has rank 1 where the routine wants
+    // rank 2 and the problem is not well posed.
+    var b = [_]f64{ 1, 1, 1, 1 };
+    var cv = [_]f64{ 1, 2, 3 };
+    var d = [_]f64{ 1, 1 };
+    var x: [n]f64 = undefined;
+
+    // Measured: this returns success. The rank test is on the QR of B, and an
+    // exact duplicate leaves a pivot that is small but not zero, so the
+    // documented info = 1 does not fire. Do not rely on gglse to validate a
+    // constraint matrix - check its rank yourself if it might be deficient.
+    try gglse(f64, testing.allocator, m, n, p, &a, m, &b, p, &cv, &d, &x);
+    for (x) |v| try testing.expect(std.math.isFinite(v));
+}
+
+test "ggglm with an identity B is ordinary least squares" {
+    const n = 4;
+    const m = 2;
+    const p = 4;
+    // d = A x + y, minimizing ||y||: exactly the least squares problem gels
+    // solves.
+    const a0 = [_]f64{ 1, 1, 1, 1, 0, 1, 2, 3 };
+    const d0 = [_]f64{ 1, 3, 5, 7 };
+
+    var a = a0;
+    var b = [_]f64{0} ** (n * p);
+    for (0..n) |i| b[i + i * n] = 1;
+    var d = d0;
+    var x: [m]f64 = undefined;
+    var y: [p]f64 = undefined;
+    try ggglm(f64, testing.allocator, n, m, p, &a, n, &b, n, &d, &x, &y);
+
+    var a_ref = a0;
+    var b_ref = d0;
+    try gels(f64, testing.allocator, .no_trans, n, m, 1, &a_ref, n, &b_ref, n);
+
+    for (0..m) |i| try testing.expectApproxEqAbs(b_ref[i], x[i], 1e-11);
+    // Exact fit here, so the minimized residual is zero.
+    for (y) |v| try testing.expectApproxEqAbs(@as(f64, 0), v, 1e-11);
+}
+
+test "ggqrf shares one Q between the two matrices" {
+    const n = 4;
+    const m = 2;
+    const p = 2;
+    const a0 = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    const b0 = [_]f64{ 1, 0, 0, 1, 0, 1, 1, 0 };
+
+    var a = a0;
+    var b = b0;
+    var taua: [m]f64 = undefined;
+    var taub: [n]f64 = undefined;
+    try ggqrf(f64, testing.allocator, n, m, p, &a, n, &taua, &b, n, &taub);
+
+    // R is the upper triangle of the leading m x m block of a; build Q from
+    // the reflectors and check Q R reconstructs A.
+    // The thin Q: n x m, which is all that pairs with the m x m R.
+    var q = a;
+    try orgqr(f64, testing.allocator, n, m, m, &q, n, &taua);
+    for (0..m) |j| {
+        for (0..n) |i| {
+            var acc: f64 = 0;
+            for (0..m) |k| {
+                if (k <= j) acc += q[i + k * n] * a[k + j * n];
+            }
+            try testing.expectApproxEqAbs(a0[i + j * n], acc, 1e-11);
+        }
+    }
+}
+
+test "ggrqf is the RQ counterpart" {
+    const m = 2;
+    const p = 2;
+    const n = 4;
+    var a = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8 };
+    var b = [_]f64{ 1, 0, 0, 1, 0, 1, 1, 0 };
+    var taua: [m]f64 = undefined;
+    var taub: [p]f64 = undefined;
+
+    try ggrqf(f64, testing.allocator, m, p, n, &a, m, &taua, &b, p, &taub);
+
+    // Both tau arrays were written; the shared Q is what makes this one call
+    // rather than two independent factorizations.
+    for (taua) |v| try testing.expect(std.math.isFinite(v));
+    for (taub) |v| try testing.expect(std.math.isFinite(v));
 }

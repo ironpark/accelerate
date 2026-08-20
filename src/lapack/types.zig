@@ -251,6 +251,23 @@ pub const Balance = enum(u8) {
 /// Which side's eigenvectors `trevc`/`tgevc` should compute.
 pub const EigSide = enum(u8) { right = 'R', left = 'L', both = 'B' };
 
+/// The order in which a block reflector's Householder vectors were applied.
+///
+/// `larfb`, `tprfb` and the block-reflector routines need to know, because the
+/// product `H1 H2 ... Hk` and `Hk ... H2 H1` are different matrices.
+pub const Direction = enum(u8) {
+    /// `H = H(1) H(2) ... H(k)`.
+    forward = 'F',
+    /// `H = H(k) ... H(2) H(1)`.
+    backward = 'B',
+};
+
+/// Whether a block reflector's vectors are stored as columns or rows.
+pub const StoreV = enum(u8) {
+    columnwise = 'C',
+    rowwise = 'R',
+};
+
 /// Which of `gebrd`'s two orthogonal factors `orgbr`/`ormbr` should form.
 pub const Vect = enum(u8) { q = 'Q', p = 'P' };
 

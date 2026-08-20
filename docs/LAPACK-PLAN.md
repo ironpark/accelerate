@@ -8,9 +8,7 @@ to condensed form, the tridiagonal eigensolvers, the Schur and QZ toolkits, and
 the expert drivers with their condition estimates.
 
 Outstanding: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants, RFP
-storage, the CS decomposition, the tall-skinny QR family, the constrained least
-squares routines (`ggglm`, `gglse`, `ggqrf`, `ggrqf`) and the remaining SVD
-drivers (`gesvdx`, `gejsv`, `gesvdq`, `bdsqr`, `bdsdc`).
+storage and the CS decomposition.
 
 This document is the working checklist for binding Apple Accelerate's LAPACK to Zig.
 It records what was measured, not what was assumed — every ABI claim below was
@@ -382,7 +380,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `tfttp` <sub>cdsz</sub>
 - [ ] `tfttr` <sub>cdsz</sub>
 - [x] `tpcon` <sub>cdsz</sub>
-- [ ] `tprfb` <sub>cdsz</sub>
+- [x] `tprfb` <sub>cdsz</sub>
 - [x] `tprfs` <sub>cdsz</sub>
 - [x] `tptri` <sub>cdsz</sub>
 - [x] `tptrs` <sub>cdsz</sub>
@@ -400,7 +398,7 @@ prefix is two characters, not one — a naming trap for the generator.
 
 `122` base routines, `332` symbols.
 
-- [ ] `gelq` <sub>cdsz</sub>
+- [x] `gelq` <sub>cdsz</sub>
 - [ ] `gelq2` <sub>cdsz</sub>
 - [x] `gelqf` <sub>cdsz</sub>
 - [ ] `gelqt` <sub>cdsz</sub>
@@ -408,33 +406,33 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `gels` <sub>cdsz</sub>
 - [x] `gelsd` <sub>cdsz</sub>
 - [x] `gelss` <sub>cdsz</sub>
-- [ ] `gelst` <sub>cdsz</sub>
+- [x] `gelst` <sub>cdsz</sub>
 - [ ] `gelsx` <sub>cdsz</sub>
 - [x] `gelsy` <sub>cdsz</sub>
-- [ ] `gemlq` <sub>cdsz</sub>
+- [x] `gemlq` <sub>cdsz</sub>
 - [ ] `gemlqt` <sub>cdsz</sub>
-- [ ] `gemqr` <sub>cdsz</sub>
-- [ ] `gemqrt` <sub>cdsz</sub>
+- [x] `gemqr` <sub>cdsz</sub>
+- [x] `gemqrt` <sub>cdsz</sub>
 - [ ] `geql2` <sub>cdsz</sub>
 - [x] `geqlf` <sub>cdsz</sub>
 - [x] `geqp3` <sub>cdsz</sub>
 - [ ] `geqpf` <sub>cdsz</sub>
-- [ ] `geqr` <sub>cdsz</sub>
+- [x] `geqr` <sub>cdsz</sub>
 - [ ] `geqr2` <sub>cdsz</sub>
-- [ ] `geqr2p` <sub>cdsz</sub>
+- [x] `geqr2p` <sub>cdsz</sub>
 - [x] `geqrf` <sub>cdsz</sub>
-- [ ] `geqrfp` <sub>cdsz</sub>
-- [ ] `geqrt` <sub>cdsz</sub>
+- [x] `geqrfp` <sub>cdsz</sub>
+- [x] `geqrt` <sub>cdsz</sub>
 - [ ] `geqrt2` <sub>cdsz</sub>
 - [ ] `geqrt3` <sub>cdsz</sub>
 - [ ] `gerq2` <sub>cdsz</sub>
 - [x] `gerqf` <sub>cdsz</sub>
-- [ ] `getsls` <sub>cdsz</sub>
+- [x] `getsls` <sub>cdsz</sub>
 - [ ] `getsqrhrt` <sub>cdsz</sub>
-- [ ] `ggglm` <sub>cdsz</sub>
-- [ ] `gglse` <sub>cdsz</sub>
-- [ ] `ggqrf` <sub>cdsz</sub>
-- [ ] `ggrqf` <sub>cdsz</sub>
+- [x] `ggglm` <sub>cdsz</sub>
+- [x] `gglse` <sub>cdsz</sub>
+- [x] `ggqrf` <sub>cdsz</sub>
+- [x] `ggrqf` <sub>cdsz</sub>
 - [x] `opgtr` <sub>ds</sub>
 - [x] `opmtr` <sub>ds</sub>
 - [ ] `orbdb` <sub>ds</sub>
@@ -472,17 +470,17 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `ormr2` <sub>ds</sub>
 - [ ] `ormr3` <sub>ds</sub>
 - [x] `ormrq` <sub>ds</sub>
-- [ ] `ormrz` <sub>ds</sub>
+- [x] `ormrz` <sub>ds</sub>
 - [x] `ormtr` <sub>ds</sub>
-- [ ] `tplqt` <sub>cdsz</sub>
+- [x] `tplqt` <sub>cdsz</sub>
 - [ ] `tplqt2` <sub>cdsz</sub>
-- [ ] `tpmlqt` <sub>cdsz</sub>
-- [ ] `tpmqrt` <sub>cdsz</sub>
-- [ ] `tpqrt` <sub>cdsz</sub>
+- [x] `tpmlqt` <sub>cdsz</sub>
+- [x] `tpmqrt` <sub>cdsz</sub>
+- [x] `tpqrt` <sub>cdsz</sub>
 - [ ] `tpqrt2` <sub>cdsz</sub>
-- [ ] `tprfb` <sub>cdsz</sub>
+- [x] `tprfb` <sub>cdsz</sub>
 - [ ] `tzrqf` <sub>cdsz</sub>
-- [ ] `tzrzf` <sub>cdsz</sub>
+- [x] `tzrzf` <sub>cdsz</sub>
 - [ ] `unbdb` <sub>cz</sub>
 - [ ] `unbdb1` <sub>cz</sub>
 - [ ] `unbdb2` <sub>cz</sub>
@@ -518,7 +516,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `unmr2` <sub>cz</sub>
 - [ ] `unmr3` <sub>cz</sub>
 - [x] `unmrq` <sub>cz</sub>
-- [ ] `unmrz` <sub>cz</sub>
+- [x] `unmrz` <sub>cz</sub>
 - [x] `unmtr` <sub>cz</sub>
 - [x] `upgtr` <sub>cz</sub>
 - [x] `upmtr` <sub>cz</sub>

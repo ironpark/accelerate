@@ -24,7 +24,11 @@
 //!   Bunch-Kaufman and triangular solves, inverses, condition estimates and
 //!   equilibration, in full, packed and band storage.
 //! - `qr.zig` - the QR/LQ/QL/RQ factorizations, forming and applying `Q`,
-//!   column-pivoted QR, and the four least squares drivers.
+//!   column-pivoted QR, the four least squares drivers, and the constrained
+//!   and generalized ones (`gglse`, `ggglm`, `ggqrf`, `ggrqf`).
+//! - `qr_tall.zig` - the tall-skinny and blocked QR interfaces: `geqr`/`gemqr`,
+//!   `geqrt`/`gemqrt`, the triangular-pentagonal family, `getsls`, `geqrfp`
+//!   and the RZ factorization.
 //! - `eigen.zig` - the symmetric/Hermitian eigenvalue drivers, dense, packed,
 //!   band, tridiagonal and generalized, including the expert (`*evx`) and
 //!   divide-and-conquer (`*evd`) variants.
@@ -83,6 +87,7 @@ pub const expert = @import("expert.zig");
 pub const reduce = @import("reduce.zig");
 pub const tridiag = @import("tridiag.zig");
 pub const qz = @import("qz.zig");
+pub const qr_tall = @import("qr_tall.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -174,6 +179,31 @@ pub const gelsd = qr.gelsd;
 pub const gelss = qr.gelss;
 pub const gelsy = qr.gelsy;
 pub const QTrans = qr.QTrans;
+pub const gglse = qr.gglse;
+pub const ggglm = qr.ggglm;
+pub const ggqrf = qr.ggqrf;
+pub const ggrqf = qr.ggrqf;
+
+pub const geqr = qr_tall.geqr;
+pub const gemqr = qr_tall.gemqr;
+pub const gelq = qr_tall.gelq;
+pub const gemlq = qr_tall.gemlq;
+pub const geqrt = qr_tall.geqrt;
+pub const gemqrt = qr_tall.gemqrt;
+pub const tpqrt = qr_tall.tpqrt;
+pub const tpmqrt = qr_tall.tpmqrt;
+pub const tplqt = qr_tall.tplqt;
+pub const tpmlqt = qr_tall.tpmlqt;
+pub const tprfb = qr_tall.tprfb;
+pub const getsls = qr_tall.getsls;
+pub const gelst = qr_tall.gelst;
+pub const geqrfp = qr_tall.geqrfp;
+pub const geqr2p = qr_tall.geqr2p;
+pub const tzrzf = qr_tall.tzrzf;
+pub const ormrz = qr_tall.ormrz;
+pub const unmrz = qr_tall.unmrz;
+pub const Direction = types.Direction;
+pub const StoreV = types.StoreV;
 
 pub const syev = eigen.syev;
 pub const heev = eigen.heev;

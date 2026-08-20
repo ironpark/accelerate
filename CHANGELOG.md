@@ -85,9 +85,18 @@
   `csum1`, and `linear.zig` gains the complex mixed-precision pair
   `cgesvIterative`/`cposvIterative` that had been missing next to the real one.
 
-  Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
-  CS decomposition, the tall-skinny QR family and the constrained least squares
-  routines. What the wrappers add:
+  `qr_tall.zig` is the modern factorization interfaces: `geqr`/`gemqr` and
+  `gelq`/`gemlq`, which let the library choose between blocked and
+  communication-avoiding QR and return an opaque `Factorization(T)` that owns
+  its array; the explicit block reflectors `geqrt`/`gemqrt`; the
+  triangular-pentagonal family `tpqrt`/`tpmqrt`/`tplqt`/`tpmlqt`/`tprfb` for
+  building your own blocked or out-of-core QR; `getsls` and `gelst`; the
+  sign-fixed `geqrfp`/`geqr2p`; and the RZ factorization `tzrzf`/`ormrz`.
+  `qr.zig` gains the constrained and generalized least squares routines
+  `gglse`, `ggglm`, `ggqrf` and `ggrqf`.
+
+  Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage and
+  the CS decomposition. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -116,6 +125,14 @@
     by a conjugation. The wrapper takes it uniformly and drops it for a real
     `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
     either precision.
+  - **`gglse` does not reliably detect a rank-deficient constraint.** Its
+    documented `info = 1` is a test on a QR pivot, and an exactly duplicated row
+    in `B` leaves a pivot that is small but not zero, so the call returns
+    success on a problem that is not well posed. The docstring says so and a
+    characterization test pins it.
+  - `tprfb` has no `info` parameter at all, so its wrapper returns
+    `Allocator.Error!void` rather than the usual error set — it is the only
+    routine here that cannot fail.
   - **`gejsv` has no workspace query.** Every other queryable routine here is
     sized by calling it with `lwork = -1` first; `gejsv` returns `info = -17`,
     an illegal value for `lwork` itself. Its workspace is therefore sized from
