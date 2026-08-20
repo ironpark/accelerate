@@ -312,7 +312,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `pbcon` <sub>cdsz</sub>
 - [x] `pbequ` <sub>cdsz</sub>
 - [x] `pbrfs` <sub>cdsz</sub>
-- [ ] `pbstf` <sub>cdsz</sub>
+- [x] `pbstf` <sub>cdsz</sub>
 - [ ] `pbtf2` <sub>cdsz</sub>
 - [x] `pbtrf` <sub>cdsz</sub>
 - [x] `pbtrs` <sub>cdsz</sub>
@@ -536,10 +536,10 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hbevd_2stage` <sub>cz</sub>
 - [x] `hbevx` <sub>cz</sub>
 - [ ] `hbevx_2stage` <sub>cz</sub>
-- [ ] `hbgst` <sub>cz</sub>
-- [ ] `hbgv` <sub>cz</sub>
-- [ ] `hbgvd` <sub>cz</sub>
-- [ ] `hbgvx` <sub>cz</sub>
+- [x] `hbgst` <sub>cz</sub>
+- [x] `hbgv` <sub>cz</sub>
+- [x] `hbgvd` <sub>cz</sub>
+- [x] `hbgvx` <sub>cz</sub>
 - [x] `hbtrd` <sub>cz</sub>
 - [x] `heequb` <sub>cz</sub>
 - [x] `heev` <sub>cz</sub>
@@ -551,11 +551,11 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `heevx` <sub>cz</sub>
 - [ ] `heevx_2stage` <sub>cz</sub>
 - [ ] `hegs2` <sub>cz</sub>
-- [ ] `hegst` <sub>cz</sub>
+- [x] `hegst` <sub>cz</sub>
 - [x] `hegv` <sub>cz</sub>
 - [ ] `hegv_2stage` <sub>cz</sub>
-- [ ] `hegvd` <sub>cz</sub>
-- [ ] `hegvx` <sub>cz</sub>
+- [x] `hegvd` <sub>cz</sub>
+- [x] `hegvx` <sub>cz</sub>
 - [ ] `hetd2` <sub>cz</sub>
 - [x] `hetrd` <sub>cz</sub>
 - [ ] `hetrd_2stage` <sub>cz</sub>
@@ -564,10 +564,10 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `hpev` <sub>cz</sub>
 - [x] `hpevd` <sub>cz</sub>
 - [x] `hpevx` <sub>cz</sub>
-- [ ] `hpgst` <sub>cz</sub>
-- [ ] `hpgv` <sub>cz</sub>
-- [ ] `hpgvd` <sub>cz</sub>
-- [ ] `hpgvx` <sub>cz</sub>
+- [x] `hpgst` <sub>cz</sub>
+- [x] `hpgv` <sub>cz</sub>
+- [x] `hpgvd` <sub>cz</sub>
+- [x] `hpgvx` <sub>cz</sub>
 - [x] `hptrd` <sub>cz</sub>
 - [x] `opgtr` <sub>ds</sub>
 - [x] `opmtr` <sub>ds</sub>
@@ -579,18 +579,18 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sbevd_2stage` <sub>ds</sub>
 - [x] `sbevx` <sub>ds</sub>
 - [ ] `sbevx_2stage` <sub>ds</sub>
-- [ ] `sbgst` <sub>ds</sub>
-- [ ] `sbgv` <sub>ds</sub>
-- [ ] `sbgvd` <sub>ds</sub>
-- [ ] `sbgvx` <sub>ds</sub>
+- [x] `sbgst` <sub>ds</sub>
+- [x] `sbgv` <sub>ds</sub>
+- [x] `sbgvd` <sub>ds</sub>
+- [x] `sbgvx` <sub>ds</sub>
 - [x] `sbtrd` <sub>ds</sub>
 - [x] `spev` <sub>ds</sub>
 - [x] `spevd` <sub>ds</sub>
 - [x] `spevx` <sub>ds</sub>
-- [ ] `spgst` <sub>ds</sub>
-- [ ] `spgv` <sub>ds</sub>
-- [ ] `spgvd` <sub>ds</sub>
-- [ ] `spgvx` <sub>ds</sub>
+- [x] `spgst` <sub>ds</sub>
+- [x] `spgv` <sub>ds</sub>
+- [x] `spgvd` <sub>ds</sub>
+- [x] `spgvx` <sub>ds</sub>
 - [x] `sptrd` <sub>ds</sub>
 - [x] `stebz` <sub>ds</sub>
 - [x] `stedc` <sub>cdsz</sub>
@@ -613,11 +613,11 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `syevx` <sub>ds</sub>
 - [ ] `syevx_2stage` <sub>ds</sub>
 - [ ] `sygs2` <sub>ds</sub>
-- [ ] `sygst` <sub>ds</sub>
+- [x] `sygst` <sub>ds</sub>
 - [x] `sygv` <sub>ds</sub>
 - [ ] `sygv_2stage` <sub>ds</sub>
-- [ ] `sygvd` <sub>ds</sub>
-- [ ] `sygvx` <sub>ds</sub>
+- [x] `sygvd` <sub>ds</sub>
+- [x] `sygvx` <sub>ds</sub>
 - [ ] `sytd2` <sub>ds</sub>
 - [x] `sytrd` <sub>ds</sub>
 - [ ] `sytrd_2stage` <sub>ds</sub>

@@ -521,7 +521,7 @@ pub fn sygv(
     } else {
         sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), w.ptr, buf.ptr, ref(&lwork), out(&info));
     }
-    return info_mod.checkConvergence(info);
+    return finishGeneralized(info, n);
 }
 
 /// LAPACK's name for `sygv` on complex elements.
@@ -1007,10 +1007,598 @@ fn requireRealTridiagonal(comptime T: type, comptime routine: []const u8) void {
 }
 
 // ============================================================================
+// Generalized problems: reduction, and the remaining drivers
+// ============================================================================
+
+/// `info` for the generalized drivers is bimodal, and the split is at `n`.
+///
+/// At or below `n` the QR/DC iteration failed to converge. Above it, the
+/// Cholesky of `B` failed — `B` is not positive definite, so the problem was
+/// never well posed — and `lastInfo() - n` is the leading minor that failed.
+/// The raw value is what `lastInfo()` carries, so both readings stay available.
+fn finishGeneralized(info: Int, n: usize) Error!void {
+    if (info > @as(Int, @intCast(n))) return info_mod.checkCholesky(info);
+    return info_mod.checkConvergence(info);
+}
+
+/// Reduces `A x = lambda B x` (or the `abx`/`bax` forms) to a standard
+/// symmetric eigenproblem, given a Cholesky factor of `B`.
+///
+/// `b` must be `factor.potrf`'s output, not `B` itself. `a` is overwritten with
+/// the reduced matrix, whose eigenvalues are the generalized ones; the
+/// eigenvectors are *not* the generalized ones and have to be back-transformed
+/// with a triangular solve against the same factor.
+///
+/// This is what `sygv` does internally. Call it directly to reduce once and
+/// then run several different queries — `syevr` for a subset, then `syevd` for
+/// everything — against the same reduced matrix.
+pub fn sygst(
+    comptime T: type,
+    kind: GeneralizedKind,
+    uplo: Uplo,
+    n: usize,
+    a: []T,
+    lda: usize,
+    b: []const T,
+    ldb: usize,
+) Error!void {
+    assertMatrix(a.len, n, n, lda);
+    assertMatrix(b.len, n, n, ldb);
+
+    const itype: Int = @intFromEnum(kind);
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    const ldb_ = dim(ldb);
+    var info: Int = 0;
+
+    sym(T, comptime herm(T, "sy", "he", "gst"))(ref(&itype), opt(uplo), ref(&n_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), out(&info));
+    return info_mod.checkArgs(info);
+}
+
+/// `sygst` under its complex name.
+pub const hegst = sygst;
+
+/// `sygst` in packed storage. `bp` is `factor.pptrf`'s output.
+pub fn spgst(
+    comptime T: type,
+    kind: GeneralizedKind,
+    uplo: Uplo,
+    n: usize,
+    ap: []T,
+    bp: []const T,
+) Error!void {
+    std.debug.assert(ap.len >= packedLen(n) and bp.len >= packedLen(n));
+
+    const itype: Int = @intFromEnum(kind);
+    const n_ = dim(n);
+    var info: Int = 0;
+
+    sym(T, comptime herm(T, "sp", "hp", "gst"))(ref(&itype), opt(uplo), ref(&n_), ap.ptr, bp.ptr, out(&info));
+    return info_mod.checkArgs(info);
+}
+
+/// `spgst` under its complex name.
+pub const hpgst = spgst;
+
+/// Reduces a banded `A x = lambda B x` to a standard banded eigenproblem.
+///
+/// The band analogue of `sygst`, but it does not use a Cholesky factor: `bb`
+/// must be `factor.pbstf`'s split factor instead, and the transformation is a
+/// sequence of rotations rather than a triangular solve. `x` receives the
+/// transformation when `vect = .vectors`, and it is `n x n` — the only dense
+/// array in a routine that is otherwise all band storage.
+///
+/// Unlike `sygst` there is no `kind`: the band routines solve only
+/// `A x = lambda B x`.
+pub fn sbgst(
+    comptime T: type,
+    allocator: Allocator,
+    vect: Job,
+    uplo: Uplo,
+    n: usize,
+    ka: usize,
+    kb: usize,
+    ab: []T,
+    ldab: usize,
+    bb: []const T,
+    ldbb: usize,
+    x: []T,
+    ldx: usize,
+) Fail!void {
+    std.debug.assert(ldab >= ka + 1 and ldbb >= kb + 1);
+    std.debug.assert(ldx >= 1);
+    if (vect == .vectors) assertMatrix(x.len, n, n, ldx);
+
+    const name = comptime herm(T, "sb", "hb", "gst");
+    const n_ = dim(n);
+    const ka_ = dim(ka);
+    const kb_ = dim(kb);
+    const ldab_ = dim(ldab);
+    const ldbb_ = dim(ldbb);
+    const ldx_ = dim(ldx);
+    var info: Int = 0;
+
+    if (comptime complexScratch(T)) {
+        const buf = try allocator.alloc(T, @max(n, 1));
+        defer allocator.free(buf);
+        const rwork = try allocator.alloc(Real(T), @max(n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(opt(vect), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), x.ptr, ref(&ldx_), buf.ptr, rwork.ptr, out(&info));
+    } else {
+        const buf = try allocator.alloc(T, @max(2 * n, 1));
+        defer allocator.free(buf);
+        sym(T, name)(opt(vect), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), x.ptr, ref(&ldx_), buf.ptr, out(&info));
+    }
+    return info_mod.checkArgs(info);
+}
+
+/// `sbgst` under its complex name.
+pub const hbgst = sbgst;
+
+/// `sygv` by divide and conquer.
+pub fn sygvd(
+    comptime T: type,
+    allocator: Allocator,
+    kind: GeneralizedKind,
+    job: Job,
+    uplo: Uplo,
+    n: usize,
+    a: []T,
+    lda: usize,
+    b: []T,
+    ldb: usize,
+    w: []Real(T),
+) Fail!void {
+    assertMatrix(a.len, n, n, lda);
+    assertMatrix(b.len, n, n, ldb);
+    std.debug.assert(w.len >= n);
+
+    const name = comptime herm(T, "sy", "he", "gvd");
+    const itype: Int = @intFromEnum(kind);
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    const ldb_ = dim(ldb);
+    var info: Int = 0;
+
+    var probe: [1]T = undefined;
+    var rprobe: [1]Real(T) = undefined;
+    var wq: [1]T = undefined;
+    var rq: [1]Real(T) = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    if (comptime complexScratch(T)) {
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), &probe, ref(&lda_), &probe, ref(&ldb_), &rprobe, &wq, ref(&neg), &rq, ref(&neg), &iq, ref(&neg), out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), &probe, ref(&lda_), &probe, ref(&ldb_), &rprobe, &wq, ref(&neg), &iq, ref(&neg), out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+    defer allocator.free(iwork);
+    const lwork = dim(size);
+    const liwork = dim(iwork.len);
+
+    if (comptime complexScratch(T)) {
+        const rsize: usize = @intCast(@max(work_mod.sizeFrom(Real(T), rq[0]), 1));
+        const rwork = try allocator.alloc(Real(T), rsize);
+        defer allocator.free(rwork);
+        const lrwork = dim(rsize);
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), w.ptr, buf.ptr, ref(&lwork), rwork.ptr, ref(&lrwork), iwork.ptr, ref(&liwork), out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), w.ptr, buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), out(&info));
+    }
+    return finishGeneralized(info, n);
+}
+
+/// `sygvd` under its complex name.
+pub const hegvd = sygvd;
+
+/// `sygv` restricted to a subset of the spectrum. See `syevx` for `abstol` and
+/// `ifail`.
+pub fn sygvx(
+    comptime T: type,
+    allocator: Allocator,
+    kind: GeneralizedKind,
+    job: Job,
+    selection: Selection,
+    uplo: Uplo,
+    n: usize,
+    a: []T,
+    lda: usize,
+    b: []T,
+    ldb: usize,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+    abstol: Real(T),
+    ifail: []Int,
+) Fail!EigResult {
+    assertMatrix(a.len, n, n, lda);
+    assertMatrix(b.len, n, n, ldb);
+    std.debug.assert(w.len >= n and ifail.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sy", "he", "gvx");
+    const itype: Int = @intFromEnum(kind);
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const lda_ = dim(lda);
+    const ldb_ = dim(ldb);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: Real(T) = @floatCast(win.vl);
+    const vu: Real(T) = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    const iwork = try allocator.alloc(Int, @max(5 * n, 1));
+    defer allocator.free(iwork);
+
+    var probe: [1]T = undefined;
+    var rprobe: [1]Real(T) = undefined;
+    var wq: [1]T = undefined;
+    const neg = work_mod.query;
+    if (comptime complexScratch(T)) {
+        sym(T, name)(ref(&itype), opt(job), opt(win.range), opt(uplo), ref(&n_), &probe, ref(&lda_), &probe, ref(&ldb_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), &rprobe, &probe, ref(&ldz_), &wq, ref(&neg), &rprobe, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(win.range), opt(uplo), ref(&n_), &probe, ref(&lda_), &probe, ref(&ldb_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), &rprobe, &probe, ref(&ldz_), &wq, ref(&neg), iwork.ptr, ifail.ptr, out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const lwork = dim(size);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(7 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(ref(&itype), opt(job), opt(win.range), opt(uplo), ref(&n_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), rwork.ptr, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(win.range), opt(uplo), ref(&n_), a.ptr, ref(&lda_), b.ptr, ref(&ldb_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), iwork.ptr, ifail.ptr, out(&info));
+    }
+    try finishGeneralized(info, n);
+    return .{ .found = @intCast(found) };
+}
+
+/// `sygvx` under its complex name.
+pub const hegvx = sygvx;
+
+/// `sygv` in packed storage. `ap` and `bp` are both destroyed.
+pub fn spgv(
+    comptime T: type,
+    allocator: Allocator,
+    kind: GeneralizedKind,
+    job: Job,
+    uplo: Uplo,
+    n: usize,
+    ap: []T,
+    bp: []T,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+) Fail!void {
+    std.debug.assert(ap.len >= packedLen(n) and bp.len >= packedLen(n));
+    std.debug.assert(w.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sp", "hp", "gv");
+    const itype: Int = @intFromEnum(kind);
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    var info: Int = 0;
+
+    const buf = try allocator.alloc(T, @max(if (comptime complexScratch(T)) 2 * n else 3 * n, 1));
+    defer allocator.free(buf);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(3 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), ap.ptr, bp.ptr, w.ptr, z.ptr, ref(&ldz_), buf.ptr, rwork.ptr, out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), ap.ptr, bp.ptr, w.ptr, z.ptr, ref(&ldz_), buf.ptr, out(&info));
+    }
+    return finishGeneralized(info, n);
+}
+
+/// `spgv` under its complex name.
+pub const hpgv = spgv;
+
+/// `spgv` by divide and conquer.
+pub fn spgvd(
+    comptime T: type,
+    allocator: Allocator,
+    kind: GeneralizedKind,
+    job: Job,
+    uplo: Uplo,
+    n: usize,
+    ap: []T,
+    bp: []T,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+) Fail!void {
+    std.debug.assert(ap.len >= packedLen(n) and bp.len >= packedLen(n));
+    std.debug.assert(w.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sp", "hp", "gvd");
+    const itype: Int = @intFromEnum(kind);
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    var info: Int = 0;
+
+    var wq: [1]T = undefined;
+    var rq: [1]Real(T) = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    if (comptime complexScratch(T)) {
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), ap.ptr, bp.ptr, w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &rq, ref(&neg), &iq, ref(&neg), out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), ap.ptr, bp.ptr, w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &iq, ref(&neg), out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+    defer allocator.free(iwork);
+    const lwork = dim(size);
+    const liwork = dim(iwork.len);
+
+    if (comptime complexScratch(T)) {
+        const rsize: usize = @intCast(@max(work_mod.sizeFrom(Real(T), rq[0]), 1));
+        const rwork = try allocator.alloc(Real(T), rsize);
+        defer allocator.free(rwork);
+        const lrwork = dim(rsize);
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), ap.ptr, bp.ptr, w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), rwork.ptr, ref(&lrwork), iwork.ptr, ref(&liwork), out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(uplo), ref(&n_), ap.ptr, bp.ptr, w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), out(&info));
+    }
+    return finishGeneralized(info, n);
+}
+
+/// `spgvd` under its complex name.
+pub const hpgvd = spgvd;
+
+/// `spgv` restricted to a subset of the spectrum.
+pub fn spgvx(
+    comptime T: type,
+    allocator: Allocator,
+    kind: GeneralizedKind,
+    job: Job,
+    selection: Selection,
+    uplo: Uplo,
+    n: usize,
+    ap: []T,
+    bp: []T,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+    abstol: Real(T),
+    ifail: []Int,
+) Fail!EigResult {
+    std.debug.assert(ap.len >= packedLen(n) and bp.len >= packedLen(n));
+    std.debug.assert(w.len >= n and ifail.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sp", "hp", "gvx");
+    const itype: Int = @intFromEnum(kind);
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: Real(T) = @floatCast(win.vl);
+    const vu: Real(T) = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    const iwork = try allocator.alloc(Int, @max(5 * n, 1));
+    defer allocator.free(iwork);
+    const buf = try allocator.alloc(T, @max(if (comptime complexScratch(T)) 2 * n else 8 * n, 1));
+    defer allocator.free(buf);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(7 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(ref(&itype), opt(job), opt(win.range), opt(uplo), ref(&n_), ap.ptr, bp.ptr, ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, rwork.ptr, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(ref(&itype), opt(job), opt(win.range), opt(uplo), ref(&n_), ap.ptr, bp.ptr, ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, iwork.ptr, ifail.ptr, out(&info));
+    }
+    try finishGeneralized(info, n);
+    return .{ .found = @intCast(found) };
+}
+
+/// `spgvx` under its complex name.
+pub const hpgvx = spgvx;
+
+/// `A x = lambda B x` for a pair of banded matrices, `B` positive definite.
+///
+/// No `kind`: the band drivers solve only this form. `ka` and `kb` are the two
+/// bandwidths and need not match.
+pub fn sbgv(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    uplo: Uplo,
+    n: usize,
+    ka: usize,
+    kb: usize,
+    ab: []T,
+    ldab: usize,
+    bb: []T,
+    ldbb: usize,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+) Fail!void {
+    std.debug.assert(ldab >= ka + 1 and ldbb >= kb + 1);
+    std.debug.assert(w.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sb", "hb", "gv");
+    const n_ = dim(n);
+    const ka_ = dim(ka);
+    const kb_ = dim(kb);
+    const ldab_ = dim(ldab);
+    const ldbb_ = dim(ldbb);
+    const ldz_ = dim(@max(ldz, 1));
+    var info: Int = 0;
+
+    const buf = try allocator.alloc(T, @max(if (comptime complexScratch(T)) n else 3 * n, 1));
+    defer allocator.free(buf);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(3 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), w.ptr, z.ptr, ref(&ldz_), buf.ptr, rwork.ptr, out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), w.ptr, z.ptr, ref(&ldz_), buf.ptr, out(&info));
+    }
+    return finishGeneralized(info, n);
+}
+
+/// `sbgv` under its complex name.
+pub const hbgv = sbgv;
+
+/// `sbgv` by divide and conquer.
+pub fn sbgvd(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    uplo: Uplo,
+    n: usize,
+    ka: usize,
+    kb: usize,
+    ab: []T,
+    ldab: usize,
+    bb: []T,
+    ldbb: usize,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+) Fail!void {
+    std.debug.assert(ldab >= ka + 1 and ldbb >= kb + 1);
+    std.debug.assert(w.len >= n);
+    if (job == .vectors) assertMatrix(z.len, n, n, ldz);
+
+    const name = comptime herm(T, "sb", "hb", "gvd");
+    const n_ = dim(n);
+    const ka_ = dim(ka);
+    const kb_ = dim(kb);
+    const ldab_ = dim(ldab);
+    const ldbb_ = dim(ldbb);
+    const ldz_ = dim(@max(ldz, 1));
+    var info: Int = 0;
+
+    var wq: [1]T = undefined;
+    var rq: [1]Real(T) = undefined;
+    var iq: [1]Int = undefined;
+    const neg = work_mod.query;
+    if (comptime complexScratch(T)) {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &rq, ref(&neg), &iq, ref(&neg), out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), w.ptr, z.ptr, ref(&ldz_), &wq, ref(&neg), &iq, ref(&neg), out(&info));
+    }
+    try info_mod.checkArgs(info);
+
+    const size: usize = @intCast(@max(work_mod.sizeFrom(T, wq[0]), 1));
+    const buf = try allocator.alloc(T, size);
+    defer allocator.free(buf);
+    const iwork = try allocator.alloc(Int, @intCast(@max(iq[0], 1)));
+    defer allocator.free(iwork);
+    const lwork = dim(size);
+    const liwork = dim(iwork.len);
+
+    if (comptime complexScratch(T)) {
+        const rsize: usize = @intCast(@max(work_mod.sizeFrom(Real(T), rq[0]), 1));
+        const rwork = try allocator.alloc(Real(T), rsize);
+        defer allocator.free(rwork);
+        const lrwork = dim(rsize);
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), rwork.ptr, ref(&lrwork), iwork.ptr, ref(&liwork), out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), w.ptr, z.ptr, ref(&ldz_), buf.ptr, ref(&lwork), iwork.ptr, ref(&liwork), out(&info));
+    }
+    return finishGeneralized(info, n);
+}
+
+/// `sbgvd` under its complex name.
+pub const hbgvd = sbgvd;
+
+/// `sbgv` restricted to a subset of the spectrum.
+///
+/// `q` receives the `sbgst` transformation, as in `sbevx`; it is `n x n` and
+/// only referenced when `job = .vectors`.
+pub fn sbgvx(
+    comptime T: type,
+    allocator: Allocator,
+    job: Job,
+    selection: Selection,
+    uplo: Uplo,
+    n: usize,
+    ka: usize,
+    kb: usize,
+    ab: []T,
+    ldab: usize,
+    bb: []T,
+    ldbb: usize,
+    q: []T,
+    ldq: usize,
+    w: []Real(T),
+    z: []T,
+    ldz: usize,
+    abstol: Real(T),
+    ifail: []Int,
+) Fail!EigResult {
+    std.debug.assert(ldab >= ka + 1 and ldbb >= kb + 1);
+    std.debug.assert(w.len >= n and ifail.len >= n);
+    std.debug.assert(ldq >= 1);
+    if (job == .vectors) {
+        assertMatrix(q.len, n, n, ldq);
+        assertMatrix(z.len, n, n, ldz);
+    }
+
+    const name = comptime herm(T, "sb", "hb", "gvx");
+    const win = Window.from(selection, n);
+    const n_ = dim(n);
+    const ka_ = dim(ka);
+    const kb_ = dim(kb);
+    const ldab_ = dim(ldab);
+    const ldbb_ = dim(ldbb);
+    const ldq_ = dim(ldq);
+    const ldz_ = dim(@max(ldz, 1));
+    const vl: Real(T) = @floatCast(win.vl);
+    const vu: Real(T) = @floatCast(win.vu);
+    var found: Int = 0;
+    var info: Int = 0;
+
+    const iwork = try allocator.alloc(Int, @max(5 * n, 1));
+    defer allocator.free(iwork);
+    const buf = try allocator.alloc(T, @max(if (comptime complexScratch(T)) n else 7 * n, 1));
+    defer allocator.free(buf);
+
+    if (comptime complexScratch(T)) {
+        const rwork = try allocator.alloc(Real(T), @max(7 * n, 1));
+        defer allocator.free(rwork);
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), q.ptr, ref(&ldq_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, rwork.ptr, iwork.ptr, ifail.ptr, out(&info));
+    } else {
+        sym(T, name)(opt(job), opt(win.range), opt(uplo), ref(&n_), ref(&ka_), ref(&kb_), ab.ptr, ref(&ldab_), bb.ptr, ref(&ldbb_), q.ptr, ref(&ldq_), ref(&vl), ref(&vu), ref(&win.il), ref(&win.iu), ref(&abstol), out(&found), w.ptr, z.ptr, ref(&ldz_), buf.ptr, iwork.ptr, ifail.ptr, out(&info));
+    }
+    try finishGeneralized(info, n);
+    return .{ .found = @intCast(found) };
+}
+
+/// `sbgvx` under its complex name.
+pub const hbgvx = sbgvx;
+
+// ============================================================================
 // Tests
 // ============================================================================
 
 const testing = std.testing;
+const factor = @import("factor.zig");
 
 /// `max_i || A v_i - lambda_i v_i ||_inf` over the columns of `z`.
 ///
@@ -1268,18 +1856,21 @@ test "sygv distinguishes its three problem types" {
 
 test "sygv reports a non-positive-definite B distinguishably" {
     // B is indefinite, so the Cholesky step fails. LAPACK signals that with
-    // info > n rather than with a different error, so lastInfo() is the only
-    // way to tell it from a convergence failure.
+    // info > n rather than with a separate code, and the wrapper reads the
+    // split: above n is NotPositiveDefinite, at or below it is a convergence
+    // failure. lastInfo() keeps the raw value, so lastInfo() - n is the
+    // leading minor of B that failed.
     const n = 2;
     var a = [_]f64{ 2, 1, 1, 2 };
     var b = [_]f64{ 1, 2, 2, 1 };
     var w: [2]f64 = undefined;
 
     try testing.expectError(
-        error.NoConvergence,
+        error.NotPositiveDefinite,
         sygv(f64, testing.allocator, .a_bx, .values_only, .upper, n, &a, n, &b, n, &w),
     );
     try testing.expect(info_mod.lastInfo() > n);
+    try testing.expectEqual(@as(Int, 2), info_mod.lastInfo() - n);
 }
 
 test "single precision works through the same wrappers" {
@@ -1494,4 +2085,226 @@ test "stevr's isuppz bounds the nonzero rows of each vector" {
             if (i + 1 < lo or i + 1 > hi) try testing.expectApproxEqAbs(@as(f64, 0), z[i + j * 4], 1e-14);
         }
     }
+}
+
+// ============================================================================
+// Tests: generalized symmetric eigenproblems
+// ============================================================================
+
+/// `A` and a positive definite `B`, used by every generalized test below.
+const gen_a = [_]f64{
+    6, 1, 0,
+    1, 5, 1,
+    0, 1, 4,
+};
+const gen_b = [_]f64{
+    2, 0, 0,
+    0, 3, 0,
+    0, 0, 4,
+};
+
+/// The eigenvalues of `A x = lambda B x`, from `sygv` — already covered above,
+/// so the variants are checked against a known-good driver.
+fn generalizedEigenvalues() ![3]f64 {
+    var a = gen_a;
+    var b = gen_b;
+    var w: [3]f64 = undefined;
+    try sygv(f64, testing.allocator, .a_bx, .values_only, .upper, 3, &a, 3, &b, 3, &w);
+    return w;
+}
+
+test "sygst reduces to a standard problem with the same eigenvalues" {
+    const reference = try generalizedEigenvalues();
+
+    var a = gen_a;
+    var b = gen_b;
+    // sygst wants the Cholesky factor, not B itself.
+    try factor.potrf(f64, .upper, 3, &b, 3);
+    try sygst(f64, .a_bx, .upper, 3, &a, 3, &b, 3);
+
+    // What is left is an ordinary symmetric eigenproblem.
+    var w: [3]f64 = undefined;
+    try syev(f64, testing.allocator, .values_only, .upper, 3, &a, 3, &w);
+    for (reference, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "spgst matches sygst in packed storage" {
+    const reference = try generalizedEigenvalues();
+
+    var ap: [6]f64 = undefined;
+    var bp: [6]f64 = undefined;
+    var at: usize = 0;
+    for (0..3) |j| for (0..j + 1) |i| {
+        ap[at] = gen_a[i + j * 3];
+        bp[at] = gen_b[i + j * 3];
+        at += 1;
+    };
+    try factor.pptrf(f64, .upper, 3, &bp);
+    try spgst(f64, .a_bx, .upper, 3, &ap, &bp);
+
+    var w: [3]f64 = undefined;
+    var z: [1]f64 = undefined;
+    try spev(f64, testing.allocator, .values_only, .upper, 3, &ap, &w, &z, 1);
+    for (reference, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "sygvd and sygvx agree with sygv" {
+    const reference = try generalizedEigenvalues();
+
+    var ad = gen_a;
+    var bd = gen_b;
+    var wd: [3]f64 = undefined;
+    try sygvd(f64, testing.allocator, .a_bx, .vectors, .upper, 3, &ad, 3, &bd, 3, &wd);
+    for (reference, wd) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    var ax = gen_a;
+    var bx = gen_b;
+    var wx: [3]f64 = undefined;
+    var zx: [9]f64 = undefined;
+    var ifail: [3]Int = undefined;
+    const res = try sygvx(f64, testing.allocator, .a_bx, .vectors, .all, .upper, 3, &ax, 3, &bx, 3, &wx, &zx, 3, 0, &ifail);
+    try testing.expectEqual(@as(usize, 3), res.found);
+    for (reference, wx) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "sygvx's vectors satisfy A x = lambda B x" {
+    var a = gen_a;
+    var b = gen_b;
+    var w: [3]f64 = undefined;
+    var z: [9]f64 = undefined;
+    var ifail: [3]Int = undefined;
+    _ = try sygvx(f64, testing.allocator, .a_bx, .vectors, .all, .upper, 3, &a, 3, &b, 3, &w, &z, 3, 0, &ifail);
+
+    for (0..3) |j| {
+        for (0..3) |i| {
+            var ax: f64 = 0;
+            var bx: f64 = 0;
+            for (0..3) |k| {
+                ax += gen_a[i + k * 3] * z[k + j * 3];
+                bx += gen_b[i + k * 3] * z[k + j * 3];
+            }
+            try testing.expectApproxEqAbs(w[j] * bx, ax, 1e-11);
+        }
+    }
+}
+
+test "spgv, spgvd and spgvx agree in packed storage" {
+    const reference = try generalizedEigenvalues();
+    var ap0: [6]f64 = undefined;
+    var bp0: [6]f64 = undefined;
+    var at: usize = 0;
+    for (0..3) |j| for (0..j + 1) |i| {
+        ap0[at] = gen_a[i + j * 3];
+        bp0[at] = gen_b[i + j * 3];
+        at += 1;
+    };
+
+    var ap = ap0;
+    var bp = bp0;
+    var w: [3]f64 = undefined;
+    var z: [9]f64 = undefined;
+    try spgv(f64, testing.allocator, .a_bx, .vectors, .upper, 3, &ap, &bp, &w, &z, 3);
+    for (reference, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    ap = ap0;
+    bp = bp0;
+    try spgvd(f64, testing.allocator, .a_bx, .vectors, .upper, 3, &ap, &bp, &w, &z, 3);
+    for (reference, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    ap = ap0;
+    bp = bp0;
+    var ifail: [3]Int = undefined;
+    const res = try spgvx(f64, testing.allocator, .a_bx, .vectors, .{ .indices = .{ .first = 1, .last = 2 } }, .upper, 3, &ap, &bp, &w, &z, 3, 0, &ifail);
+    try testing.expectEqual(@as(usize, 2), res.found);
+    for (0..2) |i| try testing.expectApproxEqAbs(reference[i], w[i], 1e-12);
+}
+
+test "sbgv, sbgvd and sbgvx agree in band storage" {
+    const reference = try generalizedEigenvalues();
+    // A: ka = 1, B: kb = 0 (diagonal). Upper band, row kd + i - j.
+    const ab0 = [_]f64{ 0, 6, 1, 5, 1, 4 };
+    const bb0 = [_]f64{ 2, 3, 4 };
+
+    var ab = ab0;
+    var bb = bb0;
+    var w: [3]f64 = undefined;
+    var z: [9]f64 = undefined;
+    try sbgv(f64, testing.allocator, .vectors, .upper, 3, 1, 0, &ab, 2, &bb, 1, &w, &z, 3);
+    for (reference, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    ab = ab0;
+    bb = bb0;
+    try sbgvd(f64, testing.allocator, .vectors, .upper, 3, 1, 0, &ab, 2, &bb, 1, &w, &z, 3);
+    for (reference, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    ab = ab0;
+    bb = bb0;
+    var q: [9]f64 = undefined;
+    var ifail: [3]Int = undefined;
+    const res = try sbgvx(f64, testing.allocator, .vectors, .all, .upper, 3, 1, 0, &ab, 2, &bb, 1, &q, 3, &w, &z, 3, 0, &ifail);
+    try testing.expectEqual(@as(usize, 3), res.found);
+    for (reference, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "sbgst reduces the banded pair, matching sbgv" {
+    const reference = try generalizedEigenvalues();
+    var ab = [_]f64{ 0, 6, 1, 5, 1, 4 };
+    var bb = [_]f64{ 2, 3, 4 };
+
+    // pbstf, not pbtrf: sbgst wants the split factor.
+    try factor.pbstf(f64, .upper, 3, 0, &bb, 1);
+
+    var x: [9]f64 = undefined;
+    try sbgst(f64, testing.allocator, .vectors, .upper, 3, 1, 0, &ab, 2, &bb, 1, &x, 3);
+
+    // What is left is a standard banded symmetric eigenproblem.
+    var w: [3]f64 = undefined;
+    var z: [1]f64 = undefined;
+    try sbev(f64, testing.allocator, .values_only, .upper, 3, 1, &ab, 2, &w, &z, 1);
+    for (reference, w) |a, b| try testing.expectApproxEqAbs(a, b, 1e-12);
+}
+
+test "the complex generalized drivers agree with each other" {
+    const Z = Complex(f64);
+    const a0 = [_]Z{
+        Z.init(6, 0), Z.init(1, -1),
+        Z.init(1, 1), Z.init(5, 0),
+    };
+    const b0 = [_]Z{
+        Z.init(2, 0), Z.init(0, 0),
+        Z.init(0, 0), Z.init(3, 0),
+    };
+
+    var a = a0;
+    var b = b0;
+    var w_ref: [2]f64 = undefined;
+    try hegv(Z, testing.allocator, .a_bx, .values_only, .upper, 2, &a, 2, &b, 2, &w_ref);
+
+    a = a0;
+    b = b0;
+    var w: [2]f64 = undefined;
+    try hegvd(Z, testing.allocator, .a_bx, .values_only, .upper, 2, &a, 2, &b, 2, &w);
+    for (w_ref, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+
+    a = a0;
+    b = b0;
+    var z: [4]Z = undefined;
+    var ifail: [2]Int = undefined;
+    const res = try hegvx(Z, testing.allocator, .a_bx, .vectors, .all, .upper, 2, &a, 2, &b, 2, &w, &z, 2, 0, &ifail);
+    try testing.expectEqual(@as(usize, 2), res.found);
+    for (w_ref, w) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
+}
+
+test "the abx and bax forms give different eigenvalues from a_bx" {
+    var w: [3][3]f64 = undefined;
+    for ([_]GeneralizedKind{ .a_bx, .abx, .bax }, 0..) |kind, i| {
+        var a = gen_a;
+        var b = gen_b;
+        try sygvd(f64, testing.allocator, kind, .values_only, .upper, 3, &a, 3, &b, 3, &w[i]);
+    }
+
+    // A B and B A are similar, so kinds 2 and 3 share a spectrum; kind 1 does
+    // not. The itype is not a formatting detail.
+    for (w[1], w[2]) |x, y| try testing.expectApproxEqAbs(x, y, 1e-11);
+    try testing.expect(@abs(w[0][0] - w[1][0]) > 1);
 }

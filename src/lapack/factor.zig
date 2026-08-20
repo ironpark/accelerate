@@ -505,6 +505,35 @@ pub fn pocon(
     return rcond;
 }
 
+/// A *split* Cholesky factorization of a positive definite band matrix.
+///
+/// Not the same as `pbtrf`. This produces `S^H S` where `S` is upper triangular
+/// in its first `(n + kd) / 2` rows and lower triangular below that — a hybrid
+/// that keeps the bandwidth of the *generalized* band eigenproblem from growing
+/// during the reduction. `eigen.sbgst` is the only consumer, and it will not
+/// accept a `pbtrf` factor.
+///
+/// `error.NotPositiveDefinite` with `lastInfo()` giving the position where the
+/// factorization broke down.
+pub fn pbstf(
+    comptime T: type,
+    uplo: Uplo,
+    n: usize,
+    kd: usize,
+    ab: []T,
+    ldab: usize,
+) Error!void {
+    std.debug.assert(ldab >= kd + 1);
+
+    const n_ = dim(n);
+    const kd_ = dim(kd);
+    const ldab_ = dim(ldab);
+    var info: Int = 0;
+
+    sym(T, "pbstf")(opt(uplo), ref(&n_), ref(&kd_), ab.ptr, ref(&ldab_), out(&info));
+    return info_mod.checkCholesky(info);
+}
+
 /// Cholesky of a packed matrix.
 pub fn pptrf(comptime T: type, uplo: Uplo, n: usize, ap: []T) Error!void {
     std.debug.assert(ap.len >= packedLen(n));

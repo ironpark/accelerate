@@ -59,6 +59,19 @@
   `condition_unreliable` flag rather than as an error, since the factorization
   itself is valid.
 
+  The generalized symmetric eigenproblem in every storage form: the reductions
+  `sygst`, `spgst` and `sbgst`, and the drivers `sygvd`, `sygvx`, `spgv`,
+  `spgvd`, `spgvx`, `sbgv`, `sbgvd`, `sbgvx`, each with its Hermitian
+  counterpart. `factor.pbstf` comes with them, since `sbgst` needs its split
+  factorization and will not accept a `pbtrf` one.
+
+  **Behaviour change:** `sygv`/`hegv` previously reported a non-positive-definite
+  `B` as `error.NoConvergence`. LAPACK signals it with `info > n`, and every
+  generalized driver now reads that split — above `n` is
+  `error.NotPositiveDefinite`, at or below it is a genuine convergence failure.
+  `lastInfo()` still carries the raw value, so `lastInfo() - n` is the leading
+  minor of `B` that failed.
+
   Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
   generalized expert drivers, the generalized Schur family, the CS
   decomposition, the tall-skinny QR family and the remaining SVD drivers. What
