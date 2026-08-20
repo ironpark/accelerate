@@ -171,12 +171,25 @@ pub fn Biquadm(comptime T: type) type {
             }
         }
 
-        /// Copies the current state between two biquadm setup objects.
-        /// The two objects must have been created with the same number of channels and sections.
+        /// Copies `src`'s delay state into `self` (`self`'s prior state is
+        /// discarded). The two objects must have been created with the same
+        /// number of channels and sections.
+        ///
+        /// vDSP.h:472-474 declares `vDSP_biquadm_CopyState(__dest, __src)`
+        /// with `__dest` first: it writes into `__dest` and reads from
+        /// `__src`. Runtime-confirmed with a one-pole filter: give `a` and
+        /// `b` distinct nonzero delay states (impulses of 1.0 and 2.0
+        /// respectively), call `a.copyState(b)`, then apply zero input to
+        /// both. With this argument order, `a`'s next output equals `b`'s
+        /// (both follow `b`'s state: 0.5*2.0=1.0) while `b` is unaffected
+        /// (also 1.0, continuing its own state) -- i.e. `self` ("a") must
+        /// map to `__dest` and `src` ("b") must map to `__src` for
+        /// `self.copyState(src)` to mean "self absorbs src's state" as its
+        /// name and parameter promise. See the "Biquadm copyState" test.
         pub fn copyState(self: Self, src: Self) void {
             switch (T) {
-                f32 => c.vDSP_biquadm_CopyState(src.setup, self.setup),
-                f64 => c.vDSP_biquadm_CopyStateD(src.setup, self.setup),
+                f32 => c.vDSP_biquadm_CopyState(self.setup, src.setup),
+                f64 => c.vDSP_biquadm_CopyStateD(self.setup, src.setup),
                 else => @compileError("Biquadm requires f32 or f64"),
             }
         }
@@ -263,4 +276,55 @@ test "Biquad one-pole IIR" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.5), output[1], 0.0001);
     try std.testing.expectApproxEqAbs(@as(f32, 0.25), output[2], 0.0001);
     try std.testing.expectApproxEqAbs(@as(f32, 0.125), output[3], 0.0001);
+}
+
+test "Biquadm copyState: self absorbs src's delay state" {
+    // vDSP.h:472-478 declares vDSP_biquadm_CopyState(__dest, __src): writes
+    // __dest, reads __src. `self.copyState(src)` must therefore make `self`
+    // end up matching `src`'s state (self <- src), consistent with the
+    // parameter being named `src`.
+    const coeffs = [_]f64{ 1.0, 0.0, 0.0, -0.5, 0.0 };
+    var a = try Biquadm(f32).init(&coeffs, 1, 1);
+    defer a.deinit();
+    var b = try Biquadm(f32).init(&coeffs, 1, 1);
+    defer b.deinit();
+
+    // Give `a` and `b` distinct, nonzero delay states via different impulse
+    // magnitudes.
+    {
+        var in_a = [_]f32{1.0};
+        var out_a: [1]f32 = undefined;
+        const xs = [_][*]const f32{&in_a};
+        const ys = [_][*]f32{&out_a};
+        a.apply(&xs, &ys, 1);
+    }
+    {
+        var in_b = [_]f32{2.0};
+        var out_b: [1]f32 = undefined;
+        const xs = [_][*]const f32{&in_b};
+        const ys = [_][*]f32{&out_b};
+        b.apply(&xs, &ys, 1);
+    }
+
+    a.copyState(b);
+
+    // Continuing both with zero input: `a` must now follow `b`'s state
+    // (0.5 * 2.0 = 1.0), and `b` must be untouched by the call (also 1.0,
+    // continuing its own state).
+    var out_a2: [1]f32 = undefined;
+    var out_b2: [1]f32 = undefined;
+    {
+        var in_z = [_]f32{0.0};
+        const xs = [_][*]const f32{&in_z};
+        const ys = [_][*]f32{&out_a2};
+        a.apply(&xs, &ys, 1);
+    }
+    {
+        var in_z = [_]f32{0.0};
+        const xs = [_][*]const f32{&in_z};
+        const ys = [_][*]f32{&out_b2};
+        b.apply(&xs, &ys, 1);
+    }
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out_a2[0], 0.0001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out_b2[0], 0.0001);
 }

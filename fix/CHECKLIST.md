@@ -21,7 +21,7 @@
 - [ ] `Biquadm(T).deinit` — L148
 - [ ] `Biquadm(T).apply` — L157
 - [ ] `Biquadm(T).resetState` — L166
-- [ ] `Biquadm(T).copyState` — L176
+- [x] `Biquadm(T).copyState` — L176
 - [ ] `Biquadm(T).setCoefficientsDouble` — L187
 - [ ] `Biquadm(T).setCoefficientsSingle` — L198
 - [ ] `Biquadm(T).setTargetsDouble` — L209
