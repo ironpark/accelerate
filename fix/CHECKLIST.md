@@ -10,10 +10,10 @@
 
 ### `src/vdsp/biquad.zig`
 
-- [ ] `Biquad` — L23
-- [ ] `Biquad(T).init` — L38
-- [ ] `Biquad(T).deinit` — L56
-- [ ] `Biquad(T).apply` — L72
+- [x] `Biquad` — L23
+- [x] `Biquad(T).init` — L38
+- [x] `Biquad(T).deinit` — L56
+- [x] `Biquad(T).apply` — L72
 - [ ] `Biquad(T).setCoefficientsDouble` — L84 (callable `pub const`)
 - [ ] `Biquad(T).setCoefficientsSingle` — L97 (callable `pub const`)
 - [ ] `Biquadm` — L112
@@ -120,10 +120,10 @@
 
 - [x] `ctoz` — L38
 - [x] `ztoc` — L54
-- [ ] `FFT` — L70
-- [ ] `FFT(T).init` — L84
-- [ ] `FFT(T).deinit` — L98
-- [ ] `FFT(T).zip` — L132
+- [x] `FFT` — L70
+- [x] `FFT(T).init` — L84
+- [x] `FFT(T).deinit` — L98
+- [x] `FFT(T).zip` — L132
 - [ ] `FFT(T).zipt` — L148
 - [ ] `FFT(T).zop` — L180
 - [ ] `FFT(T).zopt` — L196

@@ -235,3 +235,32 @@ pub fn Biquadm(comptime T: type) type {
         }
     };
 }
+
+test "Biquad identity filter" {
+    // b0=1, b1=0, b2=0, a1=0, a2=0: y[n] = x[n], independent of delay state.
+    const coeffs = [_]f64{ 1.0, 0.0, 0.0, 0.0, 0.0 };
+    var filter = try Biquad(f32).init(std.testing.allocator, &coeffs, 1);
+    defer filter.deinit(std.testing.allocator);
+
+    const input = [_]f32{ 1.0, -2.0, 3.5, 0.0 };
+    var output: [4]f32 = undefined;
+    filter.apply(&input, &output);
+    try std.testing.expectEqualSlices(f32, &input, &output);
+}
+
+test "Biquad one-pole IIR" {
+    // b0=1, b1=0, b2=0, a1=-0.5, a2=0: y[n] = x[n] + 0.5*y[n-1].
+    // Impulse input with zero initial delay gives a known geometric decay:
+    // y = [1, 0.5, 0.25, 0.125].
+    const coeffs = [_]f64{ 1.0, 0.0, 0.0, -0.5, 0.0 };
+    var filter = try Biquad(f32).init(std.testing.allocator, &coeffs, 1);
+    defer filter.deinit(std.testing.allocator);
+
+    const input = [_]f32{ 1.0, 0.0, 0.0, 0.0 };
+    var output: [4]f32 = undefined;
+    filter.apply(&input, &output);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), output[0], 0.0001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), output[1], 0.0001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.25), output[2], 0.0001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.125), output[3], 0.0001);
+}
