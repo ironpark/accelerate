@@ -301,15 +301,15 @@
 - [ ] `zrvmul` — L64
 - [x] `zvdiv` — L76
 - [ ] `zrvdiv` — L88
-- [ ] `zvabs` — L100
+- [x] `zvabs` — L100
 - [ ] `zvfill` — L112
-- [ ] `zvmul` — L128
+- [x] `zvmul` — L128
 - [ ] `zvcma` — L140
 - [ ] `zvma` — L152
 - [ ] `zvcmul` — L164
 - [ ] `zvconj` — L176
 - [ ] `zvzsml` — L188
-- [ ] `zvmags` — L200
+- [x] `zvmags` — L200
 - [ ] `zvmgsa` — L212
 - [ ] `zvmov` — L224
 - [ ] `zvneg` — L236

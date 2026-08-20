@@ -346,6 +346,47 @@ pub fn zrdesamp(comptime T: type, a: *const SC(T), decimation_factor: Stride, fi
 // Tests
 // ============================================================================
 
+test "zvabs" {
+    var a_re = [_]f32{3.0};
+    var a_im = [_]f32{4.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = [_]f32{0.0};
+    zvabs(f32, &a, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
+}
+
+test "zvmags" {
+    var a_re = [_]f32{3.0};
+    var a_im = [_]f32{4.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = [_]f32{0.0};
+    zvmags(f32, &a, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 25.0), out[0], 0.001);
+}
+
+test "zvmul" {
+    // Asymmetric operands: (1+2i)*(3+4i) = -5+10i, but conj(1+2i)*(3+4i) =
+    // 11-2i, so this also confirms the conjugate flag is wired correctly.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+
+    zvmul(f32, &a, &b, &out, 1, false);
+    try std.testing.expectApproxEqAbs(@as(f32, -5.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), out_im[0], 0.001);
+
+    zvmul(f32, &a, &b, &out, 1, true);
+    try std.testing.expectApproxEqAbs(@as(f32, 11.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -2.0), out_im[0], 0.001);
+}
+
 test "zvdiv" {
     // a/b != b/a for these asymmetric operands, so an argument-order bug
     // (dividing b/a instead of a/b) would fail this test.
