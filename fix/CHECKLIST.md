@@ -223,7 +223,7 @@
 ### `src/vdsp/util.zig`
 
 - [ ] `vrvrs` — L18
-- [ ] `vswap` — L32
+- [x] `vswap` — L32
 - [ ] `vsort` — L44
 - [ ] `vsorti` — L60
 - [ ] `vramp` — L78
@@ -234,7 +234,7 @@
 - [ ] `vthrsc` — L159
 - [ ] `vtabi` — L189
 - [ ] `vtmerg` — L207
-- [ ] `wiener` — L220
+- [x] `wiener` — L220
 - [ ] `vlint` — L244
 - [ ] `vqint` — L263
 - [ ] `vintb` — L277

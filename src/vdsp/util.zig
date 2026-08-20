@@ -1,3 +1,4 @@
+const std = @import("std");
 const types = @import("types.zig");
 const Length = types.Length;
 const SortOrder = types.SortOrder;
@@ -30,6 +31,7 @@ pub fn vrvrs(comptime T: type, buf: []T) void {
 ///     for (n = 0; n < N; ++n)
 ///         A[n] is swapped with B[n].
 pub fn vswap(comptime T: type, a: []T, b: []T) void {
+    std.debug.assert(b.len >= a.len);
     switch (T) {
         f32 => c.vDSP_vswap(a.ptr, 1, b.ptr, 1, a.len),
         f64 => c.vDSP_vswapD(a.ptr, 1, b.ptr, 1, a.len),
@@ -225,6 +227,21 @@ pub fn wiener(comptime T: type, l: Length, a: [*]const T, corr: [*]const T, filt
         else => @compileError("wiener requires f32 or f64"),
     }
     return err;
+}
+
+test "wiener" {
+    // Order-1 normal equations: autocorrelation A = [r0, r1] = [1.0, 0.5],
+    // cross-correlation C = [0.5]. The order-1 Wiener/Levinson solution is
+    // filter[0] = C[0] / A[0] = 0.5, matching the classic normal-equation
+    // solution and confirming (L, A, C, F, P, Flag, Error) line up with the
+    // header's parameter order.
+    const a = [_]f32{ 1.0, 0.5 };
+    const corr = [_]f32{0.5};
+    var filter = [_]f32{0.0};
+    var power = [_]f32{0.0};
+    const err = wiener(f32, 1, &a, &corr, &filter, &power, 0);
+    try std.testing.expectEqual(@as(c_int, 0), err);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), filter[0], 0.001);
 }
 
 // ============================================================================
@@ -434,4 +451,18 @@ pub fn hann_window(comptime T: type, out: []T, flag: WindowFlag) void {
         f64 => c.vDSP_hann_windowD(out.ptr, out.len, @intFromEnum(flag)),
         else => @compileError("hann_window requires f32 or f64"),
     }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+test "vswap" {
+    // A[n] swapped with B[n] is order-independent by definition, so this
+    // just verifies the contents actually get exchanged.
+    var a = [_]f32{ 1.0, 2.0, 3.0 };
+    var b = [_]f32{ 10.0, 20.0, 30.0 };
+    vswap(f32, &a, &b);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 10.0, 20.0, 30.0 }, &a);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 1.0, 2.0, 3.0 }, &b);
 }
