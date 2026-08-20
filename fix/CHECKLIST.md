@@ -477,18 +477,18 @@
 
 ### `src/vimage/geometry.zig`
 
-- [ ] `rotate` — L47
-- [ ] `scale` — L81
-- [ ] `horizontalReflect` — L111
-- [ ] `verticalReflect` — L134
-- [ ] `rotate90` — L177
-- [ ] `affineWarp` — L215
-- [ ] `affineWarpD` — L244
-- [ ] `affineWarpCG` — L273
-- [ ] `horizontalShear` — L307
-- [ ] `verticalShear` — L340
-- [ ] `newResamplingFilter` — L380
-- [ ] `destroyResamplingFilter` — L385
+- [x] `rotate` — L47
+- [x] `scale` — L81
+- [x] `horizontalReflect` — L111
+- [x] `verticalReflect` — L134
+- [x] `rotate90` — L177
+- [x] `affineWarp` — L215
+- [x] `affineWarpD` — L244
+- [x] `affineWarpCG` — L273
+- [x] `horizontalShear` — L307
+- [x] `verticalShear` — L340
+- [x] `newResamplingFilter` — L380
+- [x] `destroyResamplingFilter` — L385
 
 ### `src/vimage/histogram.zig`
 
