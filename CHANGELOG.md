@@ -38,10 +38,16 @@
   `tbrfs`, `tprfs`) and an expert driver (`gbsvx`, `gtsvx`, `pbsvx`, `ppsvx`,
   `ptsvx`, `spsvx`, `hpsvx`, `hesvx`).
 
+  `reduce.zig` has the reductions to condensed form that every dense eigenvalue
+  and SVD algorithm starts with — `sytrd`/`hetrd`, `sptrd`, `sbtrd`, `gehrd`,
+  `gebrd` and `gbbrd` — along with the routines that build (`orgtr`, `opgtr`,
+  `orghr`, `orgbr`) or apply (`ormtr`, `opmtr`, `ormhr`, `ormbr`) their
+  orthogonal factors, and balancing (`gebal`, `gebak`).
+
   Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
-  reductions to condensed form, the tridiagonal eigensolvers, the expert
-  eigenvalue drivers, the generalized Schur family, the CS decomposition, the
-  tall-skinny QR family and the remaining SVD drivers. What the wrappers add:
+  tridiagonal eigensolvers, the expert eigenvalue drivers, the generalized
+  Schur family, the CS decomposition, the tall-skinny QR family and the
+  remaining SVD drivers. What the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and
@@ -70,6 +76,15 @@
     by a conjugation. The wrapper takes it uniformly and drops it for a real
     `T`, with a test that pins the drop. `ptsvx`, confusingly, has no `uplo` in
     either precision.
+  - `sytrd`, `gebrd` and `gbbrd` write their diagonals as `[]Real(T)`, not
+    `[]T`. A Hermitian tridiagonal has a real diagonal and can be made to have
+    a real off-diagonal, and a bidiagonal reduction is real by construction; the
+    C signature says `double *` in both the real and complex routine and leaves
+    you to notice.
+  - `gebal`'s window comes back as a `Window { ilo, ihi }` documented as
+    1-based inclusive, because it is handed straight back to `gehrd`, `orghr`
+    and `gebak`. Converting it to 0-based at the boundary would mean converting
+    it back at four call sites.
   - The band routines disagree with each other about band layout, and nothing
     checks. `gbrfs` and `gbsvx` want the *original* matrix in the narrow
     `kl + ku + 1` form and its *factor* in the wide `2*kl + ku + 1` one, in

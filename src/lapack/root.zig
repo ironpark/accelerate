@@ -39,13 +39,15 @@
 //! - `expert.zig` - the expert drivers, which equilibrate, factor, solve,
 //!   estimate the condition number and bound the error in one call, again for
 //!   every storage form.
+//! - `reduce.zig` - the reductions to condensed form (`sytrd`, `gehrd`,
+//!   `gebrd`, `gbbrd`), the routines that build or apply their orthogonal
+//!   factors, and balancing.
 //!
 //! Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants,
-//! RFP storage, the reductions to condensed form (`gehrd`, `sytrd`, `gebrd`)
-//! and their `Q` builders, the tridiagonal eigensolvers (`steqr`, `stedc`,
-//! `stemr`, ...), the expert eigenvalue drivers (`geevx`, `geesx`, `ggevx`,
-//! `ggesx`), the generalized Schur family (`gges`, `hgeqz`, `tgsen`, ...), the
-//! CS decomposition, the tall-skinny QR family, and the remaining SVD drivers
+//! RFP storage, the tridiagonal eigensolvers (`steqr`, `stedc`, `stemr`, ...),
+//! the expert eigenvalue drivers (`geevx`, `geesx`, `ggevx`, `ggesx`), the
+//! generalized Schur family (`gges`, `hgeqz`, `tgsen`, ...), the CS
+//! decomposition, the tall-skinny QR family, and the remaining SVD drivers
 //! (`gesvdx`, `gejsv`, `gesvdq`).
 //!
 //! Until a routine has a wrapper it is reachable through `c`, with the caveats
@@ -68,6 +70,7 @@ pub const eigen_gen = @import("eigen_gen.zig");
 pub const util = @import("util.zig");
 pub const refine = @import("refine.zig");
 pub const expert = @import("expert.zig");
+pub const reduce = @import("reduce.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -182,6 +185,37 @@ pub const unpackVectors = eigen_gen.unpackVectors;
 pub const Eigenvalue = eigen_gen.Eigenvalue;
 pub const GeneralizedEigenvalue = eigen_gen.GeneralizedEigenvalue;
 pub const SelectFn = eigen_gen.SelectFn;
+
+pub const sytrd = reduce.sytrd;
+pub const hetrd = reduce.hetrd;
+pub const sptrd = reduce.sptrd;
+pub const hptrd = reduce.hptrd;
+pub const sbtrd = reduce.sbtrd;
+pub const hbtrd = reduce.hbtrd;
+pub const orgtr = reduce.orgtr;
+pub const ungtr = reduce.ungtr;
+pub const opgtr = reduce.opgtr;
+pub const upgtr = reduce.upgtr;
+pub const ormtr = reduce.ormtr;
+pub const unmtr = reduce.unmtr;
+pub const opmtr = reduce.opmtr;
+pub const upmtr = reduce.upmtr;
+pub const gehrd = reduce.gehrd;
+pub const orghr = reduce.orghr;
+pub const unghr = reduce.unghr;
+pub const ormhr = reduce.ormhr;
+pub const unmhr = reduce.unmhr;
+pub const gebrd = reduce.gebrd;
+pub const orgbr = reduce.orgbr;
+pub const ungbr = reduce.ungbr;
+pub const ormbr = reduce.ormbr;
+pub const unmbr = reduce.unmbr;
+pub const gbbrd = reduce.gbbrd;
+pub const gebal = reduce.gebal;
+pub const gebak = reduce.gebak;
+pub const Window = reduce.Window;
+pub const QUpdate = reduce.QUpdate;
+pub const BidiagVect = reduce.BidiagVect;
 
 pub const lamch = util.lamch;
 pub const ilaenv = util.ilaenv;

@@ -9,8 +9,7 @@ full, band, tridiagonal, packed and triangular-band — now has its condition
 estimator, equilibration, iterative refinement and expert driver.
 
 Outstanding: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants, RFP
-storage, the reductions to condensed form and their `Q` builders, the
-tridiagonal eigensolvers, the expert eigenvalue drivers, the generalized Schur
+storage, the tridiagonal eigensolvers, the expert eigenvalue drivers, the generalized Schur
 family, the CS decomposition, the tall-skinny QR family and the remaining SVD
 drivers.
 
@@ -437,8 +436,8 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `gglse` <sub>cdsz</sub>
 - [ ] `ggqrf` <sub>cdsz</sub>
 - [ ] `ggrqf` <sub>cdsz</sub>
-- [ ] `opgtr` <sub>ds</sub>
-- [ ] `opmtr` <sub>ds</sub>
+- [x] `opgtr` <sub>ds</sub>
+- [x] `opmtr` <sub>ds</sub>
 - [ ] `orbdb` <sub>ds</sub>
 - [ ] `orbdb1` <sub>ds</sub>
 - [ ] `orbdb2` <sub>ds</sub>
@@ -450,23 +449,23 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `orcsd2by1` <sub>ds</sub>
 - [ ] `org2l` <sub>ds</sub>
 - [ ] `org2r` <sub>ds</sub>
-- [ ] `orgbr` <sub>ds</sub>
-- [ ] `orghr` <sub>ds</sub>
+- [x] `orgbr` <sub>ds</sub>
+- [x] `orghr` <sub>ds</sub>
 - [ ] `orgl2` <sub>ds</sub>
 - [x] `orglq` <sub>ds</sub>
 - [x] `orgql` <sub>ds</sub>
 - [x] `orgqr` <sub>ds</sub>
 - [ ] `orgr2` <sub>ds</sub>
 - [x] `orgrq` <sub>ds</sub>
-- [ ] `orgtr` <sub>ds</sub>
+- [x] `orgtr` <sub>ds</sub>
 - [ ] `orgtsqr` <sub>ds</sub>
 - [ ] `orgtsqr_row` <sub>ds</sub>
 - [ ] `orhr_col` <sub>ds</sub>
 - [ ] `orm22` <sub>ds</sub>
 - [ ] `orm2l` <sub>ds</sub>
 - [ ] `orm2r` <sub>ds</sub>
-- [ ] `ormbr` <sub>ds</sub>
-- [ ] `ormhr` <sub>ds</sub>
+- [x] `ormbr` <sub>ds</sub>
+- [x] `ormhr` <sub>ds</sub>
 - [ ] `orml2` <sub>ds</sub>
 - [x] `ormlq` <sub>ds</sub>
 - [x] `ormql` <sub>ds</sub>
@@ -475,7 +474,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `ormr3` <sub>ds</sub>
 - [x] `ormrq` <sub>ds</sub>
 - [ ] `ormrz` <sub>ds</sub>
-- [ ] `ormtr` <sub>ds</sub>
+- [x] `ormtr` <sub>ds</sub>
 - [ ] `tplqt` <sub>cdsz</sub>
 - [ ] `tplqt2` <sub>cdsz</sub>
 - [ ] `tpmlqt` <sub>cdsz</sub>
@@ -496,23 +495,23 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `uncsd2by1` <sub>cz</sub>
 - [ ] `ung2l` <sub>cz</sub>
 - [ ] `ung2r` <sub>cz</sub>
-- [ ] `ungbr` <sub>cz</sub>
-- [ ] `unghr` <sub>cz</sub>
+- [x] `ungbr` <sub>cz</sub>
+- [x] `unghr` <sub>cz</sub>
 - [ ] `ungl2` <sub>cz</sub>
 - [x] `unglq` <sub>cz</sub>
 - [x] `ungql` <sub>cz</sub>
 - [x] `ungqr` <sub>cz</sub>
 - [ ] `ungr2` <sub>cz</sub>
 - [x] `ungrq` <sub>cz</sub>
-- [ ] `ungtr` <sub>cz</sub>
+- [x] `ungtr` <sub>cz</sub>
 - [ ] `ungtsqr` <sub>cz</sub>
 - [ ] `ungtsqr_row` <sub>cz</sub>
 - [ ] `unhr_col` <sub>cz</sub>
 - [ ] `unm22` <sub>cz</sub>
 - [ ] `unm2l` <sub>cz</sub>
 - [ ] `unm2r` <sub>cz</sub>
-- [ ] `unmbr` <sub>cz</sub>
-- [ ] `unmhr` <sub>cz</sub>
+- [x] `unmbr` <sub>cz</sub>
+- [x] `unmhr` <sub>cz</sub>
 - [ ] `unml2` <sub>cz</sub>
 - [x] `unmlq` <sub>cz</sub>
 - [x] `unmql` <sub>cz</sub>
@@ -521,9 +520,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `unmr3` <sub>cz</sub>
 - [x] `unmrq` <sub>cz</sub>
 - [ ] `unmrz` <sub>cz</sub>
-- [ ] `unmtr` <sub>cz</sub>
-- [ ] `upgtr` <sub>cz</sub>
-- [ ] `upmtr` <sub>cz</sub>
+- [x] `unmtr` <sub>cz</sub>
+- [x] `upgtr` <sub>cz</sub>
+- [x] `upmtr` <sub>cz</sub>
 
 ### T4 Symmetric / Hermitian eigenproblems
 
@@ -541,7 +540,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hbgv` <sub>cz</sub>
 - [ ] `hbgvd` <sub>cz</sub>
 - [ ] `hbgvx` <sub>cz</sub>
-- [ ] `hbtrd` <sub>cz</sub>
+- [x] `hbtrd` <sub>cz</sub>
 - [x] `heequb` <sub>cz</sub>
 - [x] `heev` <sub>cz</sub>
 - [ ] `heev_2stage` <sub>cz</sub>
@@ -558,7 +557,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hegvd` <sub>cz</sub>
 - [ ] `hegvx` <sub>cz</sub>
 - [ ] `hetd2` <sub>cz</sub>
-- [ ] `hetrd` <sub>cz</sub>
+- [x] `hetrd` <sub>cz</sub>
 - [ ] `hetrd_2stage` <sub>cz</sub>
 - [ ] `hetrd_hb2st` <sub>cz</sub>
 - [ ] `hetrd_he2hb` <sub>cz</sub>
@@ -569,9 +568,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `hpgv` <sub>cz</sub>
 - [ ] `hpgvd` <sub>cz</sub>
 - [ ] `hpgvx` <sub>cz</sub>
-- [ ] `hptrd` <sub>cz</sub>
-- [ ] `opgtr` <sub>ds</sub>
-- [ ] `opmtr` <sub>ds</sub>
+- [x] `hptrd` <sub>cz</sub>
+- [x] `opgtr` <sub>ds</sub>
+- [x] `opmtr` <sub>ds</sub>
 - [ ] `pteqr` <sub>cdsz</sub>
 - [ ] `sb2st_kernels` <sub>ds</sub>
 - [x] `sbev` <sub>ds</sub>
@@ -584,7 +583,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sbgv` <sub>ds</sub>
 - [ ] `sbgvd` <sub>ds</sub>
 - [ ] `sbgvx` <sub>ds</sub>
-- [ ] `sbtrd` <sub>ds</sub>
+- [x] `sbtrd` <sub>ds</sub>
 - [x] `spev` <sub>ds</sub>
 - [ ] `spevd` <sub>ds</sub>
 - [ ] `spevx` <sub>ds</sub>
@@ -592,7 +591,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `spgv` <sub>ds</sub>
 - [ ] `spgvd` <sub>ds</sub>
 - [ ] `spgvx` <sub>ds</sub>
-- [ ] `sptrd` <sub>ds</sub>
+- [x] `sptrd` <sub>ds</sub>
 - [ ] `stebz` <sub>ds</sub>
 - [ ] `stedc` <sub>cdsz</sub>
 - [ ] `stegr` <sub>cdsz</sub>
@@ -620,25 +619,25 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `sygvd` <sub>ds</sub>
 - [ ] `sygvx` <sub>ds</sub>
 - [ ] `sytd2` <sub>ds</sub>
-- [ ] `sytrd` <sub>ds</sub>
+- [x] `sytrd` <sub>ds</sub>
 - [ ] `sytrd_2stage` <sub>ds</sub>
 - [ ] `sytrd_sb2st` <sub>ds</sub>
 - [ ] `sytrd_sy2sb` <sub>ds</sub>
-- [ ] `upgtr` <sub>cz</sub>
-- [ ] `upmtr` <sub>cz</sub>
+- [x] `upgtr` <sub>cz</sub>
+- [x] `upmtr` <sub>cz</sub>
 
 ### T5 Nonsymmetric eigenproblems & Schur
 
 `17` base routines, `68` symbols.
 
-- [ ] `gebak` <sub>cdsz</sub>
-- [ ] `gebal` <sub>cdsz</sub>
+- [x] `gebak` <sub>cdsz</sub>
+- [x] `gebal` <sub>cdsz</sub>
 - [x] `gees` <sub>cdsz</sub>
 - [ ] `geesx` <sub>cdsz</sub>
 - [x] `geev` <sub>cdsz</sub>
 - [ ] `geevx` <sub>cdsz</sub>
 - [ ] `gehd2` <sub>cdsz</sub>
-- [ ] `gehrd` <sub>cdsz</sub>
+- [x] `gehrd` <sub>cdsz</sub>
 - [ ] `hsein` <sub>cdsz</sub>
 - [ ] `hseqr` <sub>cdsz</sub>
 - [ ] `trevc` <sub>cdsz</sub>
@@ -656,9 +655,9 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `bdsdc` <sub>ds</sub>
 - [ ] `bdsqr` <sub>cdsz</sub>
 - [ ] `bdsvdx` <sub>ds</sub>
-- [ ] `gbbrd` <sub>cdsz</sub>
+- [x] `gbbrd` <sub>cdsz</sub>
 - [ ] `gebd2` <sub>cdsz</sub>
-- [ ] `gebrd` <sub>cdsz</sub>
+- [x] `gebrd` <sub>cdsz</sub>
 - [ ] `gejsv` <sub>cdsz</sub>
 - [x] `gesdd` <sub>cdsz</sub>
 - [x] `gesvd` <sub>cdsz</sub>
