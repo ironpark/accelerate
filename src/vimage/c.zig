@@ -34,6 +34,9 @@ pub const Pixel_16U16U = types.Pixel_16U16U;
 pub const Pixel_16S16S = types.Pixel_16S16S;
 pub const Pixel_16F16F = types.Pixel_16F16F;
 pub const Pixel_32U = types.Pixel_32U;
+pub const vImage_PerspectiveTransform = types.vImage_PerspectiveTransform;
+pub const WarpInterpolation = types.WarpInterpolation;
+pub const KernelFunc = types.KernelFunc;
 
 // ============================================================================
 // Alpha
@@ -313,101 +316,203 @@ pub extern fn vImageCopyBuffer(src: *const vImage_Buffer, dest: *const vImage_Bu
 // ============================================================================
 // Geometry
 // ============================================================================
+//
+// Generated from Geometry.h. The format suffix set differs per operation -
+// `vImageScale` has fourteen, `vImagePerspectiveWarp` six - so the lists below
+// are the header's, not a uniform cross-product.
+//
+// Multi-channel background colours are C arrays, which decay to pointers as
+// parameters, so they are `*const [N]T` here and not the array by value.
 
-// -- Rotate --
+// -- vImageRotate --
 
 pub extern fn vImageRotate_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageRotate_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageRotate_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageRotate_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageRotate_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageRotate_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, angleInRadians: f32, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
 
-// -- Scale --
+// -- vImageScale --
 
 pub extern fn vImageScale_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageScale_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageScale_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageScale_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageScale_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageScale_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageScale_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageScale_Planar16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_XRGB2101010W(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_CbCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_CbCr16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageScale_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, flags: vImage_Flags) vImage_Error;
 
-// -- Affine Warp (single-precision transform) --
+// -- vImageHorizontalReflect --
+
+pub extern fn vImageHorizontalReflect_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalReflect_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- vImageVerticalReflect --
+
+pub extern fn vImageVerticalReflect_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalReflect_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- vImageRotate90 --
+
+pub extern fn vImageRotate90_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageRotate90_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
+
+// -- vImageAffineWarp --
 
 pub extern fn vImageAffineWarp_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarp_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarp_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarp_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarp_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarp_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarp_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageAffineWarp_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarp_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarp_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
 
-// -- Affine Warp (double-precision transform) --
+// -- vImageAffineWarpD --
 
 pub extern fn vImageAffineWarpD_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpD_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarpD_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpD_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarpD_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpD_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpD_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageAffineWarpD_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarpD_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarpD_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_AffineTransform_Double, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
 
-// -- Affine Warp (CGAffineTransform) --
+// -- vImageAffineWarpCG --
 
 pub extern fn vImageAffineWarpCG_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_CGAffineTransform, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpCG_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_CGAffineTransform, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpCG_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_CGAffineTransform, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageAffineWarpCG_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_CGAffineTransform, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpCG_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_CGAffineTransform, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageAffineWarpCG_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_CGAffineTransform, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageAffineWarpCG_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_CGAffineTransform, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
 
-// -- Reflect --
-
-pub extern fn vImageHorizontalReflect_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageHorizontalReflect_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageHorizontalReflect_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageHorizontalReflect_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageHorizontalReflect_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageHorizontalReflect_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageHorizontalReflect_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-
-pub extern fn vImageVerticalReflect_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageVerticalReflect_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageVerticalReflect_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageVerticalReflect_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageVerticalReflect_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageVerticalReflect_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageVerticalReflect_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
-
-// -- Rotate90 --
-
-pub extern fn vImageRotate90_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageRotate90_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageRotate90_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageRotate90_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageRotate90_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageRotate90_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, rotationConstant: u8, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
-
-// -- Shear (single-precision) --
+// -- vImageHorizontalShear --
 
 pub extern fn vImageHorizontalShear_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageHorizontalShear_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_Planar16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_XRGB2101010W(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_32U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageHorizontalShear_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageHorizontalShear_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageHorizontalShear_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageHorizontalShear_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_CbCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_88, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_CbCr16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_16U16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_CbCr16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_16S16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShear_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
+
+// -- vImageVerticalShear --
 
 pub extern fn vImageVerticalShear_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageVerticalShear_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_Planar16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_XRGB2101010W(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: Pixel_32U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageVerticalShear_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageVerticalShear_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageVerticalShear_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
-pub extern fn vImageVerticalShear_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_CbCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_88, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_CbCr16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_16U16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_CbCr16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_16S16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShear_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f32, shearSlope: f32, filter: ResamplingFilter, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
+
+// -- vImageHorizontalShearD --
+
+pub extern fn vImageHorizontalShearD_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_CbCr16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_16U16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_CbCr16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_16S16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageHorizontalShearD_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, xTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
+
+// -- vImageVerticalShearD --
+
+pub extern fn vImageVerticalShearD_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_PlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: Pixel_F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_ARGB16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_CbCr16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_16U16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_CbCr16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_16S16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageVerticalShearD_CbCr16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, srcOffsetToROI_X: vImagePixelCount, srcOffsetToROI_Y: vImagePixelCount, yTranslate: f64, shearSlope: f64, filter: ResamplingFilter, backColor: *const Pixel_16F16F, flags: vImage_Flags) vImage_Error;
+
+// -- vImagePerspectiveWarp --
+
+pub extern fn vImagePerspectiveWarp_Planar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_PerspectiveTransform, interpolation: WarpInterpolation, backColor: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePerspectiveWarp_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_PerspectiveTransform, interpolation: WarpInterpolation, backColor: Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePerspectiveWarp_Planar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_PerspectiveTransform, interpolation: WarpInterpolation, backColor: Pixel_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePerspectiveWarp_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_PerspectiveTransform, interpolation: WarpInterpolation, backColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePerspectiveWarp_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_PerspectiveTransform, interpolation: WarpInterpolation, backColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePerspectiveWarp_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, transform: *const vImage_PerspectiveTransform, interpolation: WarpInterpolation, backColor: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
 
 // -- Resampling Filter --
+//
+// `vImageNewResamplingKernel`, `vImageGetResamplingKernelSize` and
+// `vImageNewResamplingKernelForFunctionUsingBuffer` are `#define` aliases for
+// the three below, not symbols of their own.
 
 pub extern fn vImageNewResamplingFilter(scale: f32, flags: vImage_Flags) ResamplingFilter;
 pub extern fn vImageDestroyResamplingFilter(filter: ResamplingFilter) void;
+pub extern fn vImageGetResamplingFilterSize(scale: f32, kernelFunc: KernelFunc, kernelWidth: f32, flags: vImage_Flags) usize;
+pub extern fn vImageGetResamplingFilterExtent(filter: ResamplingFilter, flags: vImage_Flags) vImagePixelCount;
+pub extern fn vImageNewResamplingFilterForFunctionUsingBuffer(filter: ResamplingFilter, scale: f32, kernelFunc: KernelFunc, kernelWidth: f32, userData: ?*anyopaque, flags: vImage_Flags) vImage_Error;
+
+// -- Perspective transform helper --
+
+pub extern fn vImageGetPerspectiveWarp(srcPoints: *const [4][2]f32, destPoints: *const [4][2]f32, transform: *vImage_PerspectiveTransform, flags: vImage_Flags) vImage_Error;
 
 // ============================================================================
 // Histogram
@@ -564,3 +669,20 @@ pub extern fn vImageFloodFill_Planar8(srcDest: *const vImage_Buffer, tempBuffer:
 pub extern fn vImageFloodFill_Planar16U(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: Pixel_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageFloodFill_ARGB8888(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: *const Pixel_8888, connectivity: c_int, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageFloodFill_ARGB16U(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: *const Pixel_ARGB_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error;
+
+// An `extern fn` nobody calls is never resolved, so a misspelled symbol - or
+// one a future SDK stops exporting - would link cleanly right up until the
+// first caller. Taking the address of every declaration here forces all of
+// them to resolve at link time, which matters most for the format variants
+// that no test instantiates directly.
+test "every declared vImage symbol resolves and links" {
+    const std = @import("std");
+    var sink: usize = 0;
+    inline for (@typeInfo(@This()).@"struct".decls) |decl| {
+        const field = @field(@This(), decl.name);
+        if (@typeInfo(@TypeOf(field)) == .@"fn") {
+            sink +%= @intFromPtr(&field);
+        }
+    }
+    try std.testing.expect(sink != 0);
+}

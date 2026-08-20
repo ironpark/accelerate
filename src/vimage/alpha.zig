@@ -1,3 +1,21 @@
+//! Alpha compositing, premultiplication, and clipping (`vImage/Alpha.h`).
+//!
+//! ## The channel-order names that look missing
+//!
+//! `Alpha.h` declares a dozen entry points that have no symbol behind them -
+//! `vImagePremultiplyData_BGRA8888`, `vImageUnpremultiplyData_BGRAFFFF`,
+//! `vImageClipToAlpha_BGRA8888`, `vImagePremultipliedAlphaBlend_RGBA8888` and
+//! the rest of that family. Each is a `#define` onto the spelling with the
+//! opposite channel order, because the operation does not care: any 4-channel
+//! format with alpha *last* behaves identically, whether you call it RGBA or
+//! BGRA.
+//!
+//! So there is nothing to bind, and nothing missing. Where you would reach for
+//! `..._BGRA8888`, call the `..._RGBA8888` wrapper (or vice versa) on the same
+//! buffer. The one pair that is genuinely two functions is
+//! `vImagePremultipliedAlphaBlend_ARGB8888` and `..._BGRA8888`: alpha-first
+//! and alpha-last are different layouts, and both are bound here.
+
 const std = @import("std");
 const types = @import("types.zig");
 const c = @import("c.zig");

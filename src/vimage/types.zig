@@ -91,6 +91,40 @@ pub const Pixel_ARGB_16F = [4]u16;
 // Opaque pointer types
 // ============================================================================
 
+/// `vImage_PerpsectiveTransform` - the 3x3 projective transform matrix.
+///
+/// Apple's spelling of the type is `vImage_PerpsectiveTransform`, with the
+/// letters of "Perspective" transposed. The name here is the corrected one;
+/// the typo lives only in the header and is not part of any symbol.
+pub const vImage_PerspectiveTransform = extern struct {
+    a: f32,
+    b: f32,
+    c: f32,
+    d: f32,
+    tx: f32,
+    ty: f32,
+    /// The projective vector's x component. Zero for an affine transform.
+    vx: f32,
+    /// The projective vector's y component. Zero for an affine transform.
+    vy: f32,
+    /// The homogeneous scale factor. One for an affine transform.
+    v: f32,
+};
+
+/// `vImage_WarpInterpolation` - how `perspectiveWarp` samples the source.
+pub const WarpInterpolation = enum(i32) {
+    nearest = 0,
+    linear = 1,
+};
+
+/// The kernel-shape callback `vImageNewResamplingFilterForFunctionUsingBuffer`
+/// takes.
+///
+/// vImage calls it with a batch of `count` x-coordinates and expects the
+/// corresponding filter weights written to `yArray`. It is a plain C function
+/// pointer with a `userData` context, so no block shim is needed.
+pub const KernelFunc = ?*const fn (xArray: [*]const f32, yArray: [*]f32, count: c_ulong, userData: ?*anyopaque) callconv(.c) void;
+
 /// Resampling filter handle used by Geometry functions.
 pub const ResamplingFilter = ?*opaque {};
 
