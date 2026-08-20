@@ -406,3 +406,325 @@ test "zvdiv" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.44), out_re[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 0.08), out_im[0], 0.001);
 }
+
+test "zvadd" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvadd(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 4.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 6.0), out_im[0], 0.001);
+}
+
+test "zrvadd" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    const b = [_]f32{5.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zrvadd(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 6.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out_im[0], 0.001);
+}
+
+test "zvsub" {
+    // Asymmetric operands so an argument-order bug would be caught.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvsub(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, -2.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -2.0), out_im[0], 0.001);
+}
+
+test "zrvsub" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    const b = [_]f32{5.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zrvsub(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, -4.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out_im[0], 0.001);
+}
+
+test "zrvmul" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    const b = [_]f32{5.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zrvmul(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), out_im[0], 0.001);
+}
+
+test "zrvdiv" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    const b = [_]f32{5.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zrvdiv(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.2), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.4), out_im[0], 0.001);
+}
+
+test "zvfill" {
+    var val_re = [_]f32{9.0};
+    var val_im = [_]f32{3.0};
+    var out_re = [_]f32{ 0.0, 0.0 };
+    var out_im = [_]f32{ 0.0, 0.0 };
+    const val = SC(f32){ .realp = &val_re, .imagp = &val_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvfill(f32, &val, &out, 2);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 9.0, 9.0 }, &out_re);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 3.0, 3.0 }, &out_im);
+}
+
+test "zvcma" {
+    // D = conj(A)*B + C: conj(1+2i)*(3+4i) = (1-2i)(3+4i) = 11-2i, +(5+6i) = 16+4i.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    var addend_re = [_]f32{5.0};
+    var addend_im = [_]f32{6.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const addend = SC(f32){ .realp = &addend_re, .imagp = &addend_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvcma(f32, &a, &b, &addend, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 16.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 4.0), out_im[0], 0.001);
+}
+
+test "zvma" {
+    // D = A*B + C: (1+2i)(3+4i) = -5+10i, +(5+6i) = 0+16i.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    var addend_re = [_]f32{5.0};
+    var addend_im = [_]f32{6.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const addend = SC(f32){ .realp = &addend_re, .imagp = &addend_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvma(f32, &a, &b, &addend, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 16.0), out_im[0], 0.001);
+}
+
+test "zvcmul" {
+    // C = conj(A)*B = 11-2i (see zvcma above).
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvcmul(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 11.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -2.0), out_im[0], 0.001);
+}
+
+test "zvconj" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvconj(f32, &a, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -2.0), out_im[0], 0.001);
+}
+
+test "zvzsml" {
+    // C = A * B[0]: (1+2i)(5+6i) = 5+6i+10i-12 = -7+16i.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var scalar_re = [_]f32{5.0};
+    var scalar_im = [_]f32{6.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const scalar = SC(f32){ .realp = &scalar_re, .imagp = &scalar_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvzsml(f32, &a, &scalar, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, -7.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 16.0), out_im[0], 0.001);
+}
+
+test "zvmgsa" {
+    // C = |A|^2 + B: |1+2i|^2 = 5, + 3 = 8.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    const b = [_]f32{3.0};
+    var out = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    zvmgsa(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 8.0), out[0], 0.001);
+}
+
+test "zvmov" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvmov(f32, &a, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out_im[0], 0.001);
+}
+
+test "zvneg" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{-2.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvneg(f32, &a, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out_im[0], 0.001);
+}
+
+test "zvphas" {
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var out = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    zvphas(f32, &a, &out, 1);
+    try std.testing.expectApproxEqAbs(std.math.atan2(@as(f32, 2.0), @as(f32, 1.0)), out[0], 0.001);
+}
+
+test "zvsma" {
+    // D = A*B[0] + C: A*(5+6i) = -7+16i (see zvzsml), + (7+1i) = 0+17i.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var scalar_re = [_]f32{5.0};
+    var scalar_im = [_]f32{6.0};
+    var addend_re = [_]f32{7.0};
+    var addend_im = [_]f32{1.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const scalar = SC(f32){ .realp = &scalar_re, .imagp = &scalar_im };
+    const addend = SC(f32){ .realp = &addend_re, .imagp = &addend_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zvsma(f32, &a, &scalar, &addend, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 17.0), out_im[0], 0.001);
+}
+
+test "zaspec" {
+    // Accumulating: C[n] += |A[n]|^2. Seed out with a nonzero value to
+    // confirm it's an accumulation, not an overwrite.
+    var a_re = [_]f32{3.0};
+    var a_im = [_]f32{4.0};
+    var out = [_]f32{10.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    zaspec(f32, &a, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 35.0), out[0], 0.001); // 10 + |3+4i|^2 (=25)
+}
+
+test "zcoher" {
+    // D = |C|^2 / (A*B): |1+2i|^2=5, A*B=2*3=6 -> 5/6.
+    const a = [_]f32{2.0};
+    const b = [_]f32{3.0};
+    var cross_re = [_]f32{1.0};
+    var cross_im = [_]f32{2.0};
+    var out = [_]f32{0.0};
+    const cross = SC(f32){ .realp = &cross_re, .imagp = &cross_im };
+    zcoher(f32, &a, &b, &cross, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0 / 6.0), out[0], 0.001);
+}
+
+test "ztrans" {
+    // C = B / A, A real: (4+6i)/2 = 2+3i.
+    const a = [_]f32{2.0};
+    var b_re = [_]f32{4.0};
+    var b_im = [_]f32{6.0};
+    var out_re = [_]f32{0.0};
+    var out_im = [_]f32{0.0};
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    ztrans(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.0), out_im[0], 0.001);
+}
+
+test "zcspec" {
+    // Accumulating: C += conj(A)*B = 11-2i (see zvcma). Seed C nonzero to
+    // confirm accumulation.
+    var a_re = [_]f32{1.0};
+    var a_im = [_]f32{2.0};
+    var b_re = [_]f32{3.0};
+    var b_im = [_]f32{4.0};
+    var out_re = [_]f32{1.0};
+    var out_im = [_]f32{1.0};
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zcspec(f32, &a, &b, &out, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 12.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, -1.0), out_im[0], 0.001);
+}
+
+test "desamp" {
+    // C[n] = sum(A[n*DF+p] * F[p], 0 <= p < P). DF=2, F=[1,1]:
+    // C[0] = A[0]*1 + A[1]*1 = 3, C[1] = A[2]*1 + A[3]*1 = 7.
+    const a = [_]f32{ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
+    const filter = [_]f32{ 1.0, 1.0 };
+    var out: [2]f32 = undefined;
+    desamp(f32, &a, 2, &filter, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 7.0), out[1], 0.001);
+}
+
+test "zrdesamp" {
+    // Same as desamp, but the input/output are complex-split and only the
+    // filter is real.
+    var a_re = [_]f32{ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
+    var a_im = [_]f32{ 0.5, 1.5, 2.5, 3.5, 4.5, 5.5 };
+    const filter = [_]f32{ 1.0, 1.0 };
+    var out_re: [2]f32 = undefined;
+    var out_im: [2]f32 = undefined;
+    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    zrdesamp(f32, &a, 2, &filter, &out, 2);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.0), out_re[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out_im[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 7.0), out_re[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 6.0), out_im[1], 0.001);
+}

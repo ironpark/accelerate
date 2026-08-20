@@ -294,33 +294,33 @@
 
 ### `src/vdsp/zvecop.zig`
 
-- [ ] `zvadd` — L16
-- [ ] `zrvadd` — L28
-- [ ] `zvsub` — L40
-- [ ] `zrvsub` — L52
-- [ ] `zrvmul` — L64
+- [x] `zvadd` — L16
+- [x] `zrvadd` — L28
+- [x] `zvsub` — L40
+- [x] `zrvsub` — L52
+- [x] `zrvmul` — L64
 - [x] `zvdiv` — L76
-- [ ] `zrvdiv` — L88
+- [x] `zrvdiv` — L88
 - [x] `zvabs` — L100
-- [ ] `zvfill` — L112
+- [x] `zvfill` — L112
 - [x] `zvmul` — L128
-- [ ] `zvcma` — L140
-- [ ] `zvma` — L152
-- [ ] `zvcmul` — L164
-- [ ] `zvconj` — L176
-- [ ] `zvzsml` — L188
+- [x] `zvcma` — L140
+- [x] `zvma` — L152
+- [x] `zvcmul` — L164
+- [x] `zvconj` — L176
+- [x] `zvzsml` — L188
 - [x] `zvmags` — L200
-- [ ] `zvmgsa` — L212
-- [ ] `zvmov` — L224
-- [ ] `zvneg` — L236
-- [ ] `zvphas` — L248
-- [ ] `zvsma` — L260
-- [ ] `zaspec` — L276
-- [ ] `zcoher` — L288
-- [ ] `ztrans` — L300
-- [ ] `zcspec` — L312
-- [ ] `desamp` — L324
-- [ ] `zrdesamp` — L336
+- [x] `zvmgsa` — L212
+- [x] `zvmov` — L224
+- [x] `zvneg` — L236
+- [x] `zvphas` — L248
+- [x] `zvsma` — L260
+- [x] `zaspec` — L276
+- [x] `zcoher` — L288
+- [x] `ztrans` — L300
+- [x] `zcspec` — L312
+- [x] `desamp` — L324
+- [x] `zrdesamp` — L336
 
 ## vForce
 
