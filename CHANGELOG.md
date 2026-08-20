@@ -4,12 +4,39 @@
 
 ### Added
 
-- **`lapack` module - foundation.** The complete 2032-symbol extern surface in
+- **`lapack` module.** The complete 2032-symbol extern surface in
   `src/lapack/c.zig`, generated from `lapack.h` by `tools/gen_lapack.py`, plus
   shared types, `info` translation and workspace sizing. Typed wrappers are
   being added tier by tier; `docs/LAPACK-PLAN.md` is the checklist. Same symbol
   story as `blas`: this binds `$NEWLAPACK[$ILP64]`, since the unsuffixed names
   belong to the deprecated `clapack.h`.
+
+  Wrapped so far, in `linear.zig`: the simple linear-system drivers `gesv`,
+  `gbsv`, `gtsv`, `posv`, `ppsv`, `pbsv`, `ptsv`, `sysv`, `spsv`, `hesv`,
+  `hpsv`, and the mixed-precision `dsgesv`/`dsposv`. The expert drivers
+  (`gesvx` and friends) are not wrapped yet. What the wrappers add:
+
+  - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
+    illegal argument, positive is a routine-specific numerical condition - and
+    positive means something different for each family, so there is no single
+    `check`. `checkLu` reports a zero pivot, `checkCholesky` a failed leading
+    minor, `checkConvergence` a stalled iteration. The offending value is
+    readable via `lastInfo()`.
+  - `hesv`/`hpsv` are complex-only and `sysv`/`spsv` mean *symmetric* even for
+    complex elements. These are different problems, LAPACK ships both, and
+    neither routine can tell you that you picked the wrong one. Asking for
+    `hesv(f64, ...)` is a compile error pointing at `sysv`, rather than a
+    missing symbol at link time.
+  - `ptsv` takes its diagonal as `[]Real(T)`: a Hermitian tridiagonal has a real
+    diagonal by definition, so for `Complex(f64)` that is `[]f64` sitting next
+    to `[]Complex(f64)`, which the C signature only implies.
+  - `gbsv`'s band storage needs `kl` extra rows above the band for fill-in and
+    is *not* the layout `gbmv` wants; `ldab >= 2*kl + ku + 1` is asserted rather
+    than trusted, since passing a BLAS-shaped array otherwise factors a
+    different matrix without complaint.
+  - Solves are tested by residual against the original matrix rather than
+    against a solution vector written down by hand, so a wrong answer and a
+    wrong expectation cannot cancel.
 
   Verifying the ABI before writing any of it turned up two things the header
   does not tell you:
@@ -162,7 +189,7 @@
   `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
   SDK ever makes the prose true, it fails loudly.
 
-- 223 tests covering the four modules above, including struct-layout
+- 244 tests covering the four modules above, including struct-layout
   assertions against the C headers for every ABI type. Those are not decoration: each one is passed to
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are

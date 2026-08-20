@@ -277,6 +277,57 @@ pub fn opt(value: anytype) [*]const u8 {
     return @ptrCast(&byte_table[@intFromEnum(value)]);
 }
 
+// ---------------------------------------------------------------------------
+// Storage
+// ---------------------------------------------------------------------------
+
+/// Narrows a caller's `usize` extent to the `Int` the symbols read.
+pub fn dim(n: usize) Int {
+    std.debug.assert(n <= std.math.maxInt(Int));
+    return @intCast(n);
+}
+
+/// Minimum slice length for a column-major `rows x cols` matrix with leading
+/// dimension `ld`.
+///
+/// The last column only needs `rows` elements, not `ld`, so this is
+/// `ld * (cols - 1) + rows` rather than `ld * cols`. Requiring the larger
+/// figure would reject slices LAPACK never reads past - notably the common case
+/// of a caller passing exactly the trailing submatrix a blocked routine works
+/// on.
+pub fn colMajorLen(rows: usize, cols: usize, ld: usize) usize {
+    std.debug.assert(ld >= @max(1, rows));
+    if (cols == 0 or rows == 0) return 0;
+    return ld * (cols - 1) + rows;
+}
+
+/// Minimum slice length for a triangular matrix in packed storage.
+///
+/// Packed storage holds only the referenced triangle, column by column, with no
+/// leading dimension at all.
+pub fn packedLen(n: usize) usize {
+    return n * (n + 1) / 2;
+}
+
+/// Asserts a column-major matrix slice is large enough for the extents given.
+pub fn assertMatrix(len: usize, rows: usize, cols: usize, ld: usize) void {
+    std.debug.assert(len >= colMajorLen(rows, cols, ld));
+}
+
+test "colMajorLen measures what LAPACK actually reads" {
+    // A 3x3 with ld = 5 spans 5 + 5 + 3 = 13 elements, not 15: the last column
+    // stops after its third row.
+    try std.testing.expectEqual(@as(usize, 13), colMajorLen(3, 3, 5));
+    try std.testing.expectEqual(@as(usize, 9), colMajorLen(3, 3, 3));
+    try std.testing.expectEqual(@as(usize, 0), colMajorLen(0, 0, 1));
+    try std.testing.expectEqual(@as(usize, 0), colMajorLen(3, 0, 3));
+}
+
+test "packedLen counts one triangle" {
+    try std.testing.expectEqual(@as(usize, 6), packedLen(3));
+    try std.testing.expectEqual(@as(usize, 10), packedLen(4));
+}
+
 test "Bool is the width the selected symbols actually read" {
     // `sgees` writes `bwork` with this stride. If Bool ever narrows to c_int
     // while Int stays 64-bit, every other element of a sorting driver's bwork

@@ -11,12 +11,19 @@
 //!
 //! ## Status
 //!
-//! Foundation only so far: the full 2032-symbol extern surface in `c.zig`, the
-//! shared types, `info` translation and workspace sizing. The typed wrappers
-//! are being added tier by tier - see `docs/LAPACK-PLAN.md` for the checklist.
-//! Until a routine has a wrapper, it is reachable through `c` with the caveats
-//! documented there (every argument by pointer, no bounds checking, `info`
-//! unread).
+//! The full 2032-symbol extern surface is in `c.zig`, along with the shared
+//! types, `info` translation and workspace sizing. Typed wrappers are being
+//! added tier by tier - `docs/LAPACK-PLAN.md` is the checklist.
+//!
+//! Wrapped so far: the simple linear-system drivers in `linear.zig` (`gesv`,
+//! `gbsv`, `gtsv`, `posv`, `ppsv`, `pbsv`, `ptsv`, `sysv`, `spsv`, `hesv`,
+//! `hpsv`) and the mixed-precision iterative-refinement pair. The *expert*
+//! drivers (`gesvx` and friends, which also equilibrate and estimate condition
+//! numbers) are not wrapped yet.
+//!
+//! Until a routine has a wrapper it is reachable through `c`, with the caveats
+//! documented there: every argument by pointer, no bounds checking, `info`
+//! unread.
 
 const std = @import("std");
 
@@ -24,6 +31,7 @@ pub const c = @import("c.zig");
 pub const types = @import("types.zig");
 pub const info = @import("info.zig");
 pub const work = @import("work.zig");
+pub const linear = @import("linear.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -46,6 +54,18 @@ pub const Sort = types.Sort;
 pub const Balance = types.Balance;
 pub const EigSide = types.EigSide;
 pub const Vect = types.Vect;
+
+pub const gesv = linear.gesv;
+pub const gbsv = linear.gbsv;
+pub const gtsv = linear.gtsv;
+pub const posv = linear.posv;
+pub const ppsv = linear.ppsv;
+pub const pbsv = linear.pbsv;
+pub const ptsv = linear.ptsv;
+pub const sysv = linear.sysv;
+pub const spsv = linear.spsv;
+pub const hesv = linear.hesv;
+pub const hpsv = linear.hpsv;
 
 test {
     std.testing.refAllDecls(@This());
