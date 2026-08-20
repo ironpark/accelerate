@@ -326,19 +326,19 @@
 
 ### `src/vforce/root.zig`
 
-- [ ] `rec` — L20
-- [ ] `div` — L31
-- [ ] `sqrt` — L43
-- [ ] `cbrt` — L54
-- [ ] `rsqrt` — L65
-- [ ] `exp` — L80
-- [ ] `exp2` — L91
-- [ ] `expm1` — L102
-- [ ] `log` — L117
-- [ ] `log10` — L128
-- [ ] `log2` — L139
-- [ ] `log1p` — L150
-- [ ] `logb` — L161
+- [x] `rec` — L20
+- [x] `div` — L31
+- [x] `sqrt` — L43
+- [x] `cbrt` — L54
+- [x] `rsqrt` — L65
+- [x] `exp` — L80
+- [x] `exp2` — L91
+- [x] `expm1` — L102
+- [x] `log` — L117
+- [x] `log10` — L128
+- [x] `log2` — L139
+- [x] `log1p` — L150
+- [x] `logb` — L161
 - [x] `pow` — L176
 - [x] `pows` — L189
 - [ ] `fabs` — L205

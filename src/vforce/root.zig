@@ -634,6 +634,147 @@ test "tanh" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.7616), out[1], 0.001);
 }
 
+// ============================================================================
+// Additional tests: rec/div/sqrt/cbrt/rsqrt/exp*/log*/pow* (priority 6 audit)
+// ============================================================================
+
+test "div (asymmetric, confirms out[i] = a[i] / b[i], not swapped)" {
+    // vForce.h:111-119: vvdivf(z, y, x, n) documents z[i] = y[i]/x[i], with
+    // y (numerator) in the 2nd arg slot and x (denominator) in the 3rd -
+    // opposite naming from vDSP_vdiv's "Caution: A and B are swapped!" case.
+    // The wrapper passes (out, a, b) into (z, y, x), so div(a, b, out) must
+    // compute a/b, not b/a. Asymmetric inputs make a mixup visibly wrong:
+    // a/b would give [5, 7, 8.25]; b/a would give [0.2, ~0.142, ~0.121].
+    const a_f32 = [_]f32{ 10.0, 21.0, 33.0 };
+    const b_f32 = [_]f32{ 2.0, 3.0, 4.0 };
+    var out_f32: [3]f32 = undefined;
+    div(f32, &a_f32, &b_f32, &out_f32);
+    try std.testing.expectApproxEqRel(@as(f32, 5.0), out_f32[0], 1e-5);
+    try std.testing.expectApproxEqRel(@as(f32, 7.0), out_f32[1], 1e-5);
+    try std.testing.expectApproxEqRel(@as(f32, 8.25), out_f32[2], 1e-5);
+
+    const a_f64 = [_]f64{ 10.0, 21.0, 33.0 };
+    const b_f64 = [_]f64{ 2.0, 3.0, 4.0 };
+    var out_f64: [3]f64 = undefined;
+    div(f64, &a_f64, &b_f64, &out_f64);
+    try std.testing.expectApproxEqRel(@as(f64, 5.0), out_f64[0], 1e-9);
+    try std.testing.expectApproxEqRel(@as(f64, 7.0), out_f64[1], 1e-9);
+    try std.testing.expectApproxEqRel(@as(f64, 8.25), out_f64[2], 1e-9);
+}
+
+test "cbrt" {
+    const x = [_]f32{ 8.0, -27.0, 1.0, 0.125 };
+    var out: [4]f32 = undefined;
+    cbrt(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out[0], 1e-4);
+    try std.testing.expectApproxEqAbs(@as(f32, -3.0), out[1], 1e-4);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[2], 1e-4);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), out[3], 1e-4);
+}
+
+test "rsqrt (out[i] = 1/sqrt(x[i]))" {
+    const x = [_]f64{ 4.0, 16.0, 25.0 };
+    var out: [3]f64 = undefined;
+    rsqrt(f64, &x, &out);
+    try std.testing.expectApproxEqRel(@as(f64, 0.5), out[0], 1e-6);
+    try std.testing.expectApproxEqRel(@as(f64, 0.25), out[1], 1e-6);
+    try std.testing.expectApproxEqRel(@as(f64, 0.2), out[2], 1e-6);
+}
+
+test "exp direct values" {
+    const x = [_]f64{ 0.0, 1.0, 2.0 };
+    var out: [3]f64 = undefined;
+    exp(f64, &x, &out);
+    try std.testing.expectApproxEqRel(@as(f64, 1.0), out[0], 1e-9);
+    try std.testing.expectApproxEqRel(@as(f64, std.math.e), out[1], 1e-9);
+    try std.testing.expectApproxEqRel(std.math.e * std.math.e, out[2], 1e-9);
+}
+
+test "exp2" {
+    const x = [_]f32{ 0.0, 3.0, 10.0 };
+    var out: [3]f32 = undefined;
+    exp2(f32, &x, &out);
+    try std.testing.expectApproxEqRel(@as(f32, 1.0), out[0], 1e-5);
+    try std.testing.expectApproxEqRel(@as(f32, 8.0), out[1], 1e-5);
+    try std.testing.expectApproxEqRel(@as(f32, 1024.0), out[2], 1e-5);
+}
+
+test "expm1 retains precision near x=0 (unlike naive exp(x)-1 in f32)" {
+    // vForce.h:223-238: vvexpm1f is documented to avoid catastrophic
+    // cancellation for small x, where the naive exp(x)-1 loses all
+    // precision. Runtime-confirmed: with x=1e-8 (well below f32 epsilon
+    // ~1.19e-7), the naive route computes exp(1e-8) which rounds to exactly
+    // 1.0f in f32, so exp(x)-1 == 0.0 - completely wrong. expm1 must return
+    // a value close to x itself (expm1(x) ~= x for small x), not 0.
+    const x = [_]f32{1e-8};
+    var expm1_out: [1]f32 = undefined;
+    expm1(f32, &x, &expm1_out);
+    try std.testing.expectApproxEqRel(@as(f32, 1e-8), expm1_out[0], 1e-3);
+
+    var naive_exp_out: [1]f32 = undefined;
+    exp(f32, &x, &naive_exp_out);
+    const naive = naive_exp_out[0] - 1.0;
+    try std.testing.expectEqual(@as(f32, 0.0), naive); // naive route loses all precision
+}
+
+test "log direct values" {
+    const x = [_]f64{ 1.0, std.math.e, 10.0 };
+    var out: [3]f64 = undefined;
+    log(f64, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.0), out[0], 1e-9);
+    try std.testing.expectApproxEqRel(@as(f64, 1.0), out[1], 1e-9);
+    try std.testing.expectApproxEqRel(@as(f64, 2.302585092994046), out[2], 1e-9);
+}
+
+test "log10" {
+    const x = [_]f32{ 1.0, 10.0, 1000.0 };
+    var out: [3]f32 = undefined;
+    log10(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 1e-4);
+    try std.testing.expectApproxEqRel(@as(f32, 1.0), out[1], 1e-5);
+    try std.testing.expectApproxEqRel(@as(f32, 3.0), out[2], 1e-5);
+}
+
+test "log2" {
+    const x = [_]f32{ 1.0, 8.0, 1024.0 };
+    var out: [3]f32 = undefined;
+    log2(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 1e-4);
+    try std.testing.expectApproxEqRel(@as(f32, 3.0), out[1], 1e-5);
+    try std.testing.expectApproxEqRel(@as(f32, 10.0), out[2], 1e-5);
+}
+
+test "log1p retains precision near x=0 (unlike naive log(1+x) in f32)" {
+    // vForce.h:292-307: vvlog1pf is documented to avoid the precision loss
+    // of forming (1+x) directly for small x. Runtime-confirmed: x=1e-8 is
+    // below f32 epsilon, so 1.0f + 1e-8f rounds to exactly 1.0f, and
+    // log(1.0f) == 0.0f via the naive route - completely wrong. log1p must
+    // return a value close to x itself (log1p(x) ~= x for small x).
+    const x = [_]f32{1e-8};
+    var log1p_out: [1]f32 = undefined;
+    log1p(f32, &x, &log1p_out);
+    try std.testing.expectApproxEqRel(@as(f32, 1e-8), log1p_out[0], 1e-3);
+
+    const one_plus_x: f32 = 1.0 + x[0];
+    try std.testing.expectEqual(@as(f32, 1.0), one_plus_x); // precondition: 1+x truncates to 1 in f32
+    var naive_arr = [_]f32{one_plus_x};
+    var naive_log_out: [1]f32 = undefined;
+    log(f32, &naive_arr, &naive_log_out);
+    try std.testing.expectEqual(@as(f32, 0.0), naive_log_out[0]); // naive route loses all precision
+}
+
+test "logb extracts unbiased binary exponent" {
+    // vForce.h:344-360: logb(f) is the integer satisfying
+    // abs(f) = significand * 2**logb(f), significand in [1,2).
+    const x = [_]f32{ 8.0, 0.5, 1.0, 3.0 };
+    var out: [4]f32 = undefined;
+    logb(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.0), out[0], 1e-6); // 8 = 1.0 * 2^3
+    try std.testing.expectApproxEqAbs(@as(f32, -1.0), out[1], 1e-6); // 0.5 = 1.0 * 2^-1
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[2], 1e-6); // 1 = 1.0 * 2^0
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[3], 1e-6); // 3 = 1.5 * 2^1
+}
+
 test "pows applies a single scalar exponent to every base element" {
     // vForce.h:467-486: vvpowsf/vvpows document `y` as "Input scalar,
     // exponent in calculation" (singular), unlike vvpowf/vvpow's `y` which
@@ -659,3 +800,5 @@ test "pows applies a single scalar exponent to every base element" {
     pows(f64, 2.0, &base64, &out2);
     try std.testing.expectApproxEqRel(@as(f64, 25.0), out2[0], 1e-9);
     try std.testing.expectApproxEqRel(@as(f64, 36.0), out2[1], 1e-9);
+    try std.testing.expectApproxEqRel(@as(f64, 49.0), out2[2], 1e-9);
+}
