@@ -495,3 +495,224 @@ test "vswap" {
     try std.testing.expectEqualSlices(f32, &[_]f32{ 10.0, 20.0, 30.0 }, &a);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 1.0, 2.0, 3.0 }, &b);
 }
+
+test "vsort" {
+    var asc = [_]f32{ 3.0, 1.0, 4.0, 1.0, 5.0 };
+    vsort(f32, &asc, .ascending);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 1.0, 1.0, 3.0, 4.0, 5.0 }, &asc);
+
+    var desc = [_]f32{ 3.0, 1.0, 4.0, 1.0, 5.0 };
+    vsort(f32, &desc, .descending);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 5.0, 4.0, 3.0, 1.0, 1.0 }, &desc);
+}
+
+test "vsorti" {
+    const data = [_]f32{ 3.0, 1.0, 4.0 };
+    var indices = [_]Length{ 0, 1, 2 };
+    vsorti(f32, &data, &indices, .ascending);
+    // data[indices[n]] must increase: data[1]=1, data[0]=3, data[2]=4.
+    try std.testing.expectEqualSlices(Length, &[_]Length{ 1, 0, 2 }, &indices);
+}
+
+test "vramp" {
+    var out: [4]f32 = undefined;
+    vramp(f32, 2.0, 3.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 2.0, 5.0, 8.0, 11.0 }, &out);
+}
+
+test "vgen" {
+    var out: [5]f32 = undefined;
+    vgen(f32, 0.0, 10.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 0.0, 2.5, 5.0, 7.5, 10.0 }, &out);
+}
+
+test "vgathr" {
+    // C[n] = A[B[n]-1] - vDSP.h:5377-5380's gather is 1-indexed.
+    const table = [_]f32{ 10.0, 20.0, 30.0, 40.0 };
+    const indices = [_]Length{ 2, 4, 1 };
+    var out: [3]f32 = undefined;
+    vgathr(f32, &table, &indices, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 20.0, 40.0, 10.0 }, &out);
+}
+
+test "vindex" {
+    const table = [_]f32{ 10.0, 20.0, 30.0, 40.0 };
+    const indices = [_]f32{ 1.9, 3.2, 0.1 };
+    var out: [3]f32 = undefined;
+    vindex(f32, &table, &indices, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 20.0, 40.0, 10.0 }, &out);
+}
+
+test "vgathra" {
+    const x0: f32 = 100.0;
+    const x1: f32 = 200.0;
+    const x2: f32 = 300.0;
+    const ptrs = [_][*]const f32{ @ptrCast(&x0), @ptrCast(&x1), @ptrCast(&x2) };
+    var out: [3]f32 = undefined;
+    vgathra(f32, &ptrs, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 100.0, 200.0, 300.0 }, &out);
+}
+
+test "vthrsc" {
+    const a = [_]f32{ 3.0, 10.0, 5.0, -2.0 };
+    var out: [4]f32 = undefined;
+    vthrsc(f32, &a, 5.0, 100.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ -100.0, 100.0, 100.0, -100.0 }, &out);
+}
+
+test "vtabi" {
+    // table (C) = [0, 10, 20, 30], s1=1, s2=0 so p = a[n] directly.
+    const table = [_]f32{ 0.0, 10.0, 20.0, 30.0 };
+    const a = [_]f32{ 0.5, 1.5, -1.0, 5.0 };
+    var out: [4]f32 = undefined;
+    vtabi(f32, &a, 1.0, 0.0, &table, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 15.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[2], 0.001); // p<0 -> table[0]
+    try std.testing.expectApproxEqAbs(@as(f32, 30.0), out[3], 0.001); // p>=M-1 -> table[M-1]
+}
+
+test "vtmerg" {
+    const a = [_]f32{ 0.0, 0.0, 0.0, 0.0 };
+    const b = [_]f32{ 10.0, 10.0, 10.0, 10.0 };
+    var out: [4]f32 = undefined;
+    vtmerg(f32, &a, &b, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.3333), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 6.6667), out[2], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), out[3], 0.001);
+}
+
+test "vlint" {
+    const table = [_]f32{ 0.0, 10.0, 20.0, 30.0 };
+    const indices = [_]f32{ 0.5, 1.25, 2.9 };
+    var out: [3]f32 = undefined;
+    vlint(f32, &table, &indices, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 12.5), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 29.0), out[2], 0.001);
+}
+
+test "vqint" {
+    const table = [_]f32{ 0.0, 10.0, 20.0, 30.0, 40.0 };
+    const indices = [_]f32{ 1.5, 2.0, 0.2 };
+    var out: [3]f32 = undefined;
+    vqint(f32, &table, &indices, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 15.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 20.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out[2], 0.001); // index clamped to b=1
+}
+
+test "vintb" {
+    const a = [_]f32{ 1.0, 2.0, 3.0 };
+    const b = [_]f32{ 10.0, 20.0, 30.0 };
+    var out: [3]f32 = undefined;
+    vintb(f32, &a, &b, 0.25, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.25), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 6.5), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 9.75), out[2], 0.001);
+}
+
+test "vgenp" {
+    const values = [_]f32{ 0.0, 10.0, 20.0 };
+    const positions = [_]f32{ 2.0, 5.0, 8.0 };
+    var out: [10]f32 = undefined;
+    vgenp(f32, &values, &positions, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 0.001); // n <= B[0]
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[2], 0.001); // n == B[0]
+    try std.testing.expectApproxEqAbs(@as(f32, 3.3333), out[3], 0.001); // interpolated segment 0
+    try std.testing.expectApproxEqAbs(@as(f32, 10.0), out[5], 0.001); // n == B[1]
+    try std.testing.expectApproxEqAbs(@as(f32, 20.0), out[8], 0.001); // n == B[2]
+    try std.testing.expectApproxEqAbs(@as(f32, 20.0), out[9], 0.001); // n > B[M-1]
+}
+
+test "vpoly" {
+    // coeffs = [1, 2, 3] with P=2: C[n] = A[2-p]*x^p summed, i.e. x^2+2x+3.
+    const coeffs = [_]f32{ 1.0, 2.0, 3.0 };
+    const points = [_]f32{ 0.0, 1.0, 2.0, -1.0 };
+    var out: [4]f32 = undefined;
+    vpoly(f32, &coeffs, &points, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 3.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 6.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 11.0), out[2], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 2.0), out[3], 0.001);
+}
+
+test "vrsum" {
+    const a = [_]f32{ 10.0, 20.0, 30.0, 40.0 };
+    var out: [4]f32 = undefined;
+    vrsum(f32, &a, 2.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 0.0, 40.0, 100.0, 180.0 }, &out);
+}
+
+test "vsimps" {
+    const a = [_]f32{ 1.0, 2.0, 3.0, 4.0, 5.0 };
+    var out: [5]f32 = undefined;
+    vsimps(f32, &a, 1.0, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.5), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 4.0), out[2], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 7.5), out[3], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 12.0), out[4], 0.001);
+}
+
+test "vtrapz" {
+    const a = [_]f32{ 1.0, 2.0, 3.0, 4.0 };
+    var out: [4]f32 = undefined;
+    vtrapz(f32, &a, 1.0, &out);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 0.0, 1.5, 4.0, 7.5 }, &out);
+}
+
+test "vswsum" {
+    // A must contain N+P-1 elements; here N=out.len=4, P=3, so A needs 6.
+    const a = [_]f32{ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
+    var out: [4]f32 = undefined;
+    vswsum(f32, &a, &out, 3);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 6.0, 9.0, 12.0, 15.0 }, &out);
+}
+
+test "vswmax" {
+    // n=4 meaningful outputs, window_len=3: both a and out need n+window_len-1=6 elements.
+    const a = [_]f32{ 3.0, 1.0, 4.0, 1.0, 5.0, 9.0 };
+    var out: [6]f32 = undefined;
+    vswmax(f32, &a, &out, 4, 3);
+    // C[0] = max(A[0..3]) = max(3,1,4) = 4
+    // C[1] = max(A[1..4]) = max(1,4,1) = 4
+    // C[2] = max(A[2..5]) = max(4,1,5) = 5
+    // C[3] = max(A[3..6]) = max(1,5,9) = 9
+    try std.testing.expectApproxEqAbs(@as(f32, 4.0), out[0], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 4.0), out[1], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0), out[2], 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 9.0), out[3], 0.001);
+}
+
+test "blkman_window, hamm_window, hann_window (periodic form, flag=hann_denorm)" {
+    // flag=hann_denorm (0) produces the *periodic* (DFT-even) window, not a
+    // symmetric one - confirmed empirically: w[N-1] != w[0] in general
+    // (e.g. this is why a naive w[n] == w[N-1-n] symmetry check fails).
+    // Instead, compare directly against each window's textbook periodic
+    // formula (denominator N, not N-1).
+    const n = 8;
+    const two_pi = 2.0 * std.math.pi;
+
+    var blkman: [n]f32 = undefined;
+    blkman_window(f32, &blkman, .hann_denorm);
+    var hamm: [n]f32 = undefined;
+    hamm_window(f32, &hamm, .hann_denorm);
+    var hann: [n]f32 = undefined;
+    hann_window(f32, &hann, .hann_denorm);
+
+    for (0..n) |i| {
+        const x: f32 = @floatFromInt(i);
+        const theta = two_pi * x / @as(f32, n);
+
+        const expected_hann = 0.5 * (1.0 - @cos(theta));
+        try std.testing.expectApproxEqAbs(expected_hann, hann[i], 0.001);
+
+        const expected_hamm = 0.54 - 0.46 * @cos(theta);
+        try std.testing.expectApproxEqAbs(expected_hamm, hamm[i], 0.001);
+
+        const expected_blkman = 0.42 - 0.5 * @cos(theta) + 0.08 * @cos(2.0 * theta);
+        try std.testing.expectApproxEqAbs(expected_blkman, blkman[i], 0.001);
+    }
+}

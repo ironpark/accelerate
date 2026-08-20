@@ -224,30 +224,30 @@
 
 - [x] `vrvrs` — L18
 - [x] `vswap` — L32
-- [ ] `vsort` — L44
-- [ ] `vsorti` — L60
-- [ ] `vramp` — L78
-- [ ] `vgen` — L92
-- [ ] `vgathr` — L110
-- [ ] `vindex` — L124
-- [ ] `vgathra` — L138
-- [ ] `vthrsc` — L159
-- [ ] `vtabi` — L189
-- [ ] `vtmerg` — L207
+- [x] `vsort` — L44
+- [x] `vsorti` — L60
+- [x] `vramp` — L78
+- [x] `vgen` — L92
+- [x] `vgathr` — L110
+- [x] `vindex` — L124
+- [x] `vgathra` — L138
+- [x] `vthrsc` — L159
+- [x] `vtabi` — L189
+- [x] `vtmerg` — L207
 - [x] `wiener` — L220
-- [ ] `vlint` — L244
-- [ ] `vqint` — L263
-- [ ] `vintb` — L277
-- [ ] `vgenp` — L297
-- [ ] `vpoly` — L313
-- [ ] `vrsum` — L333
-- [ ] `vsimps` — L349
-- [ ] `vtrapz` — L364
-- [ ] `vswsum` — L380
-- [ ] `vswmax` — L403
-- [ ] `blkman_window` — L415
-- [ ] `hamm_window` — L423
-- [ ] `hann_window` — L431
+- [x] `vlint` — L244
+- [x] `vqint` — L263
+- [x] `vintb` — L277
+- [x] `vgenp` — L297
+- [x] `vpoly` — L313
+- [x] `vrsum` — L333
+- [x] `vsimps` — L349
+- [x] `vtrapz` — L364
+- [x] `vswsum` — L380
+- [x] `vswmax` — L403
+- [x] `blkman_window` — L415
+- [x] `hamm_window` — L423
+- [x] `hann_window` — L431
 
 ### `src/vdsp/vaddsub.zig`
 
