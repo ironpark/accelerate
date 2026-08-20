@@ -1,15 +1,21 @@
 # Accelerate binding audit
 
-Progress: 295/476 checklist items verified (see `fix/checklist.sh` for live status).
-Completed: priority 1 (8 "swapped" functions), priority 2 (16 ultrasync
-dependencies), priority 3 (vecop.zig, zvecop.zig, reduction.zig, clip.zig,
-util.zig, convert.zig - 168 functions), priority 4 (fft.zig remainder,
-dft.zig, fixed_fft.zig - 41 functions), priority 5 (biquad.zig remainder,
-conv.zig, matrix.zig, ramp.zig, dotp.zig - 47 functions), and priority 6
-(vforce/root.zig - 42 functions) from `fix/REQUEST.md`. Priorities 4, 5, and
-6 were each run as three parallel worktree agents and merged back (priority 6
-via cherry-pick + manual conflict resolution, since all three agents shared
-a single file). Priority 7 (vimage/) not yet started.
+**Progress: 476/476 checklist items verified (100%). Audit complete.**
+`zig build test` passes: 397/397 tests, 0 failures, 0 hangs.
+
+All seven priorities from `fix/REQUEST.md` are done: priority 1 (8 "swapped"
+functions), priority 2 (16 ultrasync dependencies), priority 3 (vecop.zig,
+zvecop.zig, reduction.zig, clip.zig, util.zig, convert.zig - 168 functions),
+priority 4 (fft.zig remainder, dft.zig, fixed_fft.zig - 41 functions),
+priority 5 (biquad.zig remainder, conv.zig, matrix.zig, ramp.zig, dotp.zig -
+47 functions), priority 6 (vforce/root.zig - 42 functions), a follow-up sweep
+of 13 leftover vDSP items (vaddsub, vadd, sve, types.zig's Complex(T)/Int24/
+UInt24), and priority 7 (vimage/ - 168 functions across alpha.zig,
+conversion.zig, convolution.zig, geometry.zig, histogram.zig, morphology.zig,
+transform.zig). Priorities 4, 5, 6, and 7 were each run as three parallel
+worktree agents and merged back (priority 6 via cherry-pick + manual conflict
+resolution, since all three agents shared a single file; the rest via plain
+`git merge`, since each agent touched disjoint files plus `fix/CHECKLIST.md`).
 
 ## Behavior changes
 
@@ -21,6 +27,8 @@ a single file). Priority 7 (vimage/) not yet started.
 | `Biquadm(T).copyState` | Zero callers anywhere in the codebase, not in ultrasync's list - safe to change directly | `vDSP.h:472-478` declares `vDSP_biquadm_CopyState(__dest, __src)` with `__dest` first. The binding called `c.vDSP_biquadm_CopyState(src.setup, self.setup)` - `src` in the `__dest` slot, `self` in the `__src` slot, backwards relative to the parameter names. Runtime-confirmed with two filters holding distinct nonzero delay states: before the fix, `a.copyState(b)` overwrote `b` with `a`'s state (the receiver mutated its argument); after the fix, `a` absorbs `b`'s state as the name promises. | Swapped the two arguments in the C call to match the header's declared `__dest, __src` order. |
 | `vdsp.zdotpr`, `vdsp.zidotpr`, `vdsp.zrdotpr` | Only re-exported from `root.zig`, no other callers, not in ultrasync's list - a caller could not previously invoke these successfully anyway, given the hang | `vDSP.h:3092-3128` (zdotpr/zrdotpr) and `vDSP.h:3255-3277` (zidotpr) declare the scalar complex result `C` as `const DSPSplitComplex *__C`, an output written through `C->realp[0]`/`C->imagp[0]` - the caller must supply real backing storage. The old wrapper did `var result: SC(T) = undefined;` then passed `&result` straight into the C call, leaving `realp`/`imagp` as garbage pointers the C function then wrote through (undefined behavior). This was not theoretical: isolating the zdotpr test with `--test-filter` showed execution hang indefinitely (confirmed via `ps` showing a CPU-spinning process), matching this audit's established "undocumented preconditions cause hangs" pattern (`vsorti`). A standalone probe with real backing storage confirmed the underlying C function itself is correct. | Changed the return type from `SC(T)` to `Complex(T)` (the plain `{real, imag}` value struct already used elsewhere in this codebase, e.g. `dft.zig`/`fft.zig`'s `ctoz`) - `SC(T)`'s pointer-based representation can never be made safe as a return value here, since the backing storage it would point to goes out of scope the moment the function returns. The function now allocates real/imag storage on its own stack frame, passes pointers into the C call, then copies the values out into a `Complex(T)` before that storage goes out of scope. |
 | `vforce.pows` | No callers elsewhere in the codebase (only re-exported from `src/root.zig`), safe to change directly | `vForce.h:467-475`: `vvpowsf`/`vvpows` document `y` as "Input **scalar**, exponent in calculation" (singular) - unlike `vvpowf`/`vvpow`'s `y`, documented as a full per-element vector (`vForce.h:398-429`). Runtime-confirmed: calling with `base=[2,3,4]`, junk `exp_vec=[3,999,999]` produced `[8,27,64]` (all using `exp_vec[0]=3`), not `[8, 3^999, 4^999]` - the C function only ever reads element 0. The old wrapper's `pows(exp_vec: []const T, ...)` signature, same shape as `pow`'s, silently dropped all data past index 0 with no type-level warning. | Changed the wrapper's signature from `pows(exp_vec: []const T, base, out)` to `pows(exponent: T, base, out)` - a plain scalar instead of a same-shaped-as-`pow` slice. New regression test confirms `out[i] = base[i]^exponent` for every element (f32 and f64). |
+| `src/vimage/c.zig`: six self-referencing extern type aliases (`vImage_Buffer`, `vImagePixelCount`, `vImage_Flags`, `vImage_Error`, `Pixel_8888`, `Pixel_FFFF`) | vImage has zero callers anywhere in the repo (not used by ultrasync, confirmed via grep) - this was **uncompilable dead code**, not a runtime behavior regression | Each was declared as e.g. `pub const vImage_Buffer = vImage_Buffer;` (self-referencing) instead of `pub const vImage_Buffer = types.vImage_Buffer;`, present since the original `f79ef17` commit that added the vImage module. It compiled silently because Zig lazily resolves top-level decls, and nothing had ever forced these particular ones to resolve (0% of vImage was tested/compiled-as-test before this pass) - `zig build test` immediately failed with "value of declaration depends on itself" the moment any test touched one. Found independently by two of the three parallel priority-7 agents (identical diagnosis, identical fix), confirming it wasn't a one-off misreading. | Pointed each alias at `types.<Name>`, matching the pattern already used for the adjacent, correctly-written aliases (`Pixel_8`, `Pixel_F`, etc.) in the same block. |
+| `src/vimage/c.zig`: `vImageFloodFill_ARGB8888`/`vImageFloodFill_ARGB16U` extern declarations | Same zero-caller reasoning as above - uncompilable dead code, not a regression | `vImage_Types.h:286` defines `Pixel_8888`/`Pixel_ARGB_16U` as C array typedefs, which always decay to pointers as function parameters in C - every sibling `Pixel_8888`-taking extern in the same file already correctly declared its parameter as `*const Pixel_8888`, but these two floodFill externs took the array type by value, which Zig rejects outright as an invalid C ABI mapping. | Changed the two externs to take pointers (`*const Pixel_8888`/`*const Pixel_ARGB_16U`) and updated the two call sites in `transform.zig` to pass `&new_value` instead of `new_value`. |
 
 ## Comment-only corrections
 
@@ -33,6 +41,7 @@ a single file). Priority 7 (vimage/) not yet started.
 | `DFT(T)` (complex-to-complex zop) | Not called elsewhere in the codebase. | Confirmed via impulse forward+inverse round trip returning exactly `N`x the original - unnormalized in both directions, same family of finding as `zip`/`zop`/`zrip`. | Documented as unnormalized in both directions (previously had no doc comment at all - `dft.zig` had almost no doc comments before this pass). |
 | `DCT` | Not called elsewhere in the codebase. | `vDSP.h` documents the length constraint (`f*2**n`, `f`∈{1,3,5,15}, `n`≥4) and per-type (`II`/`III`/`IV`) cosine-sum formulas, but the wrapper had no doc comment restating them. Empirically confirmed `CreateSetup` fails for `N=4` (violates the constraint). | Documented the exact per-type formulas and length constraint. |
 | `vforce.pow` | Not called elsewhere in the codebase. | Doc comment said `out[i] = exp[i] ^ base[i]` (operands backwards); actual (already-correct) behavior per `vForce.h:398-429` (`z=pow(x,y)`, x=base, y=exponent) and the existing "pow" test (`2^3=8`, not `3^2=9`) is `out[i] = base[i] ^ exp[i]`. | Doc comment corrected to match the already-correct code; no behavior change. |
+| `vimage.unpremultiplyDataPlanar` | Not called elsewhere in the codebase. | `Alpha.h:1356-1360` specifies the u8 unpremultiply formula includes a `MIN(src_color, alpha)` clamp (dividing by alpha, but never producing a result exceeding the alpha-implied ceiling); the wrapper's doc comment restated the formula without that clamp term. | Doc comment corrected to include the clamp; no code change, since the wrapper just forwards to the C function. |
 
 ## Verified, no behavior change
 
@@ -58,14 +67,14 @@ argument-order verification method used, not an exhaustive re-listing.
 | `ramp.zig` (12/12) | `vrampmul`/`vrampmuladd` (mono) and `vrampmul2`/`vrampmuladd2` (interleaved-stereo) fade/crossfade multiplies, plus their `_s1_15` (Q1.15) and `_s8_24` (Q8.24) fixed-point variants, confirmed against header argument order and fixed-point scaling convention with hand-computed decimal-to-fixed-point encodings (e.g. 0.5 in Q1.15 = 16384). `*add` variants confirmed to accumulate into pre-seeded nonzero output rather than overwrite. Added missing length asserts. |
 | `dotp.zig` (9/9) | See behavior-change section above for `zdotpr`/`zidotpr`/`zrdotpr`. `dotpr` (single-precision-accumulator) vs `dotpr2` (higher-precision accumulator) and the `_s1_15`/`_s8_24` fixed-point dot products confirmed against header scaling notes; a test verifying `zidotpr`'s (conjugate) result differs from `zdotpr`'s (non-conjugate) on identical inputs confirms the `conj()` is actually applied, not just present in the doc comment. |
 | `vforce/root.zig` (42/42) | See behavior-change/comment-only sections above for `pows`/`pow`. All other 40 functions matched `vForce.h` argument order exactly - no swap bugs found, including at the two functions REQUEST.md's own methodology most expected one (`atan2(y,x)` and `div`, vForce's argument order is genuinely different from vDSP's already-confirmed-swapped `vDSP_vdiv`, and was verified independently rather than assumed to share the bug). `sinpi`/`cospi`/`tanpi` confirmed to compute `trig(pi*x)`, not `pi*trig(x)`, with a test that would fail under the wrong interpretation. `fmod` vs `remainder` sign conventions distinguished (`fmod(5.5,2)=1.5` vs `remainder(5.5,2)=-0.5`). `expm1`/`log1p` precision-near-zero claims runtime-confirmed by showing the naive `f32` route (`exp(x)-1`/`log(1+x)`) loses all precision at `x=1e-8` while the vForce functions don't. Found a header quirk worth flagging: `vForce.h`'s `vvnextafterf` `@param` docs for `y`/`x` say "magnitude"/"sign" - copy-pasted from the preceding `vvcopysignf` doc block and inapplicable to `nextafter` (no magnitude/sign concept); the wrapper correctly follows the unambiguous `@abstract` line instead, no change needed but worth noting so a future reader doesn't "fix" it to match the copy-pasted text. |
-
-## Not yet verified
-
-181 of 476 checklist items remain (see `fix/checklist.sh` for the live, up-to-date
-breakdown by module/file/function). Not yet started:
-- Priority 7: `vimage/` (168 functions, not used by ultrasync - REQUEST.md
-  asks to check in before starting this one; it uses a different error-code
-  convention and buffer alignment model than vDSP).
+| Leftover vDSP items (13/13: `vaddsub`, `vadd`, `sve`, `types.zig`'s `Complex(T)`/`Int24`/`UInt24`) | `vaddsub`'s `O0=I1+I0`/`O1=I1-I0` and `vadd`/`sve`'s `A,B,C` order all matched `vDSP.h` positionally, closing out the vDSP module. `types.zig`'s pure-Zig helper types (no direct C call of their own) got their first direct unit tests - `Complex(T)`'s `init`/`fromStd`/`toStd`, and `Int24`/`UInt24`'s `from`/`to`/`toI32`/`toU32` round trips across their full range including both signed extremes - though they were already indirectly runtime-validated via `convert.zig`'s existing tests round-tripping real values through actual `vDSP_vflt24`/`vDSP_vsmfix24` calls. |
+| `vimage/alpha.zig` (31/31) | See comment-only-correction section above for `unpremultiplyDataPlanar`. Every alpha-blend/premultiply/unpremultiply/clip-to-alpha function's channel order (ARGB vs RGBA vs BGRA, alpha-first vs alpha-last) and formula confirmed against `Alpha.h` and hand-computed test pixels with distinct per-channel values - no channel-order or argument-order bugs found. Premultiply→unpremultiply round trips confirmed to recover the original color at non-degenerate alpha values (not just 0 or full opacity). |
+| `vimage/morphology.zig` (4/4) | `dilate`/`erode` confirmed to spread the max/min value in the kernel neighborhood respectively (not swapped - a classic naming trap this audit specifically tested for), `max`/`min` confirmed as the simpler two-image element-wise variants per `Morphology.h`, matching the `vDSP` `vmax`/`vmin` naming precedent this time. |
+| `vimage/histogram.zig` (25/25) | Bin-count/value-to-bin mapping confirmed against `Histogram.h` with known pixel-value distributions. Several runtime-determined (not header-contradicting) behaviors pinned down as test expectations per REQUEST.md's "runtime is final judge": `equalization_Planar8`'s minimum input doesn't map to exactly bin 0; `endsInContrastStretch_*8` is a no-op on a too-sparse histogram at `percent=0` rather than a full stretch; `endsInContrastStretch_PlanarF` normalizes to `[0,1]` regardless of the requested `[minVal,maxVal]` window, unlike `contrastStretch_PlanarF` which rescales into that exact window - all confirmed to be genuine vImage behavior (header's declared argument order is followed correctly), not a wrapper bug. |
+| `vimage/conversion.zig` (53/53) | See behavior-change section above for the `c.zig` self-referencing aliases this file's tests exposed. Every planar↔interleaved packing, bit-depth conversion, channel permute/extract/overwrite/select/fill, and table-lookup function confirmed against `Conversion.h` with distinct-per-channel test pixels - the risk here wasn't argument-order swaps (unlike vDSP's `vsub`) but semantic confusion between similarly-named siblings (`overwriteChannels` vs `overwriteScalar` vs `overwritePixel`; `selectChannels` vs `overwriteChannels`), resolved by testing each against a shared mask and confirming which distinguishing behavior ("broadcast one value into masked channels" vs "each masked channel gets its own value") it actually implements. |
+| `vimage/convolution.zig` (11/11) | Kernel height/width order confirmed non-swapped via non-square-kernel tests (a swap would blur the wrong axis, visibly). `boxConvolve`'s `(sum + area/2) / area` and `convolveWithBias`'s `(sum + bias) / divisor` formulas both match `Convolution.h` exactly. `tentConvolvePlanar8`'s undocumented per-size kernel weights (triangular outer-product hypothesis) runtime-confirmed rather than assumed. |
+| `vimage/geometry.zig` (12/12) | `horizontalReflect`/`verticalReflect` confirmed to flip the correct axis via marker-pixel tests. `affineWarp`'s matrix convention confirmed with a pure-translation transform (shifts exactly N pixels in x, not y or diagonal). `rotate90`'s `RotationConstant` enum values confirmed to exactly match `Geometry.h`'s `kRotate*DegreesClockwise/CounterClockwise` constants. Runtime-determined coordinate convention noted (not a bug): `+y` in the header's documented bottom-left-origin space corresponds to a *decreasing* buffer row index (row 0 = visual top). |
+| `vimage/transform.zig` (32/32) | See behavior-change section above for the `c.zig` floodFill array-by-value bug this file's tests exposed. Matrix-multiply functions (`matrixMultiplyPlanar`/`matrixMultiplyARGB`) confirmed non-square-safe, same class of test as this audit's earlier vDSP `mmul` verification. Gamma/piecewise-gamma/piecewise-polynomial/piecewise-rational formulas and lookup-table/multidimensional-table functions (including `Retain`/`Release` refcount lifecycle - confirmed a double-release after a retain doesn't invalidate a still-live reference) all confirmed against `Transform.h`. |
 
 ## Emerging patterns
 
@@ -208,3 +217,34 @@ breakdown by module/file/function). Not yet started:
   merging wholesale) but kept every conflict trivial (concatenate two
   adjacent append blocks) rather than requiring real reconciliation of
   overlapping logic.
+- An entire module can be silently uncompilable rather than silently wrong:
+  `vimage/c.zig` had six self-referencing type aliases and two invalid
+  array-by-value externs, present since the module's original commit, that
+  Zig's lazy decl resolution let sit undetected because nothing had ever
+  forced those specific decls to resolve (0% of vImage was tested before
+  this pass, and vImage has zero callers elsewhere in the repo). This is a
+  different failure class from every other finding in this audit (which were
+  all "compiles fine, computes the wrong thing" or "compiles fine, hangs") -
+  worth remembering that "verified functions elsewhere in a codebase compile
+  and pass" says nothing about an entirely untested module compiling at all.
+  Two of the three parallel priority-7 agents independently found and
+  identically fixed the self-referencing-alias bug, which is reassuring
+  convergent evidence rather than wasted duplicate work - the git merge
+  cost of the duplication was one trivial identical-diff no-op.
+- A pixel-format API's biggest risk category is not argument-order swaps
+  (vImage had none) but semantically-adjacent sibling functions with similar
+  names and different behavior: `overwriteChannels` vs `overwriteScalar` vs
+  `overwritePixel` in `vimage/conversion.zig` sound interchangeable but
+  implement genuinely different operations (broadcast-into-masked-channels
+  vs write-one-constant-into-masked-channels vs write-one-specific-pixel).
+  The vDSP audit's dominant risk (argument order) and the vImage audit's
+  dominant risk (name-similar-but-different-semantics siblings) are
+  different failure modes requiring different verification strategies -
+  worth choosing which risk to prioritize based on the API family's actual
+  shape, not applying the same checklist uniformly everywhere.
+- This closes out all 476 checklist items (100%) and all 7 priorities in
+  `fix/REQUEST.md`. Final tally: 9 real behavior-change bugs across the
+  whole audit (`vsub`, `vswmax`, `deq22`, `Biquadm.copyState`, `zdotpr`/
+  `zidotpr`/`zrdotpr`, `vforce.pows`, plus the two `vimage/c.zig` compile-
+  blocking bugs), 8 comment-only corrections, and `zig build test` at
+  397/397 passing with zero failures and zero hangs.
