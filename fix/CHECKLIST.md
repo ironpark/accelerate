@@ -341,7 +341,7 @@
 - [x] `logb` — L161
 - [x] `pow` — L176
 - [x] `pows` — L189
-- [ ] `fabs` — L205
+- [x] `fabs` — L205
 - [x] `sin` — L220
 - [x] `cos` — L231
 - [x] `tan` — L242
@@ -359,15 +359,15 @@
 - [x] `asinh` — L388
 - [x] `acosh` — L399
 - [x] `atanh` — L410
-- [ ] `trunc` — L425
-- [ ] `nint` — L436
-- [ ] `ceil` — L447
-- [ ] `floor` — L458
-- [ ] `fmod` — L473
-- [ ] `remainder` — L485
-- [ ] `copysign` — L501
-- [ ] `nextafter` — L513
-- [ ] `cosisin` — L529
+- [x] `trunc` — L425
+- [x] `nint` — L436
+- [x] `ceil` — L447
+- [x] `floor` — L458
+- [x] `fmod` — L473
+- [x] `remainder` — L485
+- [x] `copysign` — L501
+- [x] `nextafter` — L513
+- [x] `cosisin` — L529
 
 ## vImage
 

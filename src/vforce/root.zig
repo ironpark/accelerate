@@ -965,3 +965,130 @@ test "atanh domain interior, asymmetric" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.5493), out[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, -1.4722), out[1], 0.001);
 }
+
+test "trunc" {
+    // vForce.h vvintf/vvint: "rounds x[i] to the nearest integer in the
+    // direction of zero" - truncation must NOT match floor/ceil for
+    // negative fractional values.
+    const x = [_]f64{ 2.7, -2.7, -0.3, 3.0 };
+    var out: [4]f64 = undefined;
+    trunc(f64, &x, &out);
+    try std.testing.expectEqual(@as(f64, 2.0), out[0]);
+    try std.testing.expectEqual(@as(f64, -2.0), out[1]);
+    try std.testing.expectEqual(@as(f64, -0.0), out[2]);
+    try std.testing.expectEqual(@as(f64, 3.0), out[3]);
+}
+
+test "nint rounds ties to even" {
+    // vForce.h vvnintf/vvnint: "Rounds x[i] to the nearest integer, with
+    // ties rounded to even" - this is banker's rounding, NOT round-half-up.
+    // 2.5 and -2.5 are equidistant from two integers; the even one wins.
+    const x = [_]f64{ 2.5, 3.5, -2.5, -0.5, 1.3, -1.7 };
+    var out: [6]f64 = undefined;
+    nint(f64, &x, &out);
+    try std.testing.expectEqual(@as(f64, 2.0), out[0]); // tie -> even (2)
+    try std.testing.expectEqual(@as(f64, 4.0), out[1]); // tie -> even (4)
+    try std.testing.expectEqual(@as(f64, -2.0), out[2]); // tie -> even (-2)
+    try std.testing.expectEqual(@as(f64, -0.0), out[3]); // tie -> even (0)
+    try std.testing.expectEqual(@as(f64, 1.0), out[4]); // non-tie: nearest
+    try std.testing.expectEqual(@as(f64, -2.0), out[5]); // non-tie: nearest
+}
+
+test "ceil and floor asymmetric" {
+    const x = [_]f64{ -2.5, 4.1, 0.0 };
+    var ceil_out: [3]f64 = undefined;
+    var floor_out: [3]f64 = undefined;
+    ceil(f64, &x, &ceil_out);
+    floor(f64, &x, &floor_out);
+    try std.testing.expectEqual(@as(f64, -2.0), ceil_out[0]);
+    try std.testing.expectEqual(@as(f64, 5.0), ceil_out[1]);
+    try std.testing.expectEqual(@as(f64, 0.0), ceil_out[2]);
+    try std.testing.expectEqual(@as(f64, -3.0), floor_out[0]);
+    try std.testing.expectEqual(@as(f64, 4.0), floor_out[1]);
+    try std.testing.expectEqual(@as(f64, 0.0), floor_out[2]);
+}
+
+test "fmod matches libm fmod sign convention (sign of dividend/numerator)" {
+    // vForce.h vvfmodf/vvfmod: z = y - k*x, "if x is non-zero, the result
+    // has the same sign as y" where y is the numerator (2nd C arg) and x is
+    // the denominator (3rd C arg). Root.zig's fmod(a, b, out) maps a->y
+    // (numerator), b->x (denominator), matching the standard C fmod(a, b)
+    // convention despite the header's warning that "argument labels are
+    // switched with respect to the libm function fmod()" (that warning is
+    // about the *C parameter names* y/x vs libm's x/y, not about which
+    // vector is the dividend).
+    const a = [_]f64{ 5.5, -5.5, 7.0 };
+    const b = [_]f64{ 2.0, 2.0, -3.0 };
+    var out: [3]f64 = undefined;
+    fmod(f64, &a, &b, &out);
+    // fmod(5.5, 2) = 1.5 (5.5 = 2*2 + 1.5)
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), out[0], 1e-12);
+    // fmod(-5.5, 2) = -1.5 (sign follows dividend, unlike remainder)
+    try std.testing.expectApproxEqAbs(@as(f64, -1.5), out[1], 1e-12);
+    // fmod(7, -3) = 1.0 (sign follows dividend)
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), out[2], 1e-12);
+}
+
+test "remainder diverges from fmod on sign (round-to-nearest, ties to even)" {
+    // vForce.h vvremainderf/vvremainder: z = y - k*x for the integer k
+    // nearest y/x (ties to even), abs(z) <= abs(x)/2. This can have a
+    // different sign than fmod for the same inputs - a concrete divergence
+    // check per REQUEST.md's test design rules.
+    const a = [_]f64{5.5};
+    const b = [_]f64{2.0};
+    var fmod_out: [1]f64 = undefined;
+    var rem_out: [1]f64 = undefined;
+    fmod(f64, &a, &b, &fmod_out);
+    remainder(f64, &a, &b, &rem_out);
+    // fmod(5.5, 2) = 1.5, remainder(5.5, 2) = -0.5 (5.5/2 = 2.75 -> k=3,
+    // 5.5 - 3*2 = -0.5)
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), fmod_out[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -0.5), rem_out[0], 1e-12);
+}
+
+test "copysign takes magnitude from first arg, sign from second" {
+    // vForce.h vvcopysignf/vvcopysign: z = copysign(y, x) where y (2nd C
+    // arg) supplies the magnitude and x (3rd C arg) supplies the sign.
+    // Root.zig's copysign(magnitude, sign, out) maps magnitude->y, sign->x
+    // positionally, matching the header. Use DIFFERENT magnitudes (not just
+    // opposite signs of the same value) so an accidental arg swap would be
+    // caught even if it happened to preserve sign by coincidence.
+    const magnitude = [_]f64{ 3.0, -7.5, 2.0 };
+    const sign = [_]f64{ -1.0, 1.0, -0.0 };
+    var out: [3]f64 = undefined;
+    copysign(f64, &magnitude, &sign, &out);
+    try std.testing.expectEqual(@as(f64, -3.0), out[0]); // mag 3, sign of -1 -> -3
+    try std.testing.expectEqual(@as(f64, 7.5), out[1]); // mag -7.5, sign of 1 -> 7.5
+    try std.testing.expectEqual(@as(f64, -2.0), out[2]); // mag 2, sign of -0.0 -> -2
+}
+
+test "nextafter moves toward the second argument, not the first" {
+    // vForce.h vvnextafterf/vvnextafter: z = nextafter(y, x), "next machine
+    // representable number from y in the direction of x". Root.zig's
+    // nextafter(x, y, out) maps x->y (starting value), y->x (direction
+    // target) positionally, matching the header despite its param doc
+    // erroneously reusing copysign's "magnitude"/"sign" wording for y/x.
+    const from = [_]f64{ 1.0, 1.0, -1.0 };
+    const towards = [_]f64{ 2.0, 0.0, -2.0 };
+    var out: [3]f64 = undefined;
+    nextafter(f64, &from, &towards, &out);
+    try std.testing.expect(out[0] > 1.0); // moving toward +2 increases
+    try std.testing.expect(out[0] < 1.0 + 1e-10);
+    try std.testing.expect(out[1] < 1.0); // moving toward 0 decreases
+    try std.testing.expect(out[1] > 1.0 - 1e-10);
+    try std.testing.expect(out[2] < -1.0); // moving toward -2 decreases (more negative)
+    try std.testing.expect(out[2] > -1.0 - 1e-10);
+}
+
+test "cosisin computes cos(x) + i*sin(x)" {
+    // vForce.h vvcosisinf/vvcosisin: "C[i] is set to cos(x[i]) + I*sin(x[i])",
+    // the same C function as the complex exponential e^(i*x) restricted to
+    // the unit circle. Verified against known angles.
+    const x = [_]f32{ 0.0, std.math.pi / 2.0 };
+    var out: [2]FloatComplex = undefined;
+    cosisin(f32, &x, &out);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[0].real, 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[0].imag, 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), out[1].real, 0.001);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), out[1].imag, 0.001);
+}
