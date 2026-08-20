@@ -144,7 +144,7 @@ pub fn Biquadm(comptime T: type) type {
         /// which only matches the section-major ordering, not a channel-major
         /// ordering like [ch0_sec0, ch0_sec1, ch1_sec0, ...].
         pub fn init(coefficients: []const f64, sections: Length, channels: Length) !Self {
-            std.debug.assert(coefficients.len == 5 * sections * channels);
+            std.debug.assert(coefficients.len >= 5 * sections * channels);
             const setup = switch (T) {
                 f32 => c.vDSP_biquadm_CreateSetup(coefficients.ptr, sections, channels),
                 f64 => c.vDSP_biquadm_CreateSetupD(coefficients.ptr, sections, channels),
@@ -166,11 +166,23 @@ pub fn Biquadm(comptime T: type) type {
             }
         }
 
-        /// Applies the multi-channel biquad IIR filter.
-        pub fn apply(self: Self, input: [*]const [*]const T, output: [*]const [*]T, n: Length) void {
+        /// Applies the multi-channel biquad IIR filter. `input` and `output`
+        /// are arrays of per-channel buffer pointers, one entry per channel,
+        /// each pointing at `n` samples.
+        ///
+        /// These are slices rather than bare `[*]`multi-pointers specifically
+        /// so the channel count can be checked: vDSP_biquadm reads exactly
+        /// `channels` pointers out of each array, and handing it fewer does
+        /// not fault - it reads whatever follows in memory and, in testing,
+        /// **hangs indefinitely**. Nothing in the C signature communicates
+        /// that, so the length lives in the Zig type and the assert below
+        /// converts a silent deadlock into an immediate, located panic.
+        pub fn apply(self: Self, input: []const [*]const T, output: []const [*]T, n: Length) void {
+            std.debug.assert(input.len >= self.channels);
+            std.debug.assert(output.len >= self.channels);
             switch (T) {
-                f32 => c.vDSP_biquadm(self.setup, input, 1, output, 1, n),
-                f64 => c.vDSP_biquadmD(self.setup, input, 1, output, 1, n),
+                f32 => c.vDSP_biquadm(self.setup, input.ptr, 1, output.ptr, 1, n),
+                f64 => c.vDSP_biquadmD(self.setup, input.ptr, 1, output.ptr, 1, n),
                 else => @compileError("Biquadm requires f32 or f64"),
             }
         }
@@ -220,7 +232,7 @@ pub fn Biquadm(comptime T: type) type {
         /// per-channel impulse responses expected under section-major
         /// ordering (see the "Biquadm partial coefficient update" test).
         pub fn setCoefficientsDouble(self: Self, coeffs: []const f64, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void {
-            std.debug.assert(coeffs.len == 5 * nsec * nchn);
+            std.debug.assert(coeffs.len >= 5 * nsec * nchn);
             switch (T) {
                 f32 => c.vDSP_biquadm_SetCoefficientsDouble(self.setup, coeffs.ptr, start_sec, start_chn, nsec, nchn),
                 f64 => c.vDSP_biquadm_SetCoefficientsDoubleD(self.setup, coeffs.ptr, start_sec, start_chn, nsec, nchn),
@@ -233,7 +245,7 @@ pub fn Biquadm(comptime T: type) type {
         /// Coefficients are specified in single precision. Same section-major
         /// `[b0, b1, b2, a1, a2]` block layout as `setCoefficientsDouble`.
         pub fn setCoefficientsSingle(self: Self, coeffs: []const f32, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void {
-            std.debug.assert(coeffs.len == 5 * nsec * nchn);
+            std.debug.assert(coeffs.len >= 5 * nsec * nchn);
             switch (T) {
                 f32 => c.vDSP_biquadm_SetCoefficientsSingle(self.setup, coeffs.ptr, start_sec, start_chn, nsec, nchn),
                 f64 => c.vDSP_biquadm_SetCoefficientsSingleD(self.setup, coeffs.ptr, start_sec, start_chn, nsec, nchn),
@@ -255,7 +267,7 @@ pub fn Biquadm(comptime T: type) type {
         /// platform. Treat this as taking effect immediately unless you
         /// re-verify on your target OS/architecture.
         pub fn setTargetsDouble(self: Self, targets: []const f64, interp_rate: T, interp_threshold: T, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void {
-            std.debug.assert(targets.len == 5 * nsec * nchn);
+            std.debug.assert(targets.len >= 5 * nsec * nchn);
             switch (T) {
                 f32 => c.vDSP_biquadm_SetTargetsDouble(self.setup, targets.ptr, interp_rate, interp_threshold, start_sec, start_chn, nsec, nchn),
                 f64 => c.vDSP_biquadm_SetTargetsDoubleD(self.setup, targets.ptr, interp_rate, interp_threshold, start_sec, start_chn, nsec, nchn),
@@ -267,7 +279,7 @@ pub fn Biquadm(comptime T: type) type {
         /// `setTargetsDouble` for the layout and the runtime findings on
         /// `interp_rate`/`interp_threshold` (no observed gradual ramp).
         pub fn setTargetsSingle(self: Self, targets: []const f32, interp_rate: T, interp_threshold: T, start_sec: Length, start_chn: Length, nsec: Length, nchn: Length) void {
-            std.debug.assert(targets.len == 5 * nsec * nchn);
+            std.debug.assert(targets.len >= 5 * nsec * nchn);
             switch (T) {
                 f32 => c.vDSP_biquadm_SetTargetsSingle(self.setup, targets.ptr, interp_rate, interp_threshold, start_sec, start_chn, nsec, nchn),
                 f64 => c.vDSP_biquadm_SetTargetsSingleD(self.setup, targets.ptr, interp_rate, interp_threshold, start_sec, start_chn, nsec, nchn),
@@ -289,7 +301,7 @@ pub fn Biquadm(comptime T: type) type {
         /// binding's surface on this platform; do not assume it mutes,
         /// bypasses, or freezes a channel without re-verifying.
         pub fn setActiveFilters(self: Self, filter_states: []const bool) void {
-            std.debug.assert(filter_states.len == self.channels);
+            std.debug.assert(filter_states.len >= self.channels);
             switch (T) {
                 f32 => c.vDSP_biquadm_SetActiveFilters(self.setup, filter_states.ptr),
                 f64 => c.vDSP_biquadm_SetActiveFiltersD(self.setup, filter_states.ptr),
@@ -525,6 +537,11 @@ test "Biquadm copyState: self absorbs src's delay state" {
 }
 
 test "Biquadm setTargetsDouble/Single: runtime-confirmed to take effect immediately" {
+    // [characterization] This test pins behavior that Apple does not document
+    // and that was determined by running the real framework, not derived from
+    // a header. It asserts what macOS does today. If a future OS version
+    // changes it, this failing is the intended signal to re-verify and update
+    // the doc comment - it is NOT evidence that this binding regressed.
     // No gradual ramp was observed on this platform (see doc comment on
     // setTargetsDouble); the output after calling setTargets must exactly
     // match the *target* filter's own step response from sample 0, i.e. the
@@ -566,6 +583,11 @@ test "Biquadm setTargetsDouble/Single: runtime-confirmed to take effect immediat
 }
 
 test "Biquadm setActiveFilters: passthrough, no observed effect on apply output" {
+    // [characterization] This test pins behavior that Apple does not document
+    // and that was determined by running the real framework, not derived from
+    // a header. It asserts what macOS does today. If a future OS version
+    // changes it, this failing is the intended signal to re-verify and update
+    // the doc comment - it is NOT evidence that this binding regressed.
     // vDSP.h gives no pseudocode for what "active/inactive" gates. Runtime
     // testing (matching/differing per-channel coefficients, with/without a
     // pending setTargets call, and sentinel-filled output buffers) found NO
@@ -594,4 +616,47 @@ test "Biquadm setActiveFilters: passthrough, no observed effect on apply output"
     const expect = [_]f64{ 1.0, 0.5, 0.25, 0.125 };
     for (out0, expect) |got, want| try std.testing.expectApproxEqAbs(want, got, 1e-9);
     for (out1, expect) |got, want| try std.testing.expectApproxEqAbs(want, got, 1e-9);
+}
+
+test "Biquadm init: (sections, channels) argument order, pinned with an asymmetric 3x2 setup" {
+    // vDSP.h:447-451 names vDSP_biquadm_CreateSetup's two size parameters
+    // only `__M` and `__N` and gives no prose for either, so which one is
+    // sections and which is channels cannot be read off the header. Every
+    // other Biquadm test here uses a 2x2 or single-section configuration,
+    // which cannot tell the two apart - this one uses 3 sections x 2 channels
+    // so swapping them changes both the response and the required buffer
+    // shape.
+    //
+    // Channel 0: three cascaded one-poles (y[n] = x[n] + 0.5*y[n-1]).
+    //   Impulse response of one section:   0.5^n
+    //   Cascaded three times:              C(n+2, 2) * 0.5^n
+    //     = 1, 1.5, 1.5, 1.25, ...
+    // Channel 1: pure identity in all three sections, so the impulse passes
+    // through unchanged. If (sections, channels) were reversed, the setup
+    // would describe 2 sections x 3 channels and the two-pointer apply()
+    // below would be reading a third channel pointer that does not exist.
+    const one_pole = [_]f64{ 1.0, 0.0, 0.0, -0.5, 0.0 };
+    const identity = [_]f64{ 1.0, 0.0, 0.0, 0.0, 0.0 };
+    // Section-major layout: [sec0_ch0, sec0_ch1, sec1_ch0, sec1_ch1, ...]
+    const coeffs = one_pole ++ identity ++ one_pole ++ identity ++ one_pole ++ identity;
+    try std.testing.expectEqual(@as(usize, 5 * 3 * 2), coeffs.len);
+
+    const filter = try Biquadm(f64).init(&coeffs, 3, 2);
+    defer filter.deinit();
+    try std.testing.expectEqual(@as(Length, 3), filter.sections);
+    try std.testing.expectEqual(@as(Length, 2), filter.channels);
+
+    const impulse = [_]f64{ 1, 0, 0, 0 };
+    var out0 = [_]f64{ 0, 0, 0, 0 };
+    var out1 = [_]f64{ 0, 0, 0, 0 };
+    const xs = [_][*]const f64{ &impulse, &impulse };
+    const ys = [_][*]f64{ &out0, &out1 };
+    filter.apply(&xs, &ys, 4);
+
+    // C(n+2,2) * 0.5^n for n = 0..3: 1*1, 3*0.5, 6*0.25, 10*0.125
+    const expect0 = [_]f64{ 1.0, 1.5, 1.5, 1.25 };
+    for (out0, expect0) |got, want| try std.testing.expectApproxEqAbs(want, got, 1e-9);
+    // Identity sections leave the impulse alone; a section/channel mix-up
+    // would have given this channel filtered output instead.
+    try std.testing.expectEqualSlices(f64, &[_]f64{ 1, 0, 0, 0 }, &out1);
 }

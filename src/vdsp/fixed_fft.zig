@@ -4,6 +4,7 @@ const fft = @import("fft.zig");
 const Direction = fft.Direction;
 const c = @import("c.zig");
 const SC = types.SplitComplex;
+const SS = types.SplitSlice;
 
 /// vDSP_FFT16_copv performs a 16-element FFT on interleaved complex
 /// unit-stride vector-block-aligned data.
@@ -274,8 +275,8 @@ test "fft16_zopv forward cross-checked against FFT(f32).zip at N=16" {
     var im2 = in_im;
     const setup = try fft.FFT(f32).init(4, .radix2); // N = 1 << 4 = 16
     defer setup.deinit();
-    const io = SC(f32){ .realp = &re2, .imagp = &im2 };
-    setup.zip(&io, .forward);
+    const io = SS(f32).init(&re2, &im2);
+    setup.zip(io, .forward);
 
     for (out_re, 0..) |v, i| try std.testing.expectApproxEqAbs(re2[i], v, 0.05);
     for (out_im, 0..) |v, i| try std.testing.expectApproxEqAbs(im2[i], v, 0.05);
@@ -295,8 +296,8 @@ test "fft32_zopv forward cross-checked against FFT(f32).zip at N=32" {
     var im2 = in_im;
     const setup = try fft.FFT(f32).init(5, .radix2); // N = 1 << 5 = 32
     defer setup.deinit();
-    const io = SC(f32){ .realp = &re2, .imagp = &im2 };
-    setup.zip(&io, .forward);
+    const io = SS(f32).init(&re2, &im2);
+    setup.zip(io, .forward);
 
     for (out_re, 0..) |v, i| try std.testing.expectApproxEqAbs(re2[i], v, 0.05);
     for (out_im, 0..) |v, i| try std.testing.expectApproxEqAbs(im2[i], v, 0.05);

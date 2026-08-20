@@ -2,6 +2,7 @@ const std = @import("std");
 const types = @import("types.zig");
 const Length = types.Length;
 const SC = types.SplitComplex;
+const SS = types.SplitSlice;
 const c = @import("c.zig");
 
 /// Convolution and correlation.
@@ -147,10 +148,16 @@ pub fn deq22(comptime T: type, a: []const T, coeffs: *const [5]T, out: []T, n_ou
 ///
 /// Commonly, this is called correlation if IF is positive and convolution
 /// if IF is negative.
-pub fn zconv(comptime T: type, signal: *const SC(T), filter: *const SC(T), out: *SC(T), n: Length, p: Length) void {
+pub fn zconv(comptime T: type, signal: SS(T), filter: SS(T), out: SS(T), n: Length, p: Length) void {
+    std.debug.assert(out.len() >= n);
+    std.debug.assert(filter.len() >= p);
+    std.debug.assert(signal.len() >= n + p - 1);
+    var signal_raw = signal.raw();
+    var filter_raw = filter.raw();
+    var out_raw = out.raw();
     switch (T) {
-        f32 => c.vDSP_zconv(signal, 1, filter, 1, out, 1, n, p),
-        f64 => c.vDSP_zconvD(signal, 1, filter, 1, out, 1, n, p),
+        f32 => c.vDSP_zconv(&signal_raw, 1, &filter_raw, 1, &out_raw, 1, n, p),
+        f64 => c.vDSP_zconvD(&signal_raw, 1, &filter_raw, 1, &out_raw, 1, n, p),
         else => @compileError("zconv requires f32 or f64"),
     }
 }
@@ -358,14 +365,14 @@ test "zconv matches conv componentwise for a real filter" {
     var signal_im = [_]f32{ 0, 1, 0, -1, 0 };
     var filter_re = [_]f32{ 1, 0, -1 };
     var filter_im = [_]f32{ 0, 0, 0 };
-    const signal = SC(f32){ .realp = &signal_re, .imagp = &signal_im };
-    const filter = SC(f32){ .realp = &filter_re, .imagp = &filter_im };
+    const signal = SS(f32).init(&signal_re, &signal_im);
+    const filter = SS(f32).init(&filter_re, &filter_im);
 
     var out_re = [_]f32{ 0, 0, 0 };
     var out_im = [_]f32{ 0, 0, 0 };
-    var out = SC(f32){ .realp = &out_re, .imagp = &out_im };
+    const out = SS(f32).init(&out_re, &out_im);
 
-    zconv(f32, &signal, &filter, &out, 3, 3);
+    zconv(f32, signal, filter, out, 3, 3);
 
     try std.testing.expectEqualSlices(f32, &[_]f32{ -3, -6, -12 }, &out_re);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 0, 2, 0 }, &out_im);

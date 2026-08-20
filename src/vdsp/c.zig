@@ -585,8 +585,14 @@ pub extern fn vDSP_DFT_zop(Setup: DFTSetup, Ir: [*]const f32, Ii: [*]const f32, 
 // -- DCT execute --
 pub extern fn vDSP_DCT_Execute(Setup: DFTSetup, Input: [*]const f32, Output: [*]f32) void;
 // -- Interleaved setup --
-pub extern fn vDSP_DFT_Interleaved_CreateSetup(Previous: ?DFTInterleavedSetup, Length: Length, Direction: c_int, RealToComplex: c_int) ?DFTInterleavedSetup;
-pub extern fn vDSP_DFT_Interleaved_CreateSetupD(Previous: ?DFTInterleavedSetupD, Length: Length, Direction: c_int, RealToComplex: c_int) ?DFTInterleavedSetupD;
+// `RealToComplex` is `vDSP_ENUM(bool, vDSP_DFT_RealtoComplex)` in vDSP.h
+// (~L6904) - a 1-byte C `_Bool`, NOT a 4-byte `int` like the neighbouring
+// `Direction` (`vDSP_ENUM(int, vDSP_DFT_Direction)`, ~L6897). Declaring it as
+// `c_int` happened to work on AAPCS64/SysV because the callee only reads the
+// low byte of the argument register, but that is incidental, not an ABI
+// guarantee.
+pub extern fn vDSP_DFT_Interleaved_CreateSetup(Previous: ?DFTInterleavedSetup, Length: Length, Direction: c_int, RealToComplex: bool) ?DFTInterleavedSetup;
+pub extern fn vDSP_DFT_Interleaved_CreateSetupD(Previous: ?DFTInterleavedSetupD, Length: Length, Direction: c_int, RealToComplex: bool) ?DFTInterleavedSetupD;
 // -- Interleaved execute --
 pub extern fn vDSP_DFT_Interleaved_Execute(Setup: DFTInterleavedSetup, Iri: [*]const ComplexF32, Ori: [*]ComplexF32) void;
 pub extern fn vDSP_DFT_Interleaved_ExecuteD(Setup: DFTInterleavedSetupD, Iri: [*]const ComplexF64, Ori: [*]ComplexF64) void;

@@ -19,17 +19,21 @@ pub fn vclr(comptime T: type, out: []T) void {
 
 // -- Compress --
 
-/// Vector compress.
+/// Vector compress: copies the elements of `a` whose corresponding `gate`
+/// entry is nonzero into `out`, packed contiguously from `out[0]`.
 ///
 ///     p = 0;
 ///     for (n = 0; n < N; ++n)
 ///         if (B[n] != 0)
 ///             C[p++] = A[n];
+///
+/// CAUTION: `out` is the only output buffer in this file whose required size
+/// is *data-dependent* - it must hold one element per nonzero entry of
+/// `gate`, a count this function cannot know without scanning `gate` itself.
+/// It is therefore the one buffer here with no `assert`. The safe upper bound
+/// is `out.len >= a.len` (every gate entry nonzero); size `out` that way
+/// unless you have already counted the nonzero gate entries yourself.
 pub fn vcmprs(comptime T: type, a: []const T, gate: []const T, out: []T) void {
-    // out.len is not asserted against a.len: compress can write fewer than
-    // a.len elements (only where gate[n] != 0), so out only needs to be at
-    // least as large as the number of nonzero gate entries, which the
-    // caller - not this function - is responsible for sizing correctly.
     std.debug.assert(gate.len >= a.len);
     switch (T) {
         f32 => c.vDSP_vcmprs(a.ptr, 1, gate.ptr, 1, out.ptr, 1, a.len),
@@ -244,4 +248,50 @@ test "vmaxmg and vminmg" {
     vminmg(f32, &a, &b, &minmg_out);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 9.0, 8.0, 5.0 }, &maxmg_out);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 2.0, 3.0, 5.0 }, &minmg_out);
+}
+
+// ============================================================================
+// Intention-revealing aliases
+// ============================================================================
+//
+// Three functions in this file have vDSP names that read as the opposite of,
+// or vaguer than, what they do. The doc comments say so, but a doc comment is
+// only seen by someone who goes looking; the alias is visible at the call
+// site, which is where the misreading actually happens. The vDSP names stay
+// as the primary spelling so header cross-references keep working.
+
+/// `viclip` under a name that matches its behavior: values *inside* `[lo, hi]`
+/// are pushed out to the nearer boundary and values *outside* pass through
+/// unchanged - the inverse of what "clip" normally means.
+pub const inverseClip = viclip;
+
+/// `vmaxmg` under a name that says it returns a *magnitude*:
+/// `out[i] = max(|a[i]|, |b[i]|)`, always non-negative, never the original
+/// signed value.
+pub const maxMagnitude = vmaxmg;
+
+/// `vminmg` under a name that says it returns a *magnitude*:
+/// `out[i] = min(|a[i]|, |b[i]|)`, always non-negative.
+pub const minMagnitude = vminmg;
+
+test "intention-revealing aliases are the same functions, and the names are the accurate ones" {
+    const a = [_]f32{ -10.0, 3.0, -2.0, 8.0 };
+    const b = [_]f32{ 4.0, -5.0, 6.0, -1.0 };
+
+    // maxMagnitude / minMagnitude: signed inputs whose magnitude ordering
+    // differs from their signed ordering, so a "returns the signed value"
+    // misreading fails here.
+    var mx = [_]f32{0} ** 4;
+    var mn = [_]f32{0} ** 4;
+    maxMagnitude(f32, &a, &b, &mx);
+    minMagnitude(f32, &a, &b, &mn);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 10.0, 5.0, 6.0, 8.0 }, &mx);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ 4.0, 3.0, 2.0, 1.0 }, &mn);
+
+    // inverseClip: 3.0 and -2.0 are inside [-5, 5] and get pushed OUT to the
+    // nearer bound; -10.0 and 8.0 are outside and pass through untouched.
+    // A normal clip would have done exactly the opposite to every element.
+    var ic = [_]f32{0} ** 4;
+    inverseClip(f32, &a, -5.0, 5.0, &ic);
+    try std.testing.expectEqualSlices(f32, &[_]f32{ -10.0, 5.0, -5.0, 8.0 }, &ic);
 }

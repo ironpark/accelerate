@@ -172,28 +172,40 @@ pub fn logb(comptime T: type, x: []const T, out: []T) void {
 // Power
 // ============================================================================
 
-/// Power: out[i] = base[i] ^ exp[i]
-pub fn pow(comptime T: type, exp_vec: []const T, base: []const T, out: []T) void {
-    std.debug.assert(base.len >= exp_vec.len);
-    std.debug.assert(out.len >= exp_vec.len);
-    var n = toLen(exp_vec.len);
+/// Power: `out[i] = base[i] ^ exponent[i]`.
+///
+/// Note the Zig argument order is `(base, exponent)`, the mathematical one -
+/// NOT vForce's C order, which is `vvpow(z, y /* exponent */, x /* base */)`.
+/// The wrapper absorbs that reversal internally, the same way `vdsp.vsub`
+/// absorbs `vDSP_vsub`'s swapped `__A`/`__B`: a binding that reorders
+/// arguments to match its own names in one place and not another is worse
+/// than one that picks a rule and keeps it. `pows` follows the same order.
+pub fn pow(comptime T: type, base: []const T, exponent: []const T, out: []T) void {
+    std.debug.assert(exponent.len >= base.len);
+    std.debug.assert(out.len >= base.len);
+    var n = toLen(base.len);
     switch (T) {
-        f32 => c.vvpowf(out.ptr, exp_vec.ptr, base.ptr, &n),
-        f64 => c.vvpow(out.ptr, exp_vec.ptr, base.ptr, &n),
+        f32 => c.vvpowf(out.ptr, exponent.ptr, base.ptr, &n),
+        f64 => c.vvpow(out.ptr, exponent.ptr, base.ptr, &n),
         else => @compileError("pow requires f32 or f64"),
     }
 }
 
-/// Power with a scalar exponent (positive bases only): out[i] = base[i] ^ exp.
-/// `exp` is a single scalar applied to every element of `base`, not a
-/// per-element vector - faster than `pow` for this case.
-pub fn pows(comptime T: type, exponent: T, base: []const T, out: []T) void {
+/// Power with a scalar exponent (positive bases only):
+/// `out[i] = base[i] ^ exponent`.
+///
+/// `exponent` is a single scalar applied to every element of `base`, not a
+/// per-element vector - faster than `pow` for this case. Argument order
+/// matches `pow`'s `(base, exponent)`.
+pub fn pows(comptime T: type, base: []const T, exponent: T, out: []T) void {
     std.debug.assert(out.len >= base.len);
     var n = toLen(base.len);
-    var exp_var = exponent;
     switch (T) {
-        f32 => c.vvpowsf(out.ptr, @as([*]const f32, @ptrCast(&exp_var)), base.ptr, &n),
-        f64 => c.vvpows(out.ptr, @as([*]const f64, @ptrCast(&exp_var)), base.ptr, &n),
+        // vvpows reads only element 0 through the `y` pointer (vForce.h:467-475
+        // documents it as "Input scalar"), so a pointer to the parameter itself
+        // is all the storage the call needs.
+        f32 => c.vvpowsf(out.ptr, @as([*]const f32, @ptrCast(&exponent)), base.ptr, &n),
+        f64 => c.vvpows(out.ptr, @as([*]const f64, @ptrCast(&exponent)), base.ptr, &n),
         else => @compileError("pows requires f32 or f64"),
     }
 }
@@ -617,10 +629,13 @@ test "fabs" {
 }
 
 test "pow" {
+    // (base, exponent) order, not vForce's C (exponent, base): 2^3=8 and
+    // 3^2=9 are distinct, so a swapped call fails this test rather than
+    // coincidentally passing.
     const bases = [_]f32{ 2.0, 3.0, 4.0 };
     const exps = [_]f32{ 3.0, 2.0, 0.5 };
     var out: [3]f32 = undefined;
-    pow(f32, &exps, &bases, &out);
+    pow(f32, &bases, &exps, &out);
     try std.testing.expectApproxEqAbs(@as(f32, 8.0), out[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 9.0), out[1], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 2.0), out[2], 0.001);
@@ -788,7 +803,7 @@ test "pows applies a single scalar exponent to every base element" {
     // element, a footgun a caller could not detect from the type alone.
     const base = [_]f32{ 2.0, 3.0, 4.0 };
     var out: [3]f32 = undefined;
-    pows(f32, 3.0, &base, &out);
+    pows(f32, &base, 3.0, &out);
     try std.testing.expectApproxEqRel(@as(f32, 8.0), out[0], 1e-4); // 2^3
     try std.testing.expectApproxEqRel(@as(f32, 27.0), out[1], 1e-4); // 3^3
     try std.testing.expectApproxEqRel(@as(f32, 64.0), out[2], 1e-4); // 4^3
@@ -797,7 +812,7 @@ test "pows applies a single scalar exponent to every base element" {
     // dedicated (per-element) test doesn't accidentally alias this one.
     var out2: [3]f64 = undefined;
     const base64 = [_]f64{ 5.0, 6.0, 7.0 };
-    pows(f64, 2.0, &base64, &out2);
+    pows(f64, &base64, 2.0, &out2);
     try std.testing.expectApproxEqRel(@as(f64, 25.0), out2[0], 1e-9);
     try std.testing.expectApproxEqRel(@as(f64, 36.0), out2[1], 1e-9);
     try std.testing.expectApproxEqRel(@as(f64, 49.0), out2[2], 1e-9);

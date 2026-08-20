@@ -4,6 +4,7 @@ const Length = types.Length;
 const c = @import("c.zig");
 
 const SC = types.SplitComplex;
+const SS = types.SplitSlice;
 const Complex = types.Complex;
 
 /// vDSP_dotpr/vDSP_dotprD, vector dot product.
@@ -76,13 +77,17 @@ pub fn dotpr2(comptime T: type, a0: []const T, a1: []const T, b: []const T) [2]T
 /// deterministically hung the process (confirmed by isolating it with
 /// `--test-filter`, where execution stopped partway through the `zdotpr`
 /// test and the test binary sat in a CPU-spinning run state indefinitely).
-pub fn zdotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) Complex(T) {
+pub fn zdotpr(comptime T: type, a: SS(T), b: SS(T), n: Length) Complex(T) {
+    std.debug.assert(a.len() >= n);
+    std.debug.assert(b.len() >= n);
+    var a_raw = a.raw();
+    var b_raw = b.raw();
     var real_buf = [1]T{0};
     var imag_buf = [1]T{0};
     var result = SC(T){ .realp = &real_buf, .imagp = &imag_buf };
     switch (T) {
-        f32 => c.vDSP_zdotpr(a, 1, b, 1, &result, n),
-        f64 => c.vDSP_zdotprD(a, 1, b, 1, &result, n),
+        f32 => c.vDSP_zdotpr(&a_raw, 1, &b_raw, 1, &result, n),
+        f64 => c.vDSP_zdotprD(&a_raw, 1, &b_raw, 1, &result, n),
         else => @compileError("zdotpr requires f32 or f64"),
     }
     return .{ .real = real_buf[0], .imag = imag_buf[0] };
@@ -98,13 +103,17 @@ pub fn zdotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) Com
 ///
 /// Returns a `Complex(T)` value rather than `SC(T)` for the same reason as
 /// `zdotpr` - see its doc comment for the runtime-confirmed hang this avoids.
-pub fn zidotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) Complex(T) {
+pub fn zidotpr(comptime T: type, a: SS(T), b: SS(T), n: Length) Complex(T) {
+    std.debug.assert(a.len() >= n);
+    std.debug.assert(b.len() >= n);
+    var a_raw = a.raw();
+    var b_raw = b.raw();
     var real_buf = [1]T{0};
     var imag_buf = [1]T{0};
     var result = SC(T){ .realp = &real_buf, .imagp = &imag_buf };
     switch (T) {
-        f32 => c.vDSP_zidotpr(a, 1, b, 1, &result, n),
-        f64 => c.vDSP_zidotprD(a, 1, b, 1, &result, n),
+        f32 => c.vDSP_zidotpr(&a_raw, 1, &b_raw, 1, &result, n),
+        f64 => c.vDSP_zidotprD(&a_raw, 1, &b_raw, 1, &result, n),
         else => @compileError("zidotpr requires f32 or f64"),
     }
     return .{ .real = real_buf[0], .imag = imag_buf[0] };
@@ -123,14 +132,17 @@ pub fn zidotpr(comptime T: type, a: *const SC(T), b: *const SC(T), n: Length) Co
 ///
 /// Returns a `Complex(T)` value rather than `SC(T)` for the same reason as
 /// `zdotpr` - see its doc comment for the runtime-confirmed hang this avoids.
-pub fn zrdotpr(comptime T: type, a: *const SC(T), b: []const T, n: Length) Complex(T) {
+pub fn zrdotpr(comptime T: type, a: SS(T), b: []const T, n: Length) Complex(T) {
+    std.debug.assert(a.len() >= n);
+    std.debug.assert(b.len >= n);
+    var a_raw = a.raw();
     std.debug.assert(b.len >= n);
     var real_buf = [1]T{0};
     var imag_buf = [1]T{0};
     var result = SC(T){ .realp = &real_buf, .imagp = &imag_buf };
     switch (T) {
-        f32 => c.vDSP_zrdotpr(a, 1, b.ptr, 1, &result, n),
-        f64 => c.vDSP_zrdotprD(a, 1, b.ptr, 1, &result, n),
+        f32 => c.vDSP_zrdotpr(&a_raw, 1, b.ptr, 1, &result, n),
+        f64 => c.vDSP_zrdotprD(&a_raw, 1, b.ptr, 1, &result, n),
         else => @compileError("zrdotpr requires f32 or f64"),
     }
     return .{ .real = real_buf[0], .imag = imag_buf[0] };
@@ -279,9 +291,9 @@ test "zdotpr computes complex dot product without conjugation" {
     var ai = [_]f32{ 2, 4 };
     var br = [_]f32{ 5, 7 };
     var bi = [_]f32{ 6, 8 };
-    const a = SC(f32){ .realp = &ar, .imagp = &ai };
-    const b = SC(f32){ .realp = &br, .imagp = &bi };
-    const result = zdotpr(f32, &a, &b, 2);
+    const a = SS(f32).init(&ar, &ai);
+    const b = SS(f32).init(&br, &bi);
+    const result = zdotpr(f32, a, b, 2);
     try std.testing.expectEqual(@as(f32, -18), result.real);
     try std.testing.expectEqual(@as(f32, 68), result.imag);
 }
@@ -296,9 +308,9 @@ test "zidotpr conjugates A before dotting with B" {
     var ai = [_]f32{ 2, 4 };
     var br = [_]f32{ 5, 7 };
     var bi = [_]f32{ 6, 8 };
-    const a = SC(f32){ .realp = &ar, .imagp = &ai };
-    const b = SC(f32){ .realp = &br, .imagp = &bi };
-    const result = zidotpr(f32, &a, &b, 2);
+    const a = SS(f32).init(&ar, &ai);
+    const b = SS(f32).init(&br, &bi);
+    const result = zidotpr(f32, a, b, 2);
     try std.testing.expectEqual(@as(f32, 70), result.real);
     try std.testing.expectEqual(@as(f32, -8), result.imag);
 }
@@ -308,9 +320,9 @@ test "zrdotpr computes complex-times-real dot product" {
     // (1+2i)*5 = 5+10i; (3+4i)*7 = 21+28i; sum = 26+38i
     var ar = [_]f32{ 1, 3 };
     var ai = [_]f32{ 2, 4 };
-    const a = SC(f32){ .realp = &ar, .imagp = &ai };
+    const a = SS(f32).init(&ar, &ai);
     const b = [_]f32{ 5, 7 };
-    const result = zrdotpr(f32, &a, &b, 2);
+    const result = zrdotpr(f32, a, &b, 2);
     try std.testing.expectEqual(@as(f32, 26), result.real);
     try std.testing.expectEqual(@as(f32, 38), result.imag);
 }

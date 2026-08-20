@@ -21,9 +21,15 @@ pub const DCTType = enum(c_int) {
     dct_IV = 4,
 };
 
-pub const RealToComplex = enum(c_int) {
+/// vDSP.h ~L6904 declares this as `vDSP_ENUM(bool, vDSP_DFT_RealtoComplex)`,
+/// so the tag type is `bool` (a 1-byte C `_Bool`), not `c_int`.
+pub const RealToComplex = enum(u1) {
     complex_to_complex = 0,
     real_to_complex = 1,
+
+    pub fn toBool(self: RealToComplex) bool {
+        return self == .real_to_complex;
+    }
 };
 
 pub const Complex = types.Complex;
@@ -117,10 +123,10 @@ pub fn DFT(comptime T: type) type {
         /// DFT/FFT routines are unnormalized: an impulse forward-transformed
         /// then inverse-transformed comes back scaled by exactly N, not 1.
         pub fn exec(self: Self, ir: []const T, ii: []const T, or_out: []T, oi_out: []T) void {
-            std.debug.assert(ir.len == self.length);
-            std.debug.assert(ii.len == self.length);
-            std.debug.assert(or_out.len == self.length);
-            std.debug.assert(oi_out.len == self.length);
+            std.debug.assert(ir.len >= self.length);
+            std.debug.assert(ii.len >= self.length);
+            std.debug.assert(or_out.len >= self.length);
+            std.debug.assert(oi_out.len >= self.length);
             switch (T) {
                 f32 => c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
                 f64 => c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
@@ -208,10 +214,10 @@ pub fn RealDFT(comptime T: type) type {
         /// no such per-direction C factor at all.
         pub fn exec(self: Self, ir: []const T, ii: []const T, or_out: []T, oi_out: []T) void {
             const half = self.length / 2;
-            std.debug.assert(ir.len == half);
-            std.debug.assert(ii.len == half);
-            std.debug.assert(or_out.len == half);
-            std.debug.assert(oi_out.len == half);
+            std.debug.assert(ir.len >= half);
+            std.debug.assert(ii.len >= half);
+            std.debug.assert(or_out.len >= half);
+            std.debug.assert(oi_out.len >= half);
             switch (T) {
                 f32 => c.vDSP_DFT_Execute(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
                 f64 => c.vDSP_DFT_ExecuteD(self.setup, ir.ptr, ii.ptr, or_out.ptr, oi_out.ptr),
@@ -250,8 +256,8 @@ pub const DCT = struct {
     ///                  + sum(input[j] * cos((k+1/2)*j*pi/N), 1<=j<N)
     ///     DCT-IV:  output[k] = sum(input[j] * cos((k+1/2)*(j+1/2)*pi/N), 0<=j<N)
     pub fn exec(self: DCT, input: []const f32, output: []f32) void {
-        std.debug.assert(input.len == self.length);
-        std.debug.assert(output.len == self.length);
+        std.debug.assert(input.len >= self.length);
+        std.debug.assert(output.len >= self.length);
         c.vDSP_DCT_Execute(self.setup, input.ptr, output.ptr);
     }
 };
@@ -289,7 +295,7 @@ pub fn InterleavedDFT(comptime T: type) type {
         /// n >= 2 (vDSP.h ~L7523).
         pub fn init(length: Length, direction: Direction, rtc: RealToComplex) !Self {
             const dir = @intFromEnum(direction);
-            const r2c = @intFromEnum(rtc);
+            const r2c = rtc.toBool();
             const setup = switch (T) {
                 f32 => c.vDSP_DFT_Interleaved_CreateSetup(null, length, dir, r2c),
                 f64 => c.vDSP_DFT_Interleaved_CreateSetupD(null, length, dir, r2c),
@@ -320,8 +326,8 @@ pub fn InterleavedDFT(comptime T: type) type {
         /// both directions, same as DFT(T).exec above (no C scale factor is
         /// documented or observed for this routine).
         pub fn exec(self: Self, input: []const C, output: []C) void {
-            std.debug.assert(input.len == self.length);
-            std.debug.assert(output.len == self.length);
+            std.debug.assert(input.len >= self.length);
+            std.debug.assert(output.len >= self.length);
             switch (T) {
                 f32 => c.vDSP_DFT_Interleaved_Execute(self.setup, input.ptr, output.ptr),
                 f64 => c.vDSP_DFT_Interleaved_ExecuteD(self.setup, input.ptr, output.ptr),

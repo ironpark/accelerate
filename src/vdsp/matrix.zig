@@ -2,6 +2,7 @@ const std = @import("std");
 const types = @import("types.zig");
 const Length = types.Length;
 const SC = types.SplitComplex;
+const SS = types.SplitSlice;
 const c = @import("c.zig");
 
 /// Matrix multiply.
@@ -76,10 +77,18 @@ pub fn mtrans(comptime T: type, a: []const T, out: []T, m: Length, n: Length) vo
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         D[m][n] = sum(A[m][p] * B[p][n], 0 <= p < P) + C[m][n];
-pub fn zmma(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmma(comptime T: type, a: SS(T), b: SS(T), cc: SS(T), d: SS(T), m: Length, n: Length, p: Length) void {
+    std.debug.assert(a.len() >= m * p);
+    std.debug.assert(b.len() >= p * n);
+    std.debug.assert(cc.len() >= m * n);
+    std.debug.assert(d.len() >= m * n);
+    var a_raw = a.raw();
+    var b_raw = b.raw();
+    var cc_raw = cc.raw();
+    var d_raw = d.raw();
     switch (T) {
-        f32 => c.vDSP_zmma(a, 1, b, 1, cc, 1, d, 1, m, n, p),
-        f64 => c.vDSP_zmmaD(a, 1, b, 1, cc, 1, d, 1, m, n, p),
+        f32 => c.vDSP_zmma(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, m, n, p),
+        f64 => c.vDSP_zmmaD(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, m, n, p),
         else => @compileError("zmma requires f32 or f64"),
     }
 }
@@ -99,10 +108,18 @@ pub fn zmma(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T)
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         D[m][n] = sum(A[m][p] * B[p][n], 0 <= p < P) - C[m][n];
-pub fn zmms(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmms(comptime T: type, a: SS(T), b: SS(T), cc: SS(T), d: SS(T), m: Length, n: Length, p: Length) void {
+    std.debug.assert(a.len() >= m * p);
+    std.debug.assert(b.len() >= p * n);
+    std.debug.assert(cc.len() >= m * n);
+    std.debug.assert(d.len() >= m * n);
+    var a_raw = a.raw();
+    var b_raw = b.raw();
+    var cc_raw = cc.raw();
+    var d_raw = d.raw();
     switch (T) {
-        f32 => c.vDSP_zmms(a, 1, b, 1, cc, 1, d, 1, m, n, p),
-        f64 => c.vDSP_zmmsD(a, 1, b, 1, cc, 1, d, 1, m, n, p),
+        f32 => c.vDSP_zmms(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, m, n, p),
+        f64 => c.vDSP_zmmsD(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, m, n, p),
         else => @compileError("zmms requires f32 or f64"),
     }
 }
@@ -122,10 +139,18 @@ pub fn zmms(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T)
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         D[m][n] = C[m][n] - sum(A[m][p] * B[p][n], 0 <= p < P);
-pub fn zmsm(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmsm(comptime T: type, a: SS(T), b: SS(T), cc: SS(T), d: SS(T), m: Length, n: Length, p: Length) void {
+    std.debug.assert(a.len() >= m * p);
+    std.debug.assert(b.len() >= p * n);
+    std.debug.assert(cc.len() >= m * n);
+    std.debug.assert(d.len() >= m * n);
+    var a_raw = a.raw();
+    var b_raw = b.raw();
+    var cc_raw = cc.raw();
+    var d_raw = d.raw();
     switch (T) {
-        f32 => c.vDSP_zmsm(a, 1, b, 1, cc, 1, d, 1, m, n, p),
-        f64 => c.vDSP_zmsmD(a, 1, b, 1, cc, 1, d, 1, m, n, p),
+        f32 => c.vDSP_zmsm(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, m, n, p),
+        f64 => c.vDSP_zmsmD(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, m, n, p),
         else => @compileError("zmsm requires f32 or f64"),
     }
 }
@@ -144,10 +169,16 @@ pub fn zmsm(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T)
 ///     for (m = 0; m < M; ++m)
 ///     for (n = 0; n < N; ++n)
 ///         C[m][n] = sum(A[m][p] * B[p][n], 0 <= p < P);
-pub fn zmmul(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *SC(T), m: Length, n: Length, p: Length) void {
+pub fn zmmul(comptime T: type, a: SS(T), b: SS(T), cc: SS(T), m: Length, n: Length, p: Length) void {
+    std.debug.assert(a.len() >= m * p);
+    std.debug.assert(b.len() >= p * n);
+    std.debug.assert(cc.len() >= m * n);
+    var a_raw = a.raw();
+    var b_raw = b.raw();
+    var cc_raw = cc.raw();
     switch (T) {
-        f32 => c.vDSP_zmmul(a, 1, b, 1, cc, 1, m, n, p),
-        f64 => c.vDSP_zmmulD(a, 1, b, 1, cc, 1, m, n, p),
+        f32 => c.vDSP_zmmul(&a_raw, 1, &b_raw, 1, &cc_raw, 1, m, n, p),
+        f64 => c.vDSP_zmmulD(&a_raw, 1, &b_raw, 1, &cc_raw, 1, m, n, p),
         else => @compileError("zmmul requires f32 or f64"),
     }
 }
@@ -160,10 +191,22 @@ pub fn zmmul(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *SC(T), m: 
 ///
 ///     for (n = 0; n < N; ++n)
 ///         F[n] = A[n] * B[n] + C[n] * D[n] + E[n];
-pub fn zvmmaa(comptime T: type, a: *const SC(T), b: *const SC(T), cc: *const SC(T), d: *const SC(T), e: *const SC(T), f: *SC(T), n: Length) void {
+pub fn zvmmaa(comptime T: type, a: SS(T), b: SS(T), cc: SS(T), d: SS(T), e: SS(T), f: SS(T), n: Length) void {
+    std.debug.assert(a.len() >= n);
+    std.debug.assert(b.len() >= n);
+    std.debug.assert(cc.len() >= n);
+    std.debug.assert(d.len() >= n);
+    std.debug.assert(e.len() >= n);
+    std.debug.assert(f.len() >= n);
+    var a_raw = a.raw();
+    var b_raw = b.raw();
+    var cc_raw = cc.raw();
+    var d_raw = d.raw();
+    var e_raw = e.raw();
+    var f_raw = f.raw();
     switch (T) {
-        f32 => c.vDSP_zvmmaa(a, 1, b, 1, cc, 1, d, 1, e, 1, f, 1, n),
-        f64 => c.vDSP_zvmmaaD(a, 1, b, 1, cc, 1, d, 1, e, 1, f, 1, n),
+        f32 => c.vDSP_zvmmaa(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, &e_raw, 1, &f_raw, 1, n),
+        f64 => c.vDSP_zvmmaaD(&a_raw, 1, &b_raw, 1, &cc_raw, 1, &d_raw, 1, &e_raw, 1, &f_raw, 1, n),
         else => @compileError("zvmmaa requires f32 or f64"),
     }
 }
@@ -207,14 +250,14 @@ test "zmmul on a non-square 2x3 * 3x2 complex matrix" {
     var a_im = [_]f32{ 1, 0, 3, 2, 0, -1 };
     var b_re = [_]f32{ 1, 2, 0, 1, 3, 0 };
     var b_im = [_]f32{ 0, 1, 1, 0, 0, 2 };
-    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const a = SS(f32).init(&a_re, &a_im);
+    const b = SS(f32).init(&b_re, &b_im);
 
     var c_re = [_]f32{ 0, 0, 0, 0 };
     var c_im = [_]f32{ 0, 0, 0, 0 };
-    var cc = SC(f32){ .realp = &c_re, .imagp = &c_im };
+    const cc = SS(f32).init(&c_re, &c_im);
 
-    zmmul(f32, &a, &b, &cc, m, n, p);
+    zmmul(f32, a, b, cc, m, n, p);
 
     // Hand-computed: C = A*B where
     //   A = [[1+1i, 2+0i, 0+3i], [4+2i, 0+0i, 1-1i]]
@@ -232,35 +275,35 @@ test "zmma/zmms/zmsm add/subtract/reverse-subtract the same product consistently
     var a_im = [_]f32{ 1, 0, 3, 2, 0, -1 };
     var b_re = [_]f32{ 1, 2, 0, 1, 3, 0 };
     var b_im = [_]f32{ 0, 1, 1, 0, 0, 2 };
-    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const a = SS(f32).init(&a_re, &a_im);
+    const b = SS(f32).init(&b_re, &b_im);
 
     // Bias matrix C, distinct from the A*B product so add/subtract/reverse
     // are all distinguishable.
     var bias_re = [_]f32{ 10, 20, 30, 40 };
     var bias_im = [_]f32{ 1, 2, 3, 4 };
-    const bias = SC(f32){ .realp = &bias_re, .imagp = &bias_im };
+    const bias = SS(f32).init(&bias_re, &bias_im);
 
     var ma_re = [_]f32{ 0, 0, 0, 0 };
     var ma_im = [_]f32{ 0, 0, 0, 0 };
-    var d_ma = SC(f32){ .realp = &ma_re, .imagp = &ma_im };
-    zmma(f32, &a, &b, &bias, &d_ma, m, n, p);
+    const d_ma = SS(f32).init(&ma_re, &ma_im);
+    zmma(f32, a, b, bias, d_ma, m, n, p);
     // D = A*B + bias = [1+10, -3+20, 7+30, 8+40] + i*[12+1, 3+2, -1+3, 10+4]
     try std.testing.expectEqualSlices(f32, &[_]f32{ 11, 17, 37, 48 }, &ma_re);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 13, 5, 2, 14 }, &ma_im);
 
     var ms_re = [_]f32{ 0, 0, 0, 0 };
     var ms_im = [_]f32{ 0, 0, 0, 0 };
-    var d_ms = SC(f32){ .realp = &ms_re, .imagp = &ms_im };
-    zmms(f32, &a, &b, &bias, &d_ms, m, n, p);
+    const d_ms = SS(f32).init(&ms_re, &ms_im);
+    zmms(f32, a, b, bias, d_ms, m, n, p);
     // D = A*B - bias
     try std.testing.expectEqualSlices(f32, &[_]f32{ -9, -23, -23, -32 }, &ms_re);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 11, 1, -4, 6 }, &ms_im);
 
     var sm_re = [_]f32{ 0, 0, 0, 0 };
     var sm_im = [_]f32{ 0, 0, 0, 0 };
-    var d_sm = SC(f32){ .realp = &sm_re, .imagp = &sm_im };
-    zmsm(f32, &a, &b, &bias, &d_sm, m, n, p);
+    const d_sm = SS(f32).init(&sm_re, &sm_im);
+    zmsm(f32, a, b, bias, d_sm, m, n, p);
     // D = bias - A*B, i.e. exactly the negation of zmms's result - a strong
     // cross-check that "reverse subtract" really reverses the operand order
     // rather than duplicating zmms.
@@ -280,17 +323,17 @@ test "zvmmaa computes A*B + C*D + E elementwise" {
     var e_re = [_]f32{ 1, 0, 2 };
     var e_im = [_]f32{ 0, 0, 1 };
 
-    const a = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    const b = SC(f32){ .realp = &b_re, .imagp = &b_im };
-    const cc = SC(f32){ .realp = &c_re, .imagp = &c_im };
-    const d = SC(f32){ .realp = &d_re, .imagp = &d_im };
-    const e = SC(f32){ .realp = &e_re, .imagp = &e_im };
+    const a = SS(f32).init(&a_re, &a_im);
+    const b = SS(f32).init(&b_re, &b_im);
+    const cc = SS(f32).init(&c_re, &c_im);
+    const d = SS(f32).init(&d_re, &d_im);
+    const e = SS(f32).init(&e_re, &e_im);
 
     var f_re = [_]f32{ 0, 0, 0 };
     var f_im = [_]f32{ 0, 0, 0 };
-    var f = SC(f32){ .realp = &f_re, .imagp = &f_im };
+    const f = SS(f32).init(&f_re, &f_im);
 
-    zvmmaa(f32, &a, &b, &cc, &d, &e, &f, 3);
+    zvmmaa(f32, a, b, cc, d, e, f, 3);
 
     // Hand-computed F[n] = A[n]*B[n] + C[n]*D[n] + E[n]:
     //   n=0: (1+1i)*(1+0i) + (2+0i)*(3+1i) + (1+0i) = 8+3i

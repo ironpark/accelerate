@@ -53,21 +53,33 @@ pub fn vsort(comptime T: type, buf: []T, order: SortOrder) void {
 
 /// Vector sort indices, in-place.
 ///
-/// I contains indices into C.
+/// Sorts `indices` so that `data[indices[0]] .. data[indices[N-1]]` is in
+/// `order`, leaving `data` itself untouched. `N` is `data.len`; `indices`
+/// must have room for at least that many entries.
 ///
-/// If Order is +1, I is sorted so that C[I[n]] increases, for 0 <= n < N.
-/// If Order is -1, I is sorted so that C[I[n]] decreases, for 0 <= n < N.
-///
-/// Temporary is not used. NULL should be passed for it.
-///
-/// CAUTION (found by runtime testing, not documented in vDSP.h): `indices`
-/// must be initialized to the identity permutation (0, 1, ..., N-1) before
-/// calling this function. Passing an uninitialized or otherwise
-/// non-permutation `indices` array does not crash or produce wrong output -
-/// it makes vDSP_vsorti hang indefinitely. This is a dangerous failure mode
-/// (silent deadlock, not a catchable error), so seed `indices` yourself
-/// before every call.
+/// vDSP_vsorti requires `indices` to hold the identity permutation
+/// (0, 1, ..., N-1) on entry. That precondition is documented nowhere in
+/// vDSP.h, and violating it does not crash or return a wrong answer - it
+/// makes vDSP_vsorti **hang indefinitely**. This wrapper therefore seeds the
+/// identity permutation itself rather than leaving a silent deadlock in the
+/// caller's hands; the O(N) seed is negligible next to the sort. Use
+/// `vsortiAssumeSeeded` if you have already seeded `indices` (for example
+/// when re-sorting the same array) and want to skip the write.
 pub fn vsorti(comptime T: type, data: []const T, indices: []Length, order: SortOrder) void {
+    std.debug.assert(indices.len >= data.len);
+    for (indices[0..data.len], 0..) |*ix, i| ix.* = @intCast(i);
+    vsortiAssumeSeeded(T, data, indices, order);
+}
+
+/// `vsorti` without the identity-permutation seeding step.
+///
+/// CAUTION: `indices[0..data.len]` MUST already contain a permutation of
+/// 0..data.len-1. Anything else (uninitialized memory, a truncated
+/// permutation, duplicate entries) makes vDSP_vsorti hang indefinitely -
+/// not crash, not return garbage. Prefer `vsorti` unless the seeding cost is
+/// measurable in your profile.
+pub fn vsortiAssumeSeeded(comptime T: type, data: []const T, indices: []Length, order: SortOrder) void {
+    std.debug.assert(indices.len >= data.len);
     switch (T) {
         f32 => c.vDSP_vsorti(data.ptr, indices.ptr, null, data.len, @intFromEnum(order)),
         f64 => c.vDSP_vsortiD(data.ptr, indices.ptr, null, data.len, @intFromEnum(order)),
@@ -401,12 +413,20 @@ pub fn vtrapz(comptime T: type, a: []const T, step: T, out: []T) void {
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = sum(A[n+p], 0 <= p < P);
 ///
-/// Note that A must contain N+P-1 elements.
-pub fn vswsum(comptime T: type, a: []const T, out: []T, window_len: Length) void {
-    std.debug.assert(a.len >= out.len + window_len - 1);
+/// `n` is the number of sliding-window outputs, taken explicitly so that this
+/// function and `vswmax` share one signature. Their *buffer* requirements
+/// genuinely differ and the asserts carry that difference: `vswsum` needs
+/// `a.len >= n + window_len - 1` but only `out.len >= n`, whereas `vswmax`
+/// needs `n + window_len - 1` elements in **both** because it scribbles on
+/// the tail of `out` (vDSP.h:6462 vs vDSP.h:5705-5707). The two operations
+/// look interchangeable at a glance; only the asserts are.
+pub fn vswsum(comptime T: type, a: []const T, out: []T, n: Length, window_len: Length) void {
+    std.debug.assert(window_len > 0);
+    std.debug.assert(a.len >= n + window_len - 1);
+    std.debug.assert(out.len >= n);
     switch (T) {
-        f32 => c.vDSP_vswsum(a.ptr, 1, out.ptr, 1, out.len, window_len),
-        f64 => c.vDSP_vswsumD(a.ptr, 1, out.ptr, 1, out.len, window_len),
+        f32 => c.vDSP_vswsum(a.ptr, 1, out.ptr, 1, n, window_len),
+        f64 => c.vDSP_vswsumD(a.ptr, 1, out.ptr, 1, n, window_len),
         else => @compileError("vswsum requires f32 or f64"),
     }
 }
@@ -419,7 +439,8 @@ pub fn vswsum(comptime T: type, a: []const T, out: []T, window_len: Length) void
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = the greatest value of A[w] for n <= w < n+WindowLength.
 ///
-/// `n` is the number of meaningful sliding-window outputs. Both `a` and
+/// `n` is the number of meaningful sliding-window outputs, matching
+/// `vswsum`'s signature. Both `a` and
 /// `out` must contain at least `n+window_len-1` elements: unlike vswsum,
 /// vDSP_vswmax uses the tail of `out` itself as scratch space beyond the
 /// first `n` outputs (vDSP.h:5705-5707), so passing `out.len` directly as N
@@ -512,6 +533,29 @@ test "vsorti" {
     vsorti(f32, &data, &indices, .ascending);
     // data[indices[n]] must increase: data[1]=1, data[0]=3, data[2]=4.
     try std.testing.expectEqualSlices(Length, &[_]Length{ 1, 0, 2 }, &indices);
+}
+
+test "vsorti seeds indices itself: garbage on entry no longer hangs" {
+    // Before this wrapper seeded the identity permutation, a non-permutation
+    // `indices` array made vDSP_vsorti spin forever. This test would not
+    // terminate under the old implementation - that it completes at all is
+    // the assertion, on top of the sorted result below.
+    const data = [_]f32{ 5.0, -2.0, 9.0, 0.5 };
+    var indices = [_]Length{ 7, 7, 7, 7 }; // not a permutation of 0..3
+    vsorti(f32, &data, &indices, .ascending);
+    // ascending by value: -2(idx1), 0.5(idx3), 5(idx0), 9(idx2)
+    try std.testing.expectEqualSlices(Length, &[_]Length{ 1, 3, 0, 2 }, &indices);
+}
+
+test "vsortiAssumeSeeded matches vsorti when indices are pre-seeded" {
+    const data = [_]f32{ 5.0, -2.0, 9.0, 0.5 };
+    var a = [_]Length{ 0, 1, 2, 3 };
+    var b = [_]Length{ 0, 1, 2, 3 };
+    vsorti(f32, &data, &a, .descending);
+    vsortiAssumeSeeded(f32, &data, &b, .descending);
+    try std.testing.expectEqualSlices(Length, &a, &b);
+    // descending by value: 9(idx2), 5(idx0), 0.5(idx3), -2(idx1)
+    try std.testing.expectEqualSlices(Length, &[_]Length{ 2, 0, 3, 1 }, &a);
 }
 
 test "vramp" {
@@ -667,7 +711,7 @@ test "vswsum" {
     // A must contain N+P-1 elements; here N=out.len=4, P=3, so A needs 6.
     const a = [_]f32{ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
     var out: [4]f32 = undefined;
-    vswsum(f32, &a, &out, 3);
+    vswsum(f32, &a, &out, 4, 3);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 6.0, 9.0, 12.0, 15.0 }, &out);
 }
 

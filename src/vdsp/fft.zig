@@ -36,10 +36,13 @@ pub const Complex = types.Complex;
 ///
 /// where C[n] is C[n*IC/2].real + i * C[n*IC/2].imag
 /// and Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ].
-pub fn ctoz(comptime T: type, input: [*]const Complex(T), output: *const SC(T), n: Length) void {
+pub fn ctoz(comptime T: type, input: []const Complex(T), output: SS(T), n: Length) void {
+    std.debug.assert(input.len >= n);
+    std.debug.assert(output.len() >= n);
+    var output_raw = output.raw();
     switch (T) {
-        f32 => c.vDSP_ctoz(input, 2, output, 1, n),
-        f64 => c.vDSP_ctozD(input, 2, output, 1, n),
+        f32 => c.vDSP_ctoz(input.ptr, 2, &output_raw, 1, n),
+        f64 => c.vDSP_ctozD(input.ptr, 2, &output_raw, 1, n),
         else => @compileError("ctoz requires f32 or f64"),
     }
 }
@@ -52,15 +55,19 @@ pub fn ctoz(comptime T: type, input: [*]const Complex(T), output: *const SC(T), 
 ///
 /// where Z[n] is Z->realp[n*IZ] + i * Z->imagp[n*IZ]
 /// and C[n] is C[n*IC/2].real + i * C[n*IC/2].imag.
-pub fn ztoc(comptime T: type, input: *const SC(T), output: [*]Complex(T), n: Length) void {
+pub fn ztoc(comptime T: type, input: SS(T), output: []Complex(T), n: Length) void {
+    std.debug.assert(input.len() >= n);
+    std.debug.assert(output.len >= n);
+    var input_raw = input.raw();
     switch (T) {
-        f32 => c.vDSP_ztoc(input, 1, output, 2, n),
-        f64 => c.vDSP_ztocD(input, 1, output, 2, n),
+        f32 => c.vDSP_ztoc(&input_raw, 1, output.ptr, 2, n),
+        f64 => c.vDSP_ztocD(&input_raw, 1, output.ptr, 2, n),
         else => @compileError("ztoc requires f32 or f64"),
     }
 }
 
 const SC = types.SplitComplex;
+const SS = types.SplitSlice;
 
 // ============================================================================
 // High-level FFT wrapper (manages setup lifetime)
@@ -69,7 +76,6 @@ const SC = types.SplitComplex;
 /// A generic FFT wrapper parameterized on scalar type T (f32 or f64).
 /// Manages the lifetime of the underlying vDSP FFT setup object.
 pub fn FFT(comptime T: type) type {
-    const SCT = SC(T);
     const Setup = switch (T) {
         f32 => FFTSetup,
         f64 => FFTSetupD,
@@ -92,6 +98,45 @@ pub fn FFT(comptime T: type) type {
                 .setup = setup orelse return error.SetupFailed,
                 .log2n = log2n,
             };
+        }
+
+        // -- Scaling conventions --
+        //
+        // vDSP FFTs are not normalized, and vDSP.h's pseudocode is *wrong*
+        // about it: it claims a 1/N scale on the inverse leg that the real
+        // implementation does not apply (confirmed by round-tripping an
+        // impulse - see the tests at the bottom of this file). The
+        // real-to-complex family adds a second wrinkle: it applies a 2x scale
+        // on the forward leg only.
+        //
+        // Those two facts are the most easily-lost results of auditing this
+        // module, so they live here as code you can call and that the test
+        // suite checks, rather than only as prose in a doc comment that will
+        // drift.
+
+        /// Factor a complex round trip (`zip`/`zop` forward then inverse)
+        /// multiplies the signal by. Divide by this to recover the original.
+        ///
+        ///     const s = fft.roundTripScale();
+        ///     fft.zip(io, .forward);
+        ///     fft.zip(io, .inverse);
+        ///     vdsp.vsdiv(T, re, s, re);  // now back to the original
+        pub fn roundTripScale(self: Self) T {
+            return @floatFromInt(@as(usize, 1) << @intCast(self.log2n));
+        }
+
+        /// Factor the real-to-complex family (`zrip`/`zrop`) applies on the
+        /// **forward** transform. vDSP.h documents this one accurately.
+        pub fn realForwardScale(_: Self) T {
+            return 2.0;
+        }
+
+        /// Factor a real round trip (`zrip` forward then inverse) multiplies
+        /// the signal by: `2 * N`, not `N` and not 1. The asymmetry is
+        /// because the forward leg scales by 2 and the inverse leg, contrary
+        /// to vDSP.h's pseudocode, scales by 1.
+        pub fn realRoundTripScale(self: Self) T {
+            return 2.0 * self.roundTripScale();
         }
 
         /// Frees the memory allocated by init. May be called on a destroyed setup
@@ -136,10 +181,13 @@ pub fn FFT(comptime T: type) type {
         /// running an impulse through forward+inverse and observing N times
         /// the original signal, not the original signal. Divide by N
         /// yourself after an inverse transform if you need a true inverse.
-        pub fn zip(self: Self, io: *const SCT, direction: Direction) void {
+        pub fn zip(self: Self, io: SS(T), direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            std.debug.assert(io.len() >= n_elems);
+            var io_raw = io.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zip(self.setup, io, 1, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_zipD(self.setup, io, 1, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zip(self.setup, &io_raw, 1, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_zipD(self.setup, &io_raw, 1, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -152,10 +200,15 @@ pub fn FFT(comptime T: type) type {
         /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
         /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
         /// or better.
-        pub fn zipt(self: Self, io: *const SCT, buffer: *const SCT, direction: Direction) void {
+        pub fn zipt(self: Self, io: SS(T), buffer: SS(T), direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            std.debug.assert(io.len() >= n_elems);
+            std.debug.assert(buffer.len() >= @min(n_elems, 16384 / @sizeOf(T)));
+            var io_raw = io.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zipt(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_ziptD(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zipt(self.setup, &io_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_ziptD(self.setup, &io_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -188,10 +241,15 @@ pub fn FFT(comptime T: type) type {
         /// scale applied when Direction is inverse), the actual vDSP FFT
         /// implementation is unnormalized in BOTH directions - see zip()'s
         /// note above for the runtime-verified detail.
-        pub fn zop(self: Self, input: *const SCT, output: *const SCT, direction: Direction) void {
+        pub fn zop(self: Self, input: SS(T), output: SS(T), direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            std.debug.assert(input.len() >= n_elems);
+            std.debug.assert(output.len() >= n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zop(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_zopD(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zop(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_zopD(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -204,10 +262,17 @@ pub fn FFT(comptime T: type) type {
         /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
         /// bytes or N * sizeof *C->realp bytes and is preferably 16-byte aligned
         /// or better.
-        pub fn zopt(self: Self, input: *const SCT, output: *const SCT, buffer: *const SCT, direction: Direction) void {
+        pub fn zopt(self: Self, input: SS(T), output: SS(T), buffer: SS(T), direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            std.debug.assert(input.len() >= n_elems);
+            std.debug.assert(output.len() >= n_elems);
+            std.debug.assert(buffer.len() >= @min(n_elems, 16384 / @sizeOf(T)));
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zopt(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_zoptD(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zopt(self.setup, &input_raw, 1, &output_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_zoptD(self.setup, &input_raw, 1, &output_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -239,10 +304,13 @@ pub fn FFT(comptime T: type) type {
         /// they are packed specially into io.realp[0] (DC, Re(H[0])) and
         /// io.imagp[0] (Nyquist, Re(H[N/2])); regular bins 1..N/2-1 use
         /// realp[k]/imagp[k] for their Re/Im parts as usual.
-        pub fn zrip(self: Self, io: *const SCT, direction: Direction) void {
+        pub fn zrip(self: Self, io: SS(T), direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            std.debug.assert(io.len() >= n_elems);
+            var io_raw = io.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zrip(self.setup, io, 1, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_zripD(self.setup, io, 1, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zrip(self.setup, &io_raw, 1, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_zripD(self.setup, &io_raw, 1, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -254,10 +322,17 @@ pub fn FFT(comptime T: type) type {
         /// permitted to use the temporary buffer for improved performance.  Each
         /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
         /// bytes and is preferably 16-byte aligned or better.
-        pub fn zript(self: Self, io: *const SCT, buffer: *const SCT, direction: Direction) void {
+        pub fn zript(self: Self, io: SS(T), buffer: SS(T), direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            std.debug.assert(io.len() >= n_elems);
+            // vDSP.h:952/1081: the real-transform temp buffer must hold exactly
+            // N/2 elements (no 16,384-byte cap, unlike the complex variants).
+            std.debug.assert(buffer.len() >= n_elems);
+            var io_raw = io.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zript(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_zriptD(self.setup, io, 1, buffer, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zript(self.setup, &io_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_zriptD(self.setup, &io_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -276,10 +351,15 @@ pub fn FFT(comptime T: type) type {
         ///
         /// Same scaling and DC/Nyquist packing convention as zrip() - see its
         /// doc comment for the runtime-confirmed detail.
-        pub fn zrop(self: Self, input: *const SCT, output: *const SCT, direction: Direction) void {
+        pub fn zrop(self: Self, input: SS(T), output: SS(T), direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            std.debug.assert(input.len() >= n_elems);
+            std.debug.assert(output.len() >= n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zrop(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_zropD(self.setup, input, 1, output, 1, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zrop(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_zropD(self.setup, &input_raw, 1, &output_raw, 1, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -291,10 +371,19 @@ pub fn FFT(comptime T: type) type {
         /// permitted to use the temporary buffer for improved performance.  Each
         /// of Buffer->realp and Buffer->imagp must contain N/2 * sizeof *C->realp
         /// bytes and is preferably 16-byte aligned or better.
-        pub fn zropt(self: Self, input: *const SCT, output: *const SCT, buffer: *const SCT, direction: Direction) void {
+        pub fn zropt(self: Self, input: SS(T), output: SS(T), buffer: SS(T), direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            std.debug.assert(input.len() >= n_elems);
+            std.debug.assert(output.len() >= n_elems);
+            // vDSP.h:952/1081: the real-transform temp buffer must hold exactly
+            // N/2 elements (no 16,384-byte cap, unlike the complex variants).
+            std.debug.assert(buffer.len() >= n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft_zropt(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction)),
-                f64 => c.vDSP_fft_zroptD(self.setup, input, 1, output, 1, buffer, self.log2n, @intFromEnum(direction)),
+                f32 => c.vDSP_fft_zropt(self.setup, &input_raw, 1, &output_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
+                f64 => c.vDSP_fft_zroptD(self.setup, &input_raw, 1, &output_raw, 1, &buffer_raw, self.log2n, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -304,10 +393,14 @@ pub fn FFT(comptime T: type) type {
         /// In-place two-dimensional complex Discrete Fourier Transform routine.
         ///
         /// Direction must be +1 or -1.
-        pub fn zip2d(self: Self, io: *const SCT, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zip2d(self: Self, io: SS(T), ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+            const n0 = @as(usize, 1) << @intCast(log2n0);
+            const n1 = @as(usize, 1) << @intCast(log2n1);
+            if (ic0 > 0) std.debug.assert(io.len() >= (n0 - 1) * @as(usize, @intCast(ic0)) + n1);
+            var io_raw = io.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zip(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_zipD(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zip(self.setup, &io_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_zipD(self.setup, &io_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -319,10 +412,16 @@ pub fn FFT(comptime T: type) type {
         /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
         /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
         /// aligned or better.
-        pub fn zipt2d(self: Self, io: *const SCT, ic0: Stride, buffer: *const SCT, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zipt2d(self: Self, io: SS(T), ic0: Stride, buffer: SS(T), log2n0: Length, log2n1: Length, direction: Direction) void {
+            const n0 = @as(usize, 1) << @intCast(log2n0);
+            const n1 = @as(usize, 1) << @intCast(log2n1);
+            if (ic0 > 0) std.debug.assert(io.len() >= (n0 - 1) * @as(usize, @intCast(ic0)) + n1);
+            std.debug.assert(buffer.len() >= @min(n0 * n1, 16384 / @sizeOf(T)));
+            var io_raw = io.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zipt(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_ziptD(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zipt(self.setup, &io_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_ziptD(self.setup, &io_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -330,10 +429,16 @@ pub fn FFT(comptime T: type) type {
         /// Out-of-place two-dimensional complex Discrete Fourier Transform routine.
         ///
         /// Direction must be +1 or -1.
-        pub fn zop2d(self: Self, input: *const SCT, ia0: Stride, output: *const SCT, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zop2d(self: Self, input: SS(T), ia0: Stride, output: SS(T), ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+            const n0 = @as(usize, 1) << @intCast(log2n0);
+            const n1 = @as(usize, 1) << @intCast(log2n1);
+            if (ia0 > 0) std.debug.assert(input.len() >= (n0 - 1) * @as(usize, @intCast(ia0)) + n1);
+            if (ic0 > 0) std.debug.assert(output.len() >= (n0 - 1) * @as(usize, @intCast(ic0)) + n1);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zop(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_zopD(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zop(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_zopD(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -345,10 +450,18 @@ pub fn FFT(comptime T: type) type {
         /// of Buffer->realp and Buffer->imagp must contain the lesser of 16,384
         /// bytes or N1*N0 * sizeof *C->realp bytes and is preferably 16-byte
         /// aligned or better.
-        pub fn zopt2d(self: Self, input: *const SCT, ia0: Stride, output: *const SCT, ic0: Stride, buffer: *const SCT, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zopt2d(self: Self, input: SS(T), ia0: Stride, output: SS(T), ic0: Stride, buffer: SS(T), log2n0: Length, log2n1: Length, direction: Direction) void {
+            const n0 = @as(usize, 1) << @intCast(log2n0);
+            const n1 = @as(usize, 1) << @intCast(log2n1);
+            if (ia0 > 0) std.debug.assert(input.len() >= (n0 - 1) * @as(usize, @intCast(ia0)) + n1);
+            if (ic0 > 0) std.debug.assert(output.len() >= (n0 - 1) * @as(usize, @intCast(ic0)) + n1);
+            std.debug.assert(buffer.len() >= @min(n0 * n1, 16384 / @sizeOf(T)));
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zopt(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_zoptD(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zopt(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_zoptD(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -377,10 +490,11 @@ pub fn FFT(comptime T: type) type {
         /// see vDSP.h's vDSP_fft2d_zrip Maps comment for the exact element
         /// layout); this binding passes strides straight through to vDSP so
         /// that layout is unchanged from what vDSP.h documents.
-        pub fn zrip2d(self: Self, io: *const SCT, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zrip2d(self: Self, io: SS(T), ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+            var io_raw = io.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zrip(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_zripD(self.setup, io, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zrip(self.setup, &io_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_zripD(self.setup, &io_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -392,10 +506,12 @@ pub fn FFT(comptime T: type) type {
         /// of Buffer->realp and Buffer->imagp must contain space for the greater
         /// of N1 or N0/2 floating-point elements.  The addresses are preferably
         /// 16-byte aligned or better.
-        pub fn zript2d(self: Self, io: *const SCT, ic0: Stride, buffer: *const SCT, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zript2d(self: Self, io: SS(T), ic0: Stride, buffer: SS(T), log2n0: Length, log2n1: Length, direction: Direction) void {
+            var io_raw = io.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zript(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_zriptD(self.setup, io, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zript(self.setup, &io_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_zriptD(self.setup, &io_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -412,10 +528,12 @@ pub fn FFT(comptime T: type) type {
         ///
         /// Same scaling and DC/Nyquist packing convention as zrip2d() - see
         /// its doc comment for the runtime-confirmed detail.
-        pub fn zrop2d(self: Self, input: *const SCT, ia0: Stride, output: *const SCT, ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zrop2d(self: Self, input: SS(T), ia0: Stride, output: SS(T), ic0: Stride, log2n0: Length, log2n1: Length, direction: Direction) void {
+            var input_raw = input.raw();
+            var output_raw = output.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zrop(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_zropD(self.setup, input, ia0, 1, output, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zrop(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_zropD(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -427,10 +545,13 @@ pub fn FFT(comptime T: type) type {
         /// of Buffer->realp and Buffer->imagp must contain space for the greater
         /// of N1 or N0/2 floating-point elements.  The addresses are preferably
         /// 16-byte aligned or better.
-        pub fn zropt2d(self: Self, input: *const SCT, ia0: Stride, output: *const SCT, ic0: Stride, buffer: *const SCT, log2n0: Length, log2n1: Length, direction: Direction) void {
+        pub fn zropt2d(self: Self, input: SS(T), ia0: Stride, output: SS(T), ic0: Stride, buffer: SS(T), log2n0: Length, log2n1: Length, direction: Direction) void {
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fft2d_zropt(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
-                f64 => c.vDSP_fft2d_zroptD(self.setup, input, ia0, 1, output, ic0, 1, buffer, log2n0, log2n1, @intFromEnum(direction)),
+                f32 => c.vDSP_fft2d_zropt(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
+                f64 => c.vDSP_fft2d_zroptD(self.setup, &input_raw, ia0, 1, &output_raw, ic0, 1, &buffer_raw, log2n0, log2n1, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -442,10 +563,13 @@ pub fn FFT(comptime T: type) type {
         /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
         ///
         /// Direction must be +1 or -1.
-        pub fn mzip(self: Self, io: *const SCT, im: Stride, m: Length, direction: Direction) void {
+        pub fn mzip(self: Self, io: SS(T), im: Stride, m: Length, direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            if (im > 0) std.debug.assert(io.len() >= (m - 1) * @as(usize, @intCast(im)) + n_elems);
+            var io_raw = io.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zip(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_zipD(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zip(self.setup, &io_raw, 1, im, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_zipD(self.setup, &io_raw, 1, im, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -456,10 +580,17 @@ pub fn FFT(comptime T: type) type {
         /// permitted to use the temporary buffer for improved performance.  Each
         /// of Buffer->realp and Buffer->imagp must contain space for N
         /// floating-point elements and is preferably 16-byte aligned or better.
-        pub fn mzipt(self: Self, io: *const SCT, im: Stride, buffer: *const SCT, m: Length, direction: Direction) void {
+        pub fn mzipt(self: Self, io: SS(T), im: Stride, buffer: SS(T), m: Length, direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            if (im > 0) std.debug.assert(io.len() >= (m - 1) * @as(usize, @intCast(im)) + n_elems);
+            // vDSP.h:1721/1956: the batched temp buffer holds N (complex) or
+            // N/2 (real) elements - NOT m*N. n_elems already carries that split.
+            std.debug.assert(buffer.len() >= n_elems);
+            var io_raw = io.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zipt(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_ziptD(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zipt(self.setup, &io_raw, 1, im, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_ziptD(self.setup, &io_raw, 1, im, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -469,10 +600,15 @@ pub fn FFT(comptime T: type) type {
         /// Performs M individual complex DFTs, each of length N = 1 << Log2N.
         ///
         /// Direction must be +1 or -1.
-        pub fn mzop(self: Self, input: *const SCT, ima: Stride, output: *const SCT, imc: Stride, m: Length, direction: Direction) void {
+        pub fn mzop(self: Self, input: SS(T), ima: Stride, output: SS(T), imc: Stride, m: Length, direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            if (ima > 0) std.debug.assert(input.len() >= (m - 1) * @as(usize, @intCast(ima)) + n_elems);
+            if (imc > 0) std.debug.assert(output.len() >= (m - 1) * @as(usize, @intCast(imc)) + n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zop(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_zopD(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zop(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_zopD(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -483,10 +619,19 @@ pub fn FFT(comptime T: type) type {
         /// permitted to use the temporary buffer for improved performance.  Each
         /// of Buffer->realp and Buffer->imagp must contain space for N
         /// floating-point elements and is preferably 16-byte aligned or better.
-        pub fn mzopt(self: Self, input: *const SCT, ima: Stride, output: *const SCT, imc: Stride, buffer: *const SCT, m: Length, direction: Direction) void {
+        pub fn mzopt(self: Self, input: SS(T), ima: Stride, output: SS(T), imc: Stride, buffer: SS(T), m: Length, direction: Direction) void {
+            const n_elems = @as(usize, 1) << @intCast(self.log2n);
+            if (ima > 0) std.debug.assert(input.len() >= (m - 1) * @as(usize, @intCast(ima)) + n_elems);
+            if (imc > 0) std.debug.assert(output.len() >= (m - 1) * @as(usize, @intCast(imc)) + n_elems);
+            // vDSP.h:1721/1956: the batched temp buffer holds N (complex) or
+            // N/2 (real) elements - NOT m*N. n_elems already carries that split.
+            std.debug.assert(buffer.len() >= n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zopt(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_zoptD(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zopt(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_zoptD(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -498,10 +643,13 @@ pub fn FFT(comptime T: type) type {
         /// (Direction -1) DFTs, each of length N = 1 << Log2N.
         ///
         /// Direction must be +1 or -1.
-        pub fn mzrip(self: Self, io: *const SCT, im: Stride, m: Length, direction: Direction) void {
+        pub fn mzrip(self: Self, io: SS(T), im: Stride, m: Length, direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            if (im > 0) std.debug.assert(io.len() >= (m - 1) * @as(usize, @intCast(im)) + n_elems);
+            var io_raw = io.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zrip(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_zripD(self.setup, io, 1, im, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zrip(self.setup, &io_raw, 1, im, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_zripD(self.setup, &io_raw, 1, im, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -513,10 +661,17 @@ pub fn FFT(comptime T: type) type {
         /// permitted to use the temporary buffer for improved performance.  Each
         /// of Buffer->realp and Buffer->imagp must contain space for N/2
         /// floating-point elements and is preferably 16-byte aligned or better.
-        pub fn mzript(self: Self, io: *const SCT, im: Stride, buffer: *const SCT, m: Length, direction: Direction) void {
+        pub fn mzript(self: Self, io: SS(T), im: Stride, buffer: SS(T), m: Length, direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            if (im > 0) std.debug.assert(io.len() >= (m - 1) * @as(usize, @intCast(im)) + n_elems);
+            // vDSP.h:1721/1956: the batched temp buffer holds N (complex) or
+            // N/2 (real) elements - NOT m*N. n_elems already carries that split.
+            std.debug.assert(buffer.len() >= n_elems);
+            var io_raw = io.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zript(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_zriptD(self.setup, io, 1, im, buffer, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zript(self.setup, &io_raw, 1, im, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_zriptD(self.setup, &io_raw, 1, im, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -528,10 +683,15 @@ pub fn FFT(comptime T: type) type {
         /// (Direction -1) DFTs, each of length N = 1 << Log2N.
         ///
         /// Direction must be +1 or -1.
-        pub fn mzrop(self: Self, input: *const SCT, ima: Stride, output: *const SCT, imc: Stride, m: Length, direction: Direction) void {
+        pub fn mzrop(self: Self, input: SS(T), ima: Stride, output: SS(T), imc: Stride, m: Length, direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            if (ima > 0) std.debug.assert(input.len() >= (m - 1) * @as(usize, @intCast(ima)) + n_elems);
+            if (imc > 0) std.debug.assert(output.len() >= (m - 1) * @as(usize, @intCast(imc)) + n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zrop(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_zropD(self.setup, input, 1, ima, output, 1, imc, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zrop(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_zropD(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -543,10 +703,19 @@ pub fn FFT(comptime T: type) type {
         /// permitted to use the temporary buffer for improved performance.  Each
         /// of Buffer->realp and Buffer->imagp must contain space for N/2
         /// floating-point elements and is preferably 16-byte aligned or better.
-        pub fn mzropt(self: Self, input: *const SCT, ima: Stride, output: *const SCT, imc: Stride, buffer: *const SCT, m: Length, direction: Direction) void {
+        pub fn mzropt(self: Self, input: SS(T), ima: Stride, output: SS(T), imc: Stride, buffer: SS(T), m: Length, direction: Direction) void {
+            const n_elems = (@as(usize, 1) << @intCast(self.log2n)) / 2;
+            if (ima > 0) std.debug.assert(input.len() >= (m - 1) * @as(usize, @intCast(ima)) + n_elems);
+            if (imc > 0) std.debug.assert(output.len() >= (m - 1) * @as(usize, @intCast(imc)) + n_elems);
+            // vDSP.h:1721/1956: the batched temp buffer holds N (complex) or
+            // N/2 (real) elements - NOT m*N. n_elems already carries that split.
+            std.debug.assert(buffer.len() >= n_elems);
+            var input_raw = input.raw();
+            var output_raw = output.raw();
+            var buffer_raw = buffer.raw();
             switch (T) {
-                f32 => c.vDSP_fftm_zropt(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction)),
-                f64 => c.vDSP_fftm_zroptD(self.setup, input, 1, ima, output, 1, imc, buffer, self.log2n, m, @intFromEnum(direction)),
+                f32 => c.vDSP_fftm_zropt(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
+                f64 => c.vDSP_fftm_zroptD(self.setup, &input_raw, 1, ima, &output_raw, 1, imc, &buffer_raw, self.log2n, m, @intFromEnum(direction)),
                 else => unreachable,
             }
         }
@@ -574,16 +743,16 @@ test "FFT init/deinit and zip forward+inverse round-trip" {
     // themselves for a true inverse.
     var re = [_]f32{ 1.0, 0.0, 0.0, 0.0 };
     var im = [_]f32{ 0.0, 0.0, 0.0, 0.0 };
-    var io = SC(f32){ .realp = &re, .imagp = &im };
+    const io = SS(f32).init(&re, &im);
 
-    fft.zip(&io, .forward);
+    fft.zip(io, .forward);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[1], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[2], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[3], 0.001);
     for (im) |v| try std.testing.expectApproxEqAbs(@as(f32, 0.0), v, 0.001);
 
-    fft.zip(&io, .inverse);
+    fft.zip(io, .inverse);
     const n: f32 = 4.0;
     try std.testing.expectApproxEqAbs(n, re[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 0.0), re[1], 0.001);
@@ -600,9 +769,9 @@ test "ctoz and ztoc round-trip" {
     };
     var re: [3]f32 = undefined;
     var im: [3]f32 = undefined;
-    const z = SC(f32){ .realp = &re, .imagp = &im };
+    const z = SS(f32).init(&re, &im);
 
-    ctoz(f32, &input, &z, 3);
+    ctoz(f32, &input, z, 3);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 2.0), im[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, -3.0), re[1], 0.001);
@@ -611,7 +780,7 @@ test "ctoz and ztoc round-trip" {
     try std.testing.expectApproxEqAbs(@as(f32, -1.0), im[2], 0.001);
 
     var output: [3]Complex(f32) = undefined;
-    ztoc(f32, &z, &output, 3);
+    ztoc(f32, z, &output, 3);
     for (0..3) |i| {
         try std.testing.expectApproxEqAbs(input[i].real, output[i].real, 0.001);
         try std.testing.expectApproxEqAbs(input[i].imag, output[i].imag, 0.001);
@@ -648,15 +817,15 @@ test "zipt2d matches zip2d (fft2d_zipt header param-name anomaly check)" {
         zipt_re[i] = v;
         zipt_im[i] = -v * 0.5;
     }
-    const zip_sc = SC(f32){ .realp = &zip_re, .imagp = &zip_im };
-    const zipt_sc = SC(f32){ .realp = &zipt_re, .imagp = &zipt_im };
+    const zip_sc = SS(f32).init(&zip_re, &zip_im);
+    const zipt_sc = SS(f32).init(&zipt_re, &zipt_im);
 
     var buf_re: [total]f32 = undefined;
     var buf_im: [total]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
+    const buffer = SS(f32).init(&buf_re, &buf_im);
 
-    fft.zip2d(&zip_sc, ic0, log2n0, log2n1, .forward);
-    fft.zipt2d(&zipt_sc, ic0, &buffer, log2n0, log2n1, .forward);
+    fft.zip2d(zip_sc, ic0, log2n0, log2n1, .forward);
+    fft.zipt2d(zipt_sc, ic0, buffer, log2n0, log2n1, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(zip_re[i], zipt_re[i], 0.01);
@@ -687,21 +856,21 @@ test "zopt2d matches zop2d" {
         in_re[i] = v;
         in_im[i] = -v * 0.5;
     }
-    const input = SC(f32){ .realp = &in_re, .imagp = &in_im };
+    const input = SS(f32).init(&in_re, &in_im);
 
     var zop_re: [total]f32 = undefined;
     var zop_im: [total]f32 = undefined;
     var zopt_re: [total]f32 = undefined;
     var zopt_im: [total]f32 = undefined;
-    const zop_out = SC(f32){ .realp = &zop_re, .imagp = &zop_im };
-    const zopt_out = SC(f32){ .realp = &zopt_re, .imagp = &zopt_im };
+    const zop_out = SS(f32).init(&zop_re, &zop_im);
+    const zopt_out = SS(f32).init(&zopt_re, &zopt_im);
 
     var buf_re: [total]f32 = undefined;
     var buf_im: [total]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
+    const buffer = SS(f32).init(&buf_re, &buf_im);
 
-    fft.zop2d(&input, ia0, &zop_out, ic0, log2n0, log2n1, .forward);
-    fft.zopt2d(&input, ia0, &zopt_out, ic0, &buffer, log2n0, log2n1, .forward);
+    fft.zop2d(input, ia0, zop_out, ic0, log2n0, log2n1, .forward);
+    fft.zopt2d(input, ia0, zopt_out, ic0, buffer, log2n0, log2n1, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(zop_re[i], zopt_re[i], 0.01);
@@ -724,16 +893,16 @@ test "zop matches zip (out-of-place forward equals in-place forward, asymmetric 
 
     var zip_re = in_re;
     var zip_im = in_im;
-    var zip_io = SC(f32){ .realp = &zip_re, .imagp = &zip_im };
-    fft.zip(&zip_io, .forward);
+    const zip_io = SS(f32).init(&zip_re, &zip_im);
+    fft.zip(zip_io, .forward);
 
     var a_re = in_re;
     var a_im = in_im;
     var out_re: [8]f32 = undefined;
     var out_im: [8]f32 = undefined;
-    const input = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    const output = SC(f32){ .realp = &out_re, .imagp = &out_im };
-    fft.zop(&input, &output, .forward);
+    const input = SS(f32).init(&a_re, &a_im);
+    const output = SS(f32).init(&out_re, &out_im);
+    fft.zop(input, output, .forward);
 
     for (0..8) |i| {
         try std.testing.expectApproxEqAbs(zip_re[i], out_re[i], 0.01);
@@ -751,16 +920,16 @@ test "zipt matches zip (temp-buffer in-place agrees with buffer-less in-place)" 
 
     var zip_re = in_re;
     var zip_im = in_im;
-    var zip_io = SC(f32){ .realp = &zip_re, .imagp = &zip_im };
-    fft.zip(&zip_io, .inverse);
+    const zip_io = SS(f32).init(&zip_re, &zip_im);
+    fft.zip(zip_io, .inverse);
 
     var zipt_re = in_re;
     var zipt_im = in_im;
-    var zipt_io = SC(f32){ .realp = &zipt_re, .imagp = &zipt_im };
+    const zipt_io = SS(f32).init(&zipt_re, &zipt_im);
     var buf_re: [8]f32 = undefined;
     var buf_im: [8]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.zipt(&zipt_io, &buffer, .inverse);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.zipt(zipt_io, buffer, .inverse);
 
     for (0..8) |i| {
         try std.testing.expectApproxEqAbs(zip_re[i], zipt_re[i], 0.01);
@@ -775,20 +944,20 @@ test "zopt matches zop (temp-buffer out-of-place agrees with buffer-less out-of-
 
     var a_re = [_]f32{ 1.0, -2.5, 3.0, 0.5, -4.0, 2.0, -1.5, 6.0 };
     var a_im = [_]f32{ 0.5, 1.0, -2.0, 0.0, 3.0, -1.0, 0.0, 2.5 };
-    const input = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const input = SS(f32).init(&a_re, &a_im);
 
     var zop_re: [8]f32 = undefined;
     var zop_im: [8]f32 = undefined;
-    const zop_out = SC(f32){ .realp = &zop_re, .imagp = &zop_im };
-    fft.zop(&input, &zop_out, .forward);
+    const zop_out = SS(f32).init(&zop_re, &zop_im);
+    fft.zop(input, zop_out, .forward);
 
     var zopt_re: [8]f32 = undefined;
     var zopt_im: [8]f32 = undefined;
-    const zopt_out = SC(f32){ .realp = &zopt_re, .imagp = &zopt_im };
+    const zopt_out = SS(f32).init(&zopt_re, &zopt_im);
     var buf_re: [8]f32 = undefined;
     var buf_im: [8]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.zopt(&input, &zopt_out, &buffer, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.zopt(input, zopt_out, buffer, .forward);
 
     for (0..8) |i| {
         try std.testing.expectApproxEqAbs(zop_re[i], zopt_re[i], 0.01);
@@ -818,13 +987,13 @@ test "zrip forward matches vDSP.h's documented 2x-of-equivalent-complex-FFT scal
     // no extra factor.
     var zre = x;
     var zim = [_]f32{0} ** 8;
-    var zio = SC(f32){ .realp = &zre, .imagp = &zim };
-    fft.zip(&zio, .forward);
+    const zio = SS(f32).init(&zre, &zim);
+    fft.zip(zio, .forward);
 
     var rre = [_]f32{ x[0], x[2], x[4], x[6] };
     var rim = [_]f32{ x[1], x[3], x[5], x[7] };
-    var rio = SC(f32){ .realp = &rre, .imagp = &rim };
-    fft.zrip(&rio, .forward);
+    const rio = SS(f32).init(&rre, &rim);
+    fft.zrip(rio, .forward);
 
     // Special DC/Nyquist packing: realp[0] = 2*Re(X[0]), imagp[0] = 2*Re(X[N/2]).
     try std.testing.expectApproxEqAbs(2.0 * zre[0], rre[0], 0.02);
@@ -853,10 +1022,10 @@ test "zrip inverse is unnormalized (not the 1/N vDSP.h documents)" {
     const x = [_]f32{ 1.0, 2.0, -3.0, 0.5, 4.0, -1.0, 2.0, 7.0 };
     var rre = [_]f32{ x[0], x[2], x[4], x[6] };
     var rim = [_]f32{ x[1], x[3], x[5], x[7] };
-    var rio = SC(f32){ .realp = &rre, .imagp = &rim };
+    const rio = SS(f32).init(&rre, &rim);
 
-    fft.zrip(&rio, .forward);
-    fft.zrip(&rio, .inverse);
+    fft.zrip(rio, .forward);
+    fft.zrip(rio, .inverse);
 
     for (0..4) |j| {
         try std.testing.expectApproxEqAbs(2.0 * n * x[2 * j], rre[j], 0.1);
@@ -874,16 +1043,16 @@ test "zript matches zrip (temp-buffer real FFT agrees with buffer-less version)"
 
     var a_re = packed_re;
     var a_im = packed_im;
-    var a_io = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    fft.zrip(&a_io, .forward);
+    const a_io = SS(f32).init(&a_re, &a_im);
+    fft.zrip(a_io, .forward);
 
     var b_re = packed_re;
     var b_im = packed_im;
-    var b_io = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const b_io = SS(f32).init(&b_re, &b_im);
     var buf_re: [4]f32 = undefined;
     var buf_im: [4]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.zript(&b_io, &buffer, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.zript(b_io, buffer, .forward);
 
     for (0..4) |i| {
         try std.testing.expectApproxEqAbs(a_re[i], b_re[i], 0.02);
@@ -901,16 +1070,16 @@ test "zrop matches zrip (out-of-place equals in-place, same input)" {
 
     var ip_re = packed_re;
     var ip_im = packed_im;
-    var ip_io = SC(f32){ .realp = &ip_re, .imagp = &ip_im };
-    fft.zrip(&ip_io, .forward);
+    const ip_io = SS(f32).init(&ip_re, &ip_im);
+    fft.zrip(ip_io, .forward);
 
     var oa_re = packed_re;
     var oa_im = packed_im;
-    const oa_in = SC(f32){ .realp = &oa_re, .imagp = &oa_im };
+    const oa_in = SS(f32).init(&oa_re, &oa_im);
     var oc_re: [4]f32 = undefined;
     var oc_im: [4]f32 = undefined;
-    const oa_out = SC(f32){ .realp = &oc_re, .imagp = &oc_im };
-    fft.zrop(&oa_in, &oa_out, .forward);
+    const oa_out = SS(f32).init(&oc_re, &oc_im);
+    fft.zrop(oa_in, oa_out, .forward);
 
     for (0..4) |i| {
         try std.testing.expectApproxEqAbs(ip_re[i], oc_re[i], 0.02);
@@ -925,20 +1094,20 @@ test "zropt matches zrop (temp-buffer out-of-place agrees with buffer-less)" {
 
     var a_re = [_]f32{ 1.0, -3.0, 4.0, 2.0 };
     var a_im = [_]f32{ 2.0, 0.5, -1.0, 7.0 };
-    const input = SC(f32){ .realp = &a_re, .imagp = &a_im };
+    const input = SS(f32).init(&a_re, &a_im);
 
     var zrop_re: [4]f32 = undefined;
     var zrop_im: [4]f32 = undefined;
-    const zrop_out = SC(f32){ .realp = &zrop_re, .imagp = &zrop_im };
-    fft.zrop(&input, &zrop_out, .forward);
+    const zrop_out = SS(f32).init(&zrop_re, &zrop_im);
+    fft.zrop(input, zrop_out, .forward);
 
     var zropt_re: [4]f32 = undefined;
     var zropt_im: [4]f32 = undefined;
-    const zropt_out = SC(f32){ .realp = &zropt_re, .imagp = &zropt_im };
+    const zropt_out = SS(f32).init(&zropt_re, &zropt_im);
     var buf_re: [4]f32 = undefined;
     var buf_im: [4]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.zropt(&input, &zropt_out, &buffer, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.zropt(input, zropt_out, buffer, .forward);
 
     for (0..4) |i| {
         try std.testing.expectApproxEqAbs(zrop_re[i], zropt_re[i], 0.02);
@@ -960,8 +1129,8 @@ fn refFft2dViaZip(fft_n0: FFT(f32), fft_n1: FFT(f32), re: []f32, im: []f32, ic0:
     // Pass 1: transform along dim1 (contiguous) for each of the n0 rows.
     for (0..n0) |row| {
         const off = row * ic0;
-        var sc = SC(f32){ .realp = re[off..].ptr, .imagp = im[off..].ptr };
-        fft_n1.zip(&sc, direction);
+        const sc = SS(f32).init(re[off..], im[off..]);
+        fft_n1.zip(sc, direction);
     }
     // Pass 2: transform along dim0 (stride ic0) for each of the n1 columns;
     // gather into a contiguous temp buffer since zip requires stride-1 data.
@@ -972,8 +1141,8 @@ fn refFft2dViaZip(fft_n0: FFT(f32), fft_n1: FFT(f32), re: []f32, im: []f32, ic0:
             tmp_re[row] = re[row * ic0 + col];
             tmp_im[row] = im[row * ic0 + col];
         }
-        var sc = SC(f32){ .realp = tmp_re[0..n0].ptr, .imagp = tmp_im[0..n0].ptr };
-        fft_n0.zip(&sc, direction);
+        const sc = SS(f32).init(tmp_re[0..n0], tmp_im[0..n0]);
+        fft_n0.zip(sc, direction);
         for (0..n0) |row| {
             re[row * ic0 + col] = tmp_re[row];
             im[row * ic0 + col] = tmp_im[row];
@@ -1006,8 +1175,8 @@ test "zip2d matches zip-based separable reference (argument order check)" {
     var ref_re = re;
     var ref_im = im;
 
-    const io = SC(f32){ .realp = &re, .imagp = &im };
-    fft.zip2d(&io, ic0, log2n0, log2n1, .forward);
+    const io = SS(f32).init(&re, &im);
+    fft.zip2d(io, ic0, log2n0, log2n1, .forward);
 
     refFft2dViaZip(fft_n0, fft_n1, &ref_re, &ref_im, @intCast(ic0), n0, n1, .forward);
 
@@ -1039,16 +1208,16 @@ test "zop2d matches zip2d (out-of-place equals in-place)" {
 
     var ip_re = re;
     var ip_im = im;
-    const ip_io = SC(f32){ .realp = &ip_re, .imagp = &ip_im };
-    fft.zip2d(&ip_io, ic0, log2n0, log2n1, .forward);
+    const ip_io = SS(f32).init(&ip_re, &ip_im);
+    fft.zip2d(ip_io, ic0, log2n0, log2n1, .forward);
 
     var oa_re = re;
     var oa_im = im;
-    const input = SC(f32){ .realp = &oa_re, .imagp = &oa_im };
+    const input = SS(f32).init(&oa_re, &oa_im);
     var oc_re: [total]f32 = undefined;
     var oc_im: [total]f32 = undefined;
-    const output = SC(f32){ .realp = &oc_re, .imagp = &oc_im };
-    fft.zop2d(&input, ia0, &output, ic0, log2n0, log2n1, .forward);
+    const output = SS(f32).init(&oc_re, &oc_im);
+    fft.zop2d(input, ia0, output, ic0, log2n0, log2n1, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(ip_re[i], oc_re[i], 0.05);
@@ -1088,10 +1257,10 @@ test "zrip2d forward+inverse round trip confirms unnormalized-inverse pattern" {
     var re = [_]f32{0} ** total;
     var im = [_]f32{0} ** total;
     re[0] = 1.0; // impulse
-    var io = SC(f32){ .realp = &re, .imagp = &im };
+    const io = SS(f32).init(&re, &im);
 
-    fft.zrip2d(&io, ic0, log2n0, log2n1, .forward);
-    fft.zrip2d(&io, ic0, log2n0, log2n1, .inverse);
+    fft.zrip2d(io, ic0, log2n0, log2n1, .forward);
+    fft.zrip2d(io, ic0, log2n0, log2n1, .inverse);
 
     const expected: f32 = 2.0 * 4.0 * 8.0; // 2 * N0 * N1
     try std.testing.expectApproxEqAbs(expected, re[0], 0.5);
@@ -1117,16 +1286,16 @@ test "zript2d matches zrip2d (temp-buffer agrees with buffer-less)" {
 
     var a_re = seed;
     var a_im = seed;
-    var a_io = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    fft.zrip2d(&a_io, ic0, log2n0, log2n1, .forward);
+    const a_io = SS(f32).init(&a_re, &a_im);
+    fft.zrip2d(a_io, ic0, log2n0, log2n1, .forward);
 
     var b_re = seed;
     var b_im = seed;
-    var b_io = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const b_io = SS(f32).init(&b_re, &b_im);
     var buf_re: [8]f32 = undefined; // max(N1, N0/2) = max(8, 2) = 8
     var buf_im: [8]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.zript2d(&b_io, ic0, &buffer, log2n0, log2n1, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.zript2d(b_io, ic0, buffer, log2n0, log2n1, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(a_re[i], b_re[i], 0.05);
@@ -1151,16 +1320,16 @@ test "zrop2d matches zrip2d (out-of-place equals in-place)" {
 
     var ip_re = seed;
     var ip_im = seed;
-    var ip_io = SC(f32){ .realp = &ip_re, .imagp = &ip_im };
-    fft.zrip2d(&ip_io, ic0, log2n0, log2n1, .forward);
+    const ip_io = SS(f32).init(&ip_re, &ip_im);
+    fft.zrip2d(ip_io, ic0, log2n0, log2n1, .forward);
 
     var oa_re = seed;
     var oa_im = seed;
-    const input = SC(f32){ .realp = &oa_re, .imagp = &oa_im };
+    const input = SS(f32).init(&oa_re, &oa_im);
     var oc_re: [total]f32 = undefined;
     var oc_im: [total]f32 = undefined;
-    const output = SC(f32){ .realp = &oc_re, .imagp = &oc_im };
-    fft.zrop2d(&input, ia0, &output, ic0, log2n0, log2n1, .forward);
+    const output = SS(f32).init(&oc_re, &oc_im);
+    fft.zrop2d(input, ia0, output, ic0, log2n0, log2n1, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(ip_re[i], oc_re[i], 0.05);
@@ -1182,20 +1351,20 @@ test "zropt2d matches zrop2d (temp-buffer agrees with buffer-less)" {
 
     var seed = [_]f32{0} ** total;
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.5 - 3.0;
-    const input = SC(f32){ .realp = &seed, .imagp = &seed };
+    const input = SS(f32).init(&seed, &seed);
 
     var zrop_re: [total]f32 = undefined;
     var zrop_im: [total]f32 = undefined;
-    const zrop_out = SC(f32){ .realp = &zrop_re, .imagp = &zrop_im };
-    fft.zrop2d(&input, ia0, &zrop_out, ic0, log2n0, log2n1, .forward);
+    const zrop_out = SS(f32).init(&zrop_re, &zrop_im);
+    fft.zrop2d(input, ia0, zrop_out, ic0, log2n0, log2n1, .forward);
 
     var zropt_re: [total]f32 = undefined;
     var zropt_im: [total]f32 = undefined;
-    const zropt_out = SC(f32){ .realp = &zropt_re, .imagp = &zropt_im };
+    const zropt_out = SS(f32).init(&zropt_re, &zropt_im);
     var buf_re: [8]f32 = undefined;
     var buf_im: [8]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.zropt2d(&input, ia0, &zropt_out, ic0, &buffer, log2n0, log2n1, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.zropt2d(input, ia0, zropt_out, ic0, buffer, log2n0, log2n1, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(zrop_re[i], zropt_re[i], 0.05);
@@ -1238,14 +1407,14 @@ test "mzip matches per-signal zip (M independent batched transforms)" {
         }
     }
 
-    var io = SC(f32){ .realp = &re, .imagp = &im_arr };
-    fft.mzip(&io, im, m, .forward);
+    const io = SS(f32).init(&re, &im_arr);
+    fft.mzip(io, im, m, .forward);
 
     for (0..3) |s| {
         var sig_re = signals_re[s];
         var sig_im = signals_im[s];
-        var sig_io = SC(f32){ .realp = &sig_re, .imagp = &sig_im };
-        fft.zip(&sig_io, .forward);
+        const sig_io = SS(f32).init(&sig_re, &sig_im);
+        fft.zip(sig_io, .forward);
         for (0..n) |j| {
             const idx = s * @as(usize, @intCast(im)) + j;
             try std.testing.expectApproxEqAbs(sig_re[j], re[idx], 0.02);
@@ -1269,16 +1438,16 @@ test "mzipt matches mzip (temp-buffer agrees with buffer-less batched transform)
 
     var a_re = seed;
     var a_im = seed;
-    var a_io = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    fft.mzip(&a_io, im, m, .forward);
+    const a_io = SS(f32).init(&a_re, &a_im);
+    fft.mzip(a_io, im, m, .forward);
 
     var b_re = seed;
     var b_im = seed;
-    var b_io = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const b_io = SS(f32).init(&b_re, &b_im);
     var buf_re: [4]f32 = undefined;
     var buf_im: [4]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.mzipt(&b_io, im, &buffer, m, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.mzipt(b_io, im, buffer, m, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(a_re[i], b_re[i], 0.05);
@@ -1301,16 +1470,16 @@ test "mzop matches mzip (out-of-place equals in-place, batched)" {
 
     var ip_re = seed;
     var ip_im = seed;
-    var ip_io = SC(f32){ .realp = &ip_re, .imagp = &ip_im };
-    fft.mzip(&ip_io, im, m, .forward);
+    const ip_io = SS(f32).init(&ip_re, &ip_im);
+    fft.mzip(ip_io, im, m, .forward);
 
     var oa_re = seed;
     var oa_im = seed;
-    const input = SC(f32){ .realp = &oa_re, .imagp = &oa_im };
+    const input = SS(f32).init(&oa_re, &oa_im);
     var oc_re: [total]f32 = undefined;
     var oc_im: [total]f32 = undefined;
-    const output = SC(f32){ .realp = &oc_re, .imagp = &oc_im };
-    fft.mzop(&input, im, &output, im, m, .forward);
+    const output = SS(f32).init(&oc_re, &oc_im);
+    fft.mzop(input, im, output, im, m, .forward);
 
     // Only the M*N signal-occupied slots are written by mzop; the gap
     // between signals (index n..im, since im > n here) is untouched scratch
@@ -1336,20 +1505,20 @@ test "mzopt matches mzop (temp-buffer agrees with buffer-less, batched out-of-pl
 
     var seed = [_]f32{0} ** total;
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.7 - 2.0;
-    const input = SC(f32){ .realp = &seed, .imagp = &seed };
+    const input = SS(f32).init(&seed, &seed);
 
     var mzop_re: [total]f32 = undefined;
     var mzop_im: [total]f32 = undefined;
-    const mzop_out = SC(f32){ .realp = &mzop_re, .imagp = &mzop_im };
-    fft.mzop(&input, im, &mzop_out, im, m, .forward);
+    const mzop_out = SS(f32).init(&mzop_re, &mzop_im);
+    fft.mzop(input, im, mzop_out, im, m, .forward);
 
     var mzopt_re: [total]f32 = undefined;
     var mzopt_im: [total]f32 = undefined;
-    const mzopt_out = SC(f32){ .realp = &mzopt_re, .imagp = &mzopt_im };
+    const mzopt_out = SS(f32).init(&mzopt_re, &mzopt_im);
     var buf_re: [4]f32 = undefined;
     var buf_im: [4]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.mzopt(&input, im, &mzopt_out, im, &buffer, m, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.mzopt(input, im, mzopt_out, im, buffer, m, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(mzop_re[i], mzopt_re[i], 0.05);
@@ -1388,14 +1557,14 @@ test "mzrip matches per-signal zrip (M independent batched real transforms)" {
         }
     }
 
-    var io = SC(f32){ .realp = &re, .imagp = &im_arr };
-    fft.mzrip(&io, im, m, .forward);
+    const io = SS(f32).init(&re, &im_arr);
+    fft.mzrip(io, im, m, .forward);
 
     for (0..2) |s| {
         var sig_re = signals_re[s];
         var sig_im = signals_im[s];
-        var sig_io = SC(f32){ .realp = &sig_re, .imagp = &sig_im };
-        fft.zrip(&sig_io, .forward);
+        const sig_io = SS(f32).init(&sig_re, &sig_im);
+        fft.zrip(sig_io, .forward);
         for (0..half_n) |j| {
             const idx = s * @as(usize, @intCast(im)) + j;
             try std.testing.expectApproxEqAbs(sig_re[j], re[idx], 0.02);
@@ -1419,16 +1588,16 @@ test "mzript matches mzrip (temp-buffer agrees with buffer-less batched real tra
 
     var a_re = seed;
     var a_im = seed;
-    var a_io = SC(f32){ .realp = &a_re, .imagp = &a_im };
-    fft.mzrip(&a_io, im, m, .forward);
+    const a_io = SS(f32).init(&a_re, &a_im);
+    fft.mzrip(a_io, im, m, .forward);
 
     var b_re = seed;
     var b_im = seed;
-    var b_io = SC(f32){ .realp = &b_re, .imagp = &b_im };
+    const b_io = SS(f32).init(&b_re, &b_im);
     var buf_re: [4]f32 = undefined; // N/2
     var buf_im: [4]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.mzript(&b_io, im, &buffer, m, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.mzript(b_io, im, buffer, m, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(a_re[i], b_re[i], 0.05);
@@ -1451,16 +1620,16 @@ test "mzrop matches mzrip (out-of-place equals in-place, batched real)" {
 
     var ip_re = seed;
     var ip_im = seed;
-    var ip_io = SC(f32){ .realp = &ip_re, .imagp = &ip_im };
-    fft.mzrip(&ip_io, im, m, .forward);
+    const ip_io = SS(f32).init(&ip_re, &ip_im);
+    fft.mzrip(ip_io, im, m, .forward);
 
     var oa_re = seed;
     var oa_im = seed;
-    const input = SC(f32){ .realp = &oa_re, .imagp = &oa_im };
+    const input = SS(f32).init(&oa_re, &oa_im);
     var oc_re: [total]f32 = undefined;
     var oc_im: [total]f32 = undefined;
-    const output = SC(f32){ .realp = &oc_re, .imagp = &oc_im };
-    fft.mzrop(&input, im, &output, im, m, .forward);
+    const output = SS(f32).init(&oc_re, &oc_im);
+    fft.mzrop(input, im, output, im, m, .forward);
 
     // As with mzop above: only the M*(N/2) signal-occupied slots are
     // written; the gap between signals is untouched scratch space.
@@ -1485,23 +1654,261 @@ test "mzropt matches mzrop (temp-buffer agrees with buffer-less, batched real ou
 
     var seed = [_]f32{0} ** total;
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.6 - 2.5;
-    const input = SC(f32){ .realp = &seed, .imagp = &seed };
+    const input = SS(f32).init(&seed, &seed);
 
     var mzrop_re: [total]f32 = undefined;
     var mzrop_im: [total]f32 = undefined;
-    const mzrop_out = SC(f32){ .realp = &mzrop_re, .imagp = &mzrop_im };
-    fft.mzrop(&input, im, &mzrop_out, im, m, .forward);
+    const mzrop_out = SS(f32).init(&mzrop_re, &mzrop_im);
+    fft.mzrop(input, im, mzrop_out, im, m, .forward);
 
     var mzropt_re: [total]f32 = undefined;
     var mzropt_im: [total]f32 = undefined;
-    const mzropt_out = SC(f32){ .realp = &mzropt_re, .imagp = &mzropt_im };
+    const mzropt_out = SS(f32).init(&mzropt_re, &mzropt_im);
     var buf_re: [4]f32 = undefined;
     var buf_im: [4]f32 = undefined;
-    const buffer = SC(f32){ .realp = &buf_re, .imagp = &buf_im };
-    fft.mzropt(&input, im, &mzropt_out, im, &buffer, m, .forward);
+    const buffer = SS(f32).init(&buf_re, &buf_im);
+    fft.mzropt(input, im, mzropt_out, im, buffer, m, .forward);
 
     for (0..total) |i| {
         try std.testing.expectApproxEqAbs(mzrop_re[i], mzropt_re[i], 0.05);
         try std.testing.expectApproxEqAbs(mzrop_im[i], mzropt_im[i], 0.05);
+    }
+}
+
+/// Naive O(N^2) 2D DFT over a row-major complex matrix, written straight from
+/// the mathematical definition with no vDSP involvement. Used below as an
+/// independent oracle: every other 2D test in this file checks one vDSP
+/// routine against another vDSP routine, which cannot catch an error the
+/// whole family shares.
+fn refDft2d(
+    in_re: []const f32,
+    in_im: []const f32,
+    out_re: []f32,
+    out_im: []f32,
+    n0: usize,
+    n1: usize,
+    direction: Direction,
+) void {
+    // vDSP's Direction: .forward => e^(-2*pi*i*...), .inverse => e^(+2*pi*i*...).
+    const sign: f32 = if (direction == .forward) -1.0 else 1.0;
+    for (0..n0) |k0| {
+        for (0..n1) |k1| {
+            var acc_re: f32 = 0;
+            var acc_im: f32 = 0;
+            for (0..n0) |j0| {
+                for (0..n1) |j1| {
+                    const phase = sign * 2.0 * std.math.pi *
+                        (@as(f32, @floatFromInt(j0 * k0)) / @as(f32, @floatFromInt(n0)) +
+                            @as(f32, @floatFromInt(j1 * k1)) / @as(f32, @floatFromInt(n1)));
+                    const cr = @cos(phase);
+                    const ci = @sin(phase);
+                    const vr = in_re[j0 * n1 + j1];
+                    const vi = in_im[j0 * n1 + j1];
+                    acc_re += vr * cr - vi * ci;
+                    acc_im += vr * ci + vi * cr;
+                }
+            }
+            out_re[k0 * n1 + k1] = acc_re;
+            out_im[k0 * n1 + k1] = acc_im;
+        }
+    }
+}
+
+test "zop2d matches an independent naive 2D DFT (not just another vDSP routine)" {
+    // The existing 2D coverage cross-checks vDSP against vDSP (zop2d vs
+    // zip2d, zipt2d vs zip2d, and a separable zip()-based reference). All of
+    // those share vDSP's own conventions, so a systematic error in the family
+    // would pass every one. This compares against a closed-form DFT computed
+    // from the definition, in plain Zig, at a deliberately non-square size.
+    const log2n0: Length = 2; // N0 = 4 (the strided dimension)
+    const log2n1: Length = 3; // N1 = 8 (the contiguous dimension)
+    const n0: usize = 4;
+    const n1: usize = 8;
+    const total = n0 * n1;
+    const ic0: Stride = @intCast(n1);
+
+    var in_re: [total]f32 = undefined;
+    var in_im: [total]f32 = undefined;
+    // Asymmetric, non-separable input so a transposed or single-axis bug
+    // cannot produce a coincidentally-correct spectrum.
+    for (0..n0) |y| {
+        for (0..n1) |x| {
+            const fy: f32 = @floatFromInt(y);
+            const fx: f32 = @floatFromInt(x);
+            in_re[y * n1 + x] = fx * 1.5 - fy * 0.25 + fx * fy * 0.125;
+            in_im[y * n1 + x] = fy * 0.75 - fx * 0.5;
+        }
+    }
+
+    var got_re = in_re;
+    var got_im = in_im;
+    var out_re: [total]f32 = undefined;
+    var out_im: [total]f32 = undefined;
+
+    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    defer fft.deinit();
+    const input = SS(f32).init(&got_re, &got_im);
+    const output = SS(f32).init(&out_re, &out_im);
+    fft.zop2d(input, ic0, output, ic0, log2n0, log2n1, .forward);
+
+    var want_re: [total]f32 = undefined;
+    var want_im: [total]f32 = undefined;
+    refDft2d(&in_re, &in_im, &want_re, &want_im, n0, n1, .forward);
+
+    for (0..total) |i| {
+        try std.testing.expectApproxEqAbs(want_re[i], out_re[i], 0.02);
+        try std.testing.expectApproxEqAbs(want_im[i], out_im[i], 0.02);
+    }
+}
+
+test "zrip2d DC/Nyquist packing: which output slot each basis image lands in" {
+    // vDSP.h's own pseudocode for the 2D real transform's packing is
+    // internally inconsistent (it gives identical formulas for two different
+    // array positions) and the header itself calls the format "awkward ...
+    // due to a legacy implementation". Rather than hand-derive a closed form
+    // from documentation that contradicts itself, this pins the layout the
+    // way the rest of this audit resolved undocumented behavior: drive the
+    // real function with basis images whose spectra have exactly one nonzero
+    // coefficient, and record which slot receives it.
+    //
+    // Observed on this platform (N0 = 4 rows, N1 = 8 cols, forward):
+    //
+    //   input image                    -> slot holding the energy
+    //   -------------------------------   -----------------------
+    //   DC (all ones)                     realp[row 0][col 0]
+    //   Nyquist along x (cols)            realp[row 0][col 1]
+    //   Nyquist along y (rows)            imagp[row 0][col 0]
+    //   Nyquist along both                imagp[row 0][col 1]
+    //   cos(2*pi*x/N1)  (kx = 1)          realp[row 0][col 2]
+    //   cos(2*pi*y/N0)  (ky = 1)          realp[row 1][col 0]
+    //
+    // So the y (row) dimension folds DC and Nyquist into row 0's real and
+    // imaginary parts respectively - exactly the 1D zrip convention - while
+    // the x (column) dimension puts DC at col 0 and Nyquist at col 1, with
+    // the remaining bins starting at col 2. That col-0/col-1 adjacency is
+    // the "awkward" part, and it is NOT what a naive reading of the header
+    // would predict (col N1/2 for Nyquist).
+    //
+    // These are characterization expectations: if a future macOS changes the
+    // layout, this test failing is the intended signal, not a regression in
+    // this binding.
+    const log2n0: Length = 2;
+    const log2n1: Length = 3;
+    const n0: usize = 4;
+    const n1: usize = 8;
+    const half_n0 = n0 / 2;
+    const total = half_n0 * n1;
+    const ic0: Stride = @intCast(n1);
+
+    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    defer fft.deinit();
+
+    const Case = struct {
+        name: []const u8,
+        // Which of realp/imagp, which row, which col, and the expected value.
+        in_imag: bool,
+        row: usize,
+        col: usize,
+        value: f32,
+        gen: *const fn (y: usize, x: usize) f32,
+    };
+    const gens = struct {
+        fn dc(_: usize, _: usize) f32 {
+            return 1.0;
+        }
+        fn nyqX(_: usize, x: usize) f32 {
+            return if (x % 2 == 0) 1.0 else -1.0;
+        }
+        fn nyqY(y: usize, _: usize) f32 {
+            return if (y % 2 == 0) 1.0 else -1.0;
+        }
+        fn nyqBoth(y: usize, x: usize) f32 {
+            return if ((x + y) % 2 == 0) 1.0 else -1.0;
+        }
+        fn cosX(_: usize, x: usize) f32 {
+            return @cos(2.0 * std.math.pi * @as(f32, @floatFromInt(x)) / 8.0);
+        }
+        fn cosY(y: usize, _: usize) f32 {
+            return @cos(2.0 * std.math.pi * @as(f32, @floatFromInt(y)) / 4.0);
+        }
+    };
+    // Forward scale is 2 (vDSP.h's documented real-to-complex convention), so
+    // a self-conjugate bin (DC, Nyquist) gets 2*N0*N1 = 64 and an ordinary
+    // cosine splits between +k and -k for 2*(N0*N1/2) = 32.
+    const cases = [_]Case{
+        .{ .name = "DC", .in_imag = false, .row = 0, .col = 0, .value = 64.0, .gen = gens.dc },
+        .{ .name = "Nyquist x", .in_imag = false, .row = 0, .col = 1, .value = 64.0, .gen = gens.nyqX },
+        .{ .name = "Nyquist y", .in_imag = true, .row = 0, .col = 0, .value = 64.0, .gen = gens.nyqY },
+        .{ .name = "Nyquist xy", .in_imag = true, .row = 0, .col = 1, .value = 64.0, .gen = gens.nyqBoth },
+        .{ .name = "cos kx=1", .in_imag = false, .row = 0, .col = 2, .value = 32.0, .gen = gens.cosX },
+        .{ .name = "cos ky=1", .in_imag = false, .row = 1, .col = 0, .value = 32.0, .gen = gens.cosY },
+    };
+
+    for (cases) |case| {
+        var re = [_]f32{0} ** total;
+        var im = [_]f32{0} ** total;
+        // Real 2D input packing (same as 1D zrip): even rows -> realp,
+        // odd rows -> imagp.
+        for (0..half_n0) |r| {
+            for (0..n1) |cc| {
+                re[r * n1 + cc] = case.gen(2 * r, cc);
+                im[r * n1 + cc] = case.gen(2 * r + 1, cc);
+            }
+        }
+        const io = SS(f32).init(&re, &im);
+        fft.zrip2d(io, ic0, log2n0, log2n1, .forward);
+
+        const target = case.row * n1 + case.col;
+        const buf: []const f32 = if (case.in_imag) &im else &re;
+        std.testing.expectApproxEqAbs(case.value, buf[target], 0.05) catch |e| {
+            std.debug.print("case '{s}': wrong value in the expected slot\n", .{case.name});
+            return e;
+        };
+        // Every other slot must be (numerically) zero - this is what makes
+        // the test a packing check and not just a magnitude check.
+        for (0..total) |i| {
+            const in_re_slot = !case.in_imag and i == target;
+            const in_im_slot = case.in_imag and i == target;
+            if (!in_re_slot) try std.testing.expectApproxEqAbs(@as(f32, 0.0), re[i], 0.05);
+            if (!in_im_slot) try std.testing.expectApproxEqAbs(@as(f32, 0.0), im[i], 0.05);
+        }
+    }
+}
+
+test "roundTripScale / realRoundTripScale match what the transforms actually do" {
+    // Guards the scaling helpers against the doc-comment drift that made the
+    // original 1/N claim survive in this file for so long: if a future macOS
+    // ever starts normalizing, these fail rather than silently misinforming.
+    const log2n: Length = 4; // N = 16
+    const n: usize = 16;
+    const fft = try FFT(f32).init(log2n, .radix2);
+    defer fft.deinit();
+
+    try std.testing.expectEqual(@as(f32, 16.0), fft.roundTripScale());
+    try std.testing.expectEqual(@as(f32, 2.0), fft.realForwardScale());
+    try std.testing.expectEqual(@as(f32, 32.0), fft.realRoundTripScale());
+
+    // Complex round trip: an impulse comes back scaled by roundTripScale().
+    {
+        var re = [_]f32{0} ** n;
+        var im = [_]f32{0} ** n;
+        re[3] = 1.0;
+        const io = SS(f32).init(&re, &im);
+        fft.zip(io, .forward);
+        fft.zip(io, .inverse);
+        try std.testing.expectApproxEqAbs(fft.roundTripScale(), re[3], 1e-3);
+        // Dividing by the helper's factor is what recovers the original.
+        try std.testing.expectApproxEqAbs(@as(f32, 1.0), re[3] / fft.roundTripScale(), 1e-4);
+    }
+
+    // Real round trip: scaled by realRoundTripScale() = 2*N, not N.
+    {
+        var re = [_]f32{0} ** (n / 2);
+        var im = [_]f32{0} ** (n / 2);
+        re[1] = 1.0;
+        const io = SS(f32).init(&re, &im);
+        fft.zrip(io, .forward);
+        fft.zrip(io, .inverse);
+        try std.testing.expectApproxEqAbs(fft.realRoundTripScale(), re[1], 1e-2);
     }
 }
