@@ -42,10 +42,12 @@
 //! - `reduce.zig` - the reductions to condensed form (`sytrd`, `gehrd`,
 //!   `gebrd`, `gbbrd`), the routines that build or apply their orthogonal
 //!   factors, and balancing.
+//! - `tridiag.zig` - the symmetric tridiagonal eigensolvers that run on what
+//!   `reduce.zig` produces: `sterf`, `steqr`, `pteqr`, `stedc`, `stemr` and the
+//!   `stebz`/`stein` bisection pair.
 //!
 //! Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants,
-//! RFP storage, the tridiagonal eigensolvers (`steqr`, `stedc`, `stemr`, ...),
-//! the expert eigenvalue drivers (`geevx`, `geesx`, `ggevx`, `ggesx`), the
+//! RFP storage, the expert eigenvalue drivers (`geevx`, `geesx`, `ggevx`, `ggesx`), the
 //! generalized Schur family (`gges`, `hgeqz`, `tgsen`, ...), the CS
 //! decomposition, the tall-skinny QR family, and the remaining SVD drivers
 //! (`gesvdx`, `gejsv`, `gesvdq`).
@@ -71,6 +73,7 @@ pub const util = @import("util.zig");
 pub const refine = @import("refine.zig");
 pub const expert = @import("expert.zig");
 pub const reduce = @import("reduce.zig");
+pub const tridiag = @import("tridiag.zig");
 
 pub const Int = types.Int;
 pub const Bool = types.Bool;
@@ -216,6 +219,18 @@ pub const gebak = reduce.gebak;
 pub const Window = reduce.Window;
 pub const QUpdate = reduce.QUpdate;
 pub const BidiagVect = reduce.BidiagVect;
+
+pub const sterf = tridiag.sterf;
+pub const steqr = tridiag.steqr;
+pub const pteqr = tridiag.pteqr;
+pub const stedc = tridiag.stedc;
+pub const stemr = tridiag.stemr;
+pub const stegr = tridiag.stegr;
+pub const stebz = tridiag.stebz;
+pub const stein = tridiag.stein;
+pub const Compz = tridiag.Compz;
+pub const EigenOrder = tridiag.EigenOrder;
+pub const BisectionResult = tridiag.BisectionResult;
 
 pub const lamch = util.lamch;
 pub const ilaenv = util.ilaenv;

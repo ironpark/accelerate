@@ -44,10 +44,16 @@
   `orghr`, `orgbr`) or apply (`ormtr`, `opmtr`, `ormhr`, `ormbr`) their
   orthogonal factors, and balancing (`gebal`, `gebak`).
 
+  `tridiag.zig` has the six symmetric tridiagonal eigensolvers that run on what
+  `reduce.zig` produces, with the module documentation laying out which to pick:
+  `sterf` (values only, cheapest), `steqr` (QL/QR, most robust), `stedc`
+  (divide and conquer), `stemr`/`stegr` (MRRR), `pteqr` (positive definite,
+  accurate small eigenvalues) and the `stebz`/`stein` bisection pair.
+
   Not yet wrapped: the `_aa`/`_rk`/`_rook`/`_2stage` variants, RFP storage, the
-  tridiagonal eigensolvers, the expert eigenvalue drivers, the generalized
-  Schur family, the CS decomposition, the tall-skinny QR family and the
-  remaining SVD drivers. What the wrappers add:
+  expert eigenvalue drivers, the generalized Schur family, the CS
+  decomposition, the tall-skinny QR family and the remaining SVD drivers. What
+  the wrappers add:
 
   - `info` becomes a typed error. It is tri-modal in LAPACK - negative is an
     illegal argument, positive is a routine-specific numerical condition - and

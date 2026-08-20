@@ -9,7 +9,7 @@ full, band, tridiagonal, packed and triangular-band — now has its condition
 estimator, equilibration, iterative refinement and expert driver.
 
 Outstanding: the `_aa`/`_rk`/`_rook`/`_2stage` factorization variants, RFP
-storage, the tridiagonal eigensolvers, the expert eigenvalue drivers, the generalized Schur
+storage, the expert eigenvalue drivers, the generalized Schur
 family, the CS decomposition, the tall-skinny QR family and the remaining SVD
 drivers.
 
@@ -571,7 +571,7 @@ prefix is two characters, not one — a naming trap for the generator.
 - [x] `hptrd` <sub>cz</sub>
 - [x] `opgtr` <sub>ds</sub>
 - [x] `opmtr` <sub>ds</sub>
-- [ ] `pteqr` <sub>cdsz</sub>
+- [x] `pteqr` <sub>cdsz</sub>
 - [ ] `sb2st_kernels` <sub>ds</sub>
 - [x] `sbev` <sub>ds</sub>
 - [ ] `sbev_2stage` <sub>ds</sub>
@@ -592,13 +592,13 @@ prefix is two characters, not one — a naming trap for the generator.
 - [ ] `spgvd` <sub>ds</sub>
 - [ ] `spgvx` <sub>ds</sub>
 - [x] `sptrd` <sub>ds</sub>
-- [ ] `stebz` <sub>ds</sub>
-- [ ] `stedc` <sub>cdsz</sub>
-- [ ] `stegr` <sub>cdsz</sub>
-- [ ] `stein` <sub>cdsz</sub>
-- [ ] `stemr` <sub>cdsz</sub>
-- [ ] `steqr` <sub>cdsz</sub>
-- [ ] `sterf` <sub>ds</sub>
+- [x] `stebz` <sub>ds</sub>
+- [x] `stedc` <sub>cdsz</sub>
+- [x] `stegr` <sub>cdsz</sub>
+- [x] `stein` <sub>cdsz</sub>
+- [x] `stemr` <sub>cdsz</sub>
+- [x] `steqr` <sub>cdsz</sub>
+- [x] `sterf` <sub>ds</sub>
 - [x] `stev` <sub>ds</sub>
 - [ ] `stevd` <sub>ds</sub>
 - [ ] `stevr` <sub>ds</sub>
