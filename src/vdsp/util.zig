@@ -59,6 +59,14 @@ pub fn vsort(comptime T: type, buf: []T, order: SortOrder) void {
 /// If Order is -1, I is sorted so that C[I[n]] decreases, for 0 <= n < N.
 ///
 /// Temporary is not used. NULL should be passed for it.
+///
+/// CAUTION (found by runtime testing, not documented in vDSP.h): `indices`
+/// must be initialized to the identity permutation (0, 1, ..., N-1) before
+/// calling this function. Passing an uninitialized or otherwise
+/// non-permutation `indices` array does not crash or produce wrong output -
+/// it makes vDSP_vsorti hang indefinitely. This is a dangerous failure mode
+/// (silent deadlock, not a catchable error), so seed `indices` yourself
+/// before every call.
 pub fn vsorti(comptime T: type, data: []const T, indices: []Length, order: SortOrder) void {
     switch (T) {
         f32 => c.vDSP_vsorti(data.ptr, indices.ptr, null, data.len, @intFromEnum(order)),
@@ -395,6 +403,7 @@ pub fn vtrapz(comptime T: type, a: []const T, step: T, out: []T) void {
 ///
 /// Note that A must contain N+P-1 elements.
 pub fn vswsum(comptime T: type, a: []const T, out: []T, window_len: Length) void {
+    std.debug.assert(a.len >= out.len + window_len - 1);
     switch (T) {
         f32 => c.vDSP_vswsum(a.ptr, 1, out.ptr, 1, out.len, window_len),
         f64 => c.vDSP_vswsumD(a.ptr, 1, out.ptr, 1, out.len, window_len),
@@ -410,17 +419,25 @@ pub fn vswsum(comptime T: type, a: []const T, out: []T, window_len: Length) void
 ///     for (n = 0; n < N; ++n)
 ///         C[n] = the greatest value of A[w] for n <= w < n+WindowLength.
 ///
-/// A must contain N+WindowLength-1 elements, and C must contain space for
-/// N+WindowLength-1 elements. Although only N outputs are provided in C,
-/// the additional elements may be used for intermediate computation.
+/// `n` is the number of meaningful sliding-window outputs. Both `a` and
+/// `out` must contain at least `n+window_len-1` elements: unlike vswsum,
+/// vDSP_vswmax uses the tail of `out` itself as scratch space beyond the
+/// first `n` outputs (vDSP.h:5705-5707), so passing `out.len` directly as N
+/// (as an earlier version of this wrapper did) let the C function write
+/// past the end of a correctly-`n`-sized caller buffer. `n` is now taken
+/// explicitly so callers size `out` to the caller-visible requirement, and
+/// asserts catch under-sized buffers instead of overflowing them.
 ///
 /// A and C may not overlap.
 ///
 /// WindowLength must be positive (zero is not supported).
-pub fn vswmax(comptime T: type, a: []const T, out: []T, window_len: Length) void {
+pub fn vswmax(comptime T: type, a: []const T, out: []T, n: Length, window_len: Length) void {
+    std.debug.assert(window_len > 0);
+    std.debug.assert(a.len >= n + window_len - 1);
+    std.debug.assert(out.len >= n + window_len - 1);
     switch (T) {
-        f32 => c.vDSP_vswmax(a.ptr, 1, out.ptr, 1, out.len, window_len),
-        f64 => c.vDSP_vswmaxD(a.ptr, 1, out.ptr, 1, out.len, window_len),
+        f32 => c.vDSP_vswmax(a.ptr, 1, out.ptr, 1, n, window_len),
+        f64 => c.vDSP_vswmaxD(a.ptr, 1, out.ptr, 1, n, window_len),
         else => @compileError("vswmax requires f32 or f64"),
     }
 }
