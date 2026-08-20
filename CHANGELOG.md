@@ -2,6 +2,76 @@
 
 ## Unreleased
 
+### Added
+
+- **`sparse` module - Apple's Sparse Solvers.** Direct sparse linear solvers:
+  Cholesky, `LDL^T` (four pivoting modes) and QR, over `f32` and `f64`, plus
+  sparse-times-dense multiplication and coordinate-to-block-CSC conversion.
+
+  The public C API could not be bound the way `vdsp`/`vforce`/`vimage` were.
+  Every entry point in `Sparse/Solve.h` is
+  `static inline __attribute__((overloadable))`, so there is no symbol to link
+  against, and `@cImport` cannot read the header at all - translate-c rejects
+  the second declaration of an overloaded name, and `SparseSolve` alone has 78.
+  The bindings target the underscore-prefixed implementation symbols that the
+  inline wrappers dispatch to (declared `extern` in the SDK's
+  `SolveImplementation*.h` under `API_AVAILABLE(macos(10.13), ...)`) and
+  re-implement the wrappers' validation in Zig. `docs/SPARSE-RESEARCH.md` has
+  the full reasoning, including the risk this carries.
+
+  Two places where the Zig API is deliberately not a transliteration:
+
+  - **A bad argument is an error, not process death.** With
+    `options.reportError == NULL` - the default - Sparse's parameter checks
+    call `_SparseTrap()`, i.e. `__builtin_trap()`. Arguments are validated in
+    Zig first, and a `reportError` callback is installed so anything Sparse
+    rejects internally surfaces as `SparseError` with its message available
+    from `lastErrorMessage()`.
+  - **The solve workspace comes from your allocator.** Apple's `SparseSolve`
+    mallocs and frees scratch on every call. The size is computable from
+    public fields, so `solve` takes a `std.mem.Allocator` and
+    `solveWithWorkspace` takes a buffer you can hoist out of a loop.
+    `refactor` works the same way.
+
+- **Iterative solvers** - conjugate gradient, GMRES (DQGMRES / GMRES / FGMRES)
+  and LSMR, over either a stored matrix or a **matrix-free operator**, with
+  built-in (diagonal, diagonal-scaling) or user-supplied preconditioners.
+
+  Every iterative entry point takes its operator as a `_Nonnull` Objective-C
+  block, and there is no block-free variant. Zig has no block syntax, so
+  `block.zig` reproduces libclosure's `Block_layout` directly - a block is a
+  struct with a documented layout, not magic - and the operator callback is
+  what it captures. This is also why the matrix-free form is the *natural* one
+  here: it is the shape the C API actually has, and the matrix-taking overloads
+  are wrappers around it.
+
+  Two behaviours worth knowing, both found by measurement rather than from the
+  header:
+
+  - Non-convergence is an outcome, not an error. `.max_iterations` comes back
+    as a status. Sparse *also* pushes "Exceeded maximum iteration limit."
+    through the `reportError` callback, so the binding decides on the returned
+    status rather than on whether a message arrived.
+  - `.fgmres` requires a preconditioner and is rejected without one.
+
+- **Subfactors** - `L`, `D`, `P`, `S`, `Q`, `R` extracted from a factorization
+  and applied individually, each holding its own reference so it may outlive
+  the factorization it came from.
+
+  `Solve.h` documents the `PLPS` round trip as "transpose solve followed by
+  non-transpose solve". **That is backwards.** For the symmetric 4x4 in the
+  test suite the header's order returns `{0.690, 2.035, 2.772, 4.198}` where
+  the answer is `{1, 2, 3, 4}`. The algebra agrees with the measurement: for
+  Cholesky `A = PLL'P'`, so `M = PLP'` gives `M M' = A`, and a full solve is
+  `M y = b` then `M' x = y`. Both orders are pinned by tests, so if a future
+  SDK ever makes the prose true, it fails loudly.
+
+- 109 tests covering the above, including struct-layout assertions against the
+  C headers for every ABI type. Those are not decoration: each one is passed to
+  or returned from Accelerate by value, so layout drift on a future SDK would
+  corrupt memory rather than fail to compile. The block literal's offsets are
+  asserted for the same reason - a wrong one is a wild jump, not a type error.
+
 ### Documented
 
 - **`FFTSetup`/`FFTSetupD` are immutable after creation and safe to share

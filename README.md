@@ -9,6 +9,7 @@ Zig bindings for Apple's [Accelerate framework](https://developer.apple.com/docu
 | `vdsp` | Digital signal processing — vector arithmetic, FFT/DFT/DCT, convolution, biquad filters, reductions, complex operations, type conversions |
 | `vimage` | Image processing — alpha compositing, format conversion, convolution, geometric transforms, histograms, morphology |
 | `vforce` | Vectorized math functions — exp, log, trig, hyperbolic, power, rounding, and more on large arrays |
+| `sparse` | Sparse solvers — direct (Cholesky, LDL^T, QR) and iterative (CG, GMRES, LSMR), subfactors, preconditioners |
 
 ## Installation
 
@@ -35,6 +36,7 @@ const accelerate = @import("accelerate");
 const vdsp = accelerate.vdsp;
 const vforce = accelerate.vforce;
 const vimage = accelerate.vimage;
+const sparse = accelerate.sparse;
 ```
 
 ### vDSP
@@ -92,6 +94,41 @@ vforce.tanh(f32, &x, &out);
 var src = vimage.types.vImage_Buffer{ ... };
 var dst = vimage.types.vImage_Buffer{ ... };
 try vimage.alpha.premultipliedAlphaBlend_ARGB8888(&src, &dst, &dst, .{});
+```
+
+### Sparse
+
+```zig
+// Lower triangle of a symmetric positive-definite matrix, in CSC.
+const starts = [_]c_long{ 0, 2, 4, 6, 7 };
+const rows   = [_]c_int{ 0, 1, 1, 2, 2, 3, 3 };
+const vals   = [_]f64{ 2, 1, 3, 1, 4, 1, 5 };
+const a = sparse.Sparse(f64).init(4, 4, &starts, &rows, &vals, .{
+    .attributes = .{ .kind = .symmetric, .triangle = .lower },
+});
+
+var f = try sparse.Factorization(f64).init(.cholesky, a, .{});
+defer f.deinit();
+
+var b = [_]f64{ 4, 10, 18, 23 };
+var x = [_]f64{ 0, 0, 0, 0 };
+try f.solve(allocator, &b, &x);
+// x = { 1, 2, 3, 4 }
+
+// Same pattern, new values: reuses the ordering and symbolic analysis.
+try f.refactor(allocator, a2, .{});
+
+// Iterative, for when a factorization is too big to store.
+const status = try sparse.Iterative(f64).conjugateGradient(
+    a, sparse.Dense(f64).fromSlice(&b), sparse.Dense(f64).fromSlice(&x),
+    .{ .rtol = 1e-12 }, null,
+);
+
+// ...or matrix-free, with A never stored at all.
+_ = try sparse.Iterative(f64).conjugateGradientOperator(
+    *Grid, &grid, applyStencil,
+    sparse.Dense(f64).fromSlice(&b), sparse.Dense(f64).fromSlice(&x), .{}, null,
+);
 ```
 
 ## API Overview
@@ -157,6 +194,31 @@ try vimage.alpha.premultipliedAlphaBlend_ARGB8888(&src, &dst, &dst, .{});
 **Morphology:** dilate, erode, min, max
 
 **Transform:** gamma correction, lookup tables, multidimensional interpolation
+
+### sparse
+
+**Matrix types:** `Sparse(T)` (block CSC, borrowed or built from coordinate
+form via `fromCoordinate`), `Dense(T)` (column-major, one or many right-hand
+sides)
+
+**Factorizations:** `.cholesky`, `.ldlt`, `.ldlt_unpivoted`, `.ldlt_sbk`,
+`.ldlt_tpp`, `.qr`, `.cholesky_at_a`
+
+**Solving:** `solve`, `solveInPlace`, `solveMatrix`, `solveMatrixInPlace`,
+`solveWithWorkspace`, `workspaceSize`
+
+**Iterative:** `conjugateGradient`, `gmres` (DQGMRES/GMRES/FGMRES), `lsmr`,
+each with a matrix-free `...Operator` variant; `Preconditioner` (built-in
+diagonal/diagonal-scaling, or user-supplied)
+
+**Subfactors:** `Subfactor` — extract and apply `L`, `D`, `P`, `S`, `Q`, `R`
+individually
+
+**Other:** `multiply` (sparse x dense, with optional accumulate and scale),
+`refactor` / `refactorWithWorkspace`, `inertia`, `retain`
+
+Supports `f32` and `f64`. See `docs/SPARSE-RESEARCH.md` for how these bind to a
+C API that exports no symbols for its public functions.
 
 ## Requirements
 
