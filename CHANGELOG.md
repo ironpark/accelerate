@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **`LICENSE` was not shipped with the package.** `build.zig.zon`'s `.paths`
+  listed only `build.zig`, `build.zig.zon` and `src`, so a consumer running
+  `zig fetch` got the code without its licence. `README.md`, `CHANGELOG.md` and
+  `docs/` were missing for the same reason and are now included too. Affects
+  every release up to and including 0.2.0.
+
 ## 0.2.0
 
 Accelerate, bound in full.
