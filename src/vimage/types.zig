@@ -134,12 +134,18 @@ pub const GammaFunction = ?*opaque {};
 /// Handle to a multidimensional interpolated lookup table.
 pub const vImage_MultidimensionalTable = ?*opaque {};
 
+/// A vImage pixel-format converter (CFType-bridged). Named rather than an
+/// anonymous `opaque {}` so that wrappers can spell the non-optional
+/// `*vImageConverter` for an object that is known to exist.
+pub const vImageConverter = opaque {};
 /// Handle to a vImage pixel-format converter (CFType-bridged).
-pub const vImageConverterRef = ?*opaque {};
+pub const vImageConverterRef = ?*vImageConverter;
 
+/// A CoreVideo image format description.
+pub const vImageCVImageFormat = opaque {};
 /// Handle to a CoreVideo image format description.
-pub const vImageCVImageFormatRef = ?*opaque {};
-pub const vImageConstCVImageFormatRef = ?*const opaque {};
+pub const vImageCVImageFormatRef = ?*vImageCVImageFormat;
+pub const vImageConstCVImageFormatRef = ?*const vImageCVImageFormat;
 
 // ============================================================================
 // YpCbCr types
@@ -374,6 +380,17 @@ pub const Error = struct {
     pub const kvImageInvalidCVImageFormat: vImage_Error = -21782;
     pub const kvImageUnsupportedConversion: vImage_Error = -21783;
     pub const kvImageCoreVideoIsAbsent: vImage_Error = -21784;
+
+    // -- vImageCVImageFormatError (vImage_CVUtilities.h) --
+    //
+    // A separate, non-contiguous block of codes, returned only by the
+    // `vImageCVImageFormat_*` setters when the format already has a value for
+    // that property that the new one contradicts.
+    pub const kvImageCVImageFormat_ConversionMatrix: vImage_Error = -21600;
+    pub const kvImageCVImageFormat_ChromaSiting: vImage_Error = -21601;
+    pub const kvImageCVImageFormat_ColorSpace: vImage_Error = -21602;
+    pub const kvImageCVImageFormat_VideoChannelDescription: vImage_Error = -21603;
+    pub const kvImageCVImageFormat_AlphaIsOneHint: vImage_Error = -21604;
 };
 
 // ============================================================================
@@ -406,6 +423,16 @@ pub const VImageError = error{
     InvalidCVImageFormat,
     UnsupportedConversion,
     CoreVideoIsAbsent,
+    /// The format's conversion matrix conflicts with the requested change.
+    CVImageFormatConversionMatrix,
+    /// The format's chroma siting conflicts with the requested change.
+    CVImageFormatChromaSiting,
+    /// The format's colour space conflicts with the requested change.
+    CVImageFormatColorSpace,
+    /// The format's channel description conflicts with the requested change.
+    CVImageFormatVideoChannelDescription,
+    /// The format's alpha-is-one hint conflicts with the requested change.
+    CVImageFormatAlphaIsOneHint,
     /// A negative code vImage returned that is not in the documented set.
     Unknown,
 };
@@ -443,6 +470,11 @@ pub fn check(e: vImage_Error) VImageError!usize {
         Error.kvImageInvalidCVImageFormat => VImageError.InvalidCVImageFormat,
         Error.kvImageUnsupportedConversion => VImageError.UnsupportedConversion,
         Error.kvImageCoreVideoIsAbsent => VImageError.CoreVideoIsAbsent,
+        Error.kvImageCVImageFormat_ConversionMatrix => VImageError.CVImageFormatConversionMatrix,
+        Error.kvImageCVImageFormat_ChromaSiting => VImageError.CVImageFormatChromaSiting,
+        Error.kvImageCVImageFormat_ColorSpace => VImageError.CVImageFormatColorSpace,
+        Error.kvImageCVImageFormat_VideoChannelDescription => VImageError.CVImageFormatVideoChannelDescription,
+        Error.kvImageCVImageFormat_AlphaIsOneHint => VImageError.CVImageFormatAlphaIsOneHint,
         else => VImageError.Unknown,
     };
 }
@@ -456,6 +488,10 @@ test "check maps negative codes to errors and treats >= 0 as success" {
     try std.testing.expectError(VImageError.BufferSizeMismatch, check(-21774));
     try std.testing.expectError(VImageError.NullPointerArgument, check(-21772));
     try std.testing.expectError(VImageError.Unknown, check(-1));
+    // The vImageCVImageFormatError block lives well away from the main run of
+    // codes, so a range-based mapping would have missed it entirely.
+    try std.testing.expectError(VImageError.CVImageFormatColorSpace, check(-21602));
+    try std.testing.expectError(VImageError.CVImageFormatAlphaIsOneHint, check(-21604));
 }
 
 test "a real vImage failure surfaces as a Zig error, not a dropped return value" {

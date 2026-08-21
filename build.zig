@@ -28,11 +28,31 @@ pub fn build(b: *std.Build) void {
     // to our consumers. We must give it a name because a Zig package can expose
     // multiple modules and consumers will need to be able to specify which
     // module they want to access.
+    // The CoreGraphics-facing half of vImage — `vImage_Utilities.h` and
+    // `vImage_CVUtilities.h`, plus the `accelerate.cg` and `accelerate.cv`
+    // support modules — is opt-in, because binding it means linking
+    // CoreGraphics, CoreVideo and CoreFoundation into every consumer whether
+    // they touch a CGImage or not. Off by default; a dependent turns it on
+    // through the dependency call:
+    //
+    //     const accelerate = b.dependency("accelerate", .{
+    //         .target = target,
+    //         .optimize = optimize,
+    //         .coregraphics = true,
+    //     });
+    const coregraphics = b.option(
+        bool,
+        "coregraphics",
+        "Bind the vImage entry points that interoperate with CGImage and CVPixelBuffer. Links CoreGraphics, CoreVideo and CoreFoundation. (default: false)",
+    ) orelse false;
+
     const mod = b.addModule("accelerate", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
     });
     mod.linkFramework("Accelerate", .{});
+    mod.addOptions("build_options", buildOptions(b, coregraphics));
+    if (coregraphics) linkCoreGraphics(mod);
 
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
@@ -135,6 +155,24 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
 
+    // `mod` above is built with whatever -Dcoregraphics the user passed, so
+    // by default its tests skip the CoreGraphics-gated modules entirely. Add
+    // a second, private copy with the option forced on so `zig build test`
+    // covers that code either way. Skipped when the option is already on,
+    // where it would just be the same tests twice.
+    if (!coregraphics) {
+        const cg_mod = b.createModule(.{
+            .root_source_file = b.path("src/root.zig"),
+            .target = target,
+        });
+        cg_mod.linkFramework("Accelerate", .{});
+        cg_mod.addOptions("build_options", buildOptions(b, true));
+        linkCoreGraphics(cg_mod);
+
+        const cg_tests = b.addTest(.{ .root_module = cg_mod });
+        test_step.dependOn(&b.addRunArtifact(cg_tests).step);
+    }
+
     // Just like flags, top level steps are also listed in the `--help` menu.
     //
     // The Zig build system is entirely implemented in userland, which means
@@ -146,4 +184,22 @@ pub fn build(b: *std.Build) void {
     //
     // Lastly, the Zig build system is relatively simple and self-contained,
     // and reading its source code will allow you to master it.
+}
+
+/// The `build_options` module the package's source imports, so that
+/// `src/vimage/root.zig` can decide at compile time whether the
+/// CoreGraphics-gated namespaces exist.
+fn buildOptions(b: *std.Build, coregraphics: bool) *std.Build.Step.Options {
+    const options = b.addOptions();
+    options.addOption(bool, "coregraphics", coregraphics);
+    return options;
+}
+
+/// CoreFoundation is listed explicitly rather than relied on to come in
+/// through CoreGraphics: `CFRetain`, `CFRelease` and `CFEqual` are called
+/// directly by `src/cg/root.zig`.
+fn linkCoreGraphics(mod: *std.Build.Module) void {
+    mod.linkFramework("CoreGraphics", .{});
+    mod.linkFramework("CoreVideo", .{});
+    mod.linkFramework("CoreFoundation", .{});
 }

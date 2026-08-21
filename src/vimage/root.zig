@@ -1,3 +1,5 @@
+const build_options = @import("build_options");
+
 pub const types = @import("types.zig");
 
 // -- Core types --
@@ -44,6 +46,29 @@ pub const geometry = @import("geometry.zig");
 pub const histogram = @import("histogram.zig");
 pub const morphology = @import("morphology.zig");
 pub const transform = @import("transform.zig");
+
+// -- CoreGraphics / CoreVideo modules (opt-in) --
+//
+// Present only when the package is built with `-Dcoregraphics=true`.
+// Otherwise each name resolves to `disabled_module`, whose only declaration
+// is `enabled = false` — so `@hasDecl` and a check on `.enabled` both work,
+// and referencing anything else is a compile error naming the missing
+// declaration.
+
+/// `vImage_Utilities.h` — CGImage interoperation and `vImageConvert_AnyToAny`.
+pub const utilities = if (build_options.coregraphics) @import("utilities.zig") else disabled_module;
+/// `vImage_CVUtilities.h` — CVPixelBuffer interoperation.
+pub const cv = if (build_options.coregraphics) @import("cv.zig") else disabled_module;
+/// The vImage types that mention a CoreGraphics or CoreVideo type.
+pub const cg_types = if (build_options.coregraphics) @import("cg_types.zig") else disabled_module;
+
+/// Stands in for the CoreGraphics-gated namespaces when the option is off, so
+/// that `vimage.utilities.enabled` is answerable either way instead of being
+/// a "no member named 'utilities'" error that says nothing about the cause.
+const disabled_module = struct {
+    /// Rebuild with `-Dcoregraphics=true` to make these namespaces real.
+    pub const enabled = false;
+};
 
 test {
     const std = @import("std");

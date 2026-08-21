@@ -1,6 +1,70 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
+
+Accelerate, bound in full — the CoreGraphics half included.
+
+0.2.0 left `vImage_Utilities.h` and `vImage_CVUtilities.h` out on a scope
+question about depending on CoreGraphics and CoreVideo. This release answers
+it and binds all 45, so every non-excluded symbol in `Accelerate.framework` is
+now bound. The dependency is opt-in.
+
+The test suite went from 1246 to 2536 tests across both build configurations,
+passing in all four optimize modes.
+
+### Added
+
+- **`vImage_Utilities.h` and `vImage_CVUtilities.h` — the last 45 entry
+  points.** With these, every non-excluded symbol in `Accelerate.framework` is
+  bound. The headline is `vImageConvert_AnyToAny`, wrapped as
+  `vimage.utilities.Converter`: one compiled object converts between any two
+  formats vImage can describe, colour-space changes and CG-to-CV format pairs
+  included.
+
+  - `vimage.utilities` — `CGImageFormat`, `Converter`,
+    `createCGImageFromBuffer`, `bufferInitWithCGImage`, `bufferInit`,
+    `bufferLayout`, `bufferSize`, `componentCount`, `formatsEqual`.
+  - `vimage.cv` — `CVImageFormat`, the `CVPixelBuffer` bridges,
+    `converterForCGToCVImageFormat` / `converterForCVToCGImageFormat`,
+    `createRGBColorSpace` / `createMonochromeColorSpace`.
+  - `accelerate.cg` — the slice of CoreFoundation and CoreGraphics these need:
+    `ColorSpace`, `Image`, `ColorConversionInfo`, and `CGBitmapInfo` as a
+    `packed struct(u32)` rather than an integer to hand-OR.
+  - `accelerate.cv` — `PixelBuffer` (creation, locking, plane access) and the
+    `kCVPixelFormatType_*` codes.
+
+- **`-Dcoregraphics` build option**, default `false`. The four namespaces above
+  exist only when it is on, because binding them means linking CoreGraphics,
+  CoreVideo and CoreFoundation into every consumer. Dependents set it in the
+  `b.dependency` call: `.coregraphics = true`. With it off, each namespace
+  resolves to a placeholder whose only declaration is `enabled = false`, so a
+  program can branch on the feature and one that uses it anyway gets a compile
+  error naming what it wanted. `zig build test` builds the package both ways.
+
+- **CoreFoundation ownership is encoded in the types.** `*CGImage`,
+  `*CGColorSpace` and `*CVPixelBuffer` are borrowed pointers with no `deinit`;
+  `cg.Image`, `cg.ColorSpace`, `cv.PixelBuffer`, `utilities.Converter` and
+  `cv.CVImageFormat` are owned +1 references that must be released.
+  Constructors return the owned form, getters the borrowed one, and
+  `.borrow(ptr)` / `.adopt(ptr)` convert. The Create Rule is invisible in C,
+  where both are the same `CGImageRef`.
+
+- **Ten more rows in `docs/COVERAGE.md`'s "Behaviour that contradicts the
+  headers" table**, each pinned by a test. Among them:
+  `vImageCreateCGImageFromBuffer` rewrites an alpha-first format to alpha-last
+  and converts the pixels to match; `vImageBuffer_InitForCopyToCVPixelBuffer`
+  describes a subsampled chroma plane in the *luma* geometry, four times what
+  `CVPixelBufferGetWidthOfPlane` reports; `vImageCGImageFormat_IsEqual` says
+  two NULLs are unequal.
+
+- `vImage_Error` now maps the `vImageCVImageFormatError` block
+  (-21600..-21604) onto its own Zig errors. Those codes sit well away from the
+  main run, so they previously fell through to `Unknown`.
+
+- `README.md` gains a "What this package does not bind" section: the five
+  deliberately excluded headers, why Zig's `@Vector` and arbitrary-width
+  integers make four of them unnecessary, and why `LinearAlgebra` is excluded
+  while the equally deprecated BNNS filter API is not.
 
 ### Fixed
 
