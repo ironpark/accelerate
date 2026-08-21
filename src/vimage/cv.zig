@@ -29,11 +29,12 @@ const utilities = @import("utilities.zig");
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Flags = types.vImage_Flags;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImageCVImageFormat = types.vImageCVImageFormat;
 const vImageConverter = types.vImageConverter;
 const ARGBToYpCbCrMatrix = types.vImage_ARGBToYpCbCrMatrix;
+const Options = types.Options;
 
 const CGFloat = cg.CGFloat;
 const CVPixelBuffer = cv.CVPixelBuffer;
@@ -88,9 +89,9 @@ pub const CVImageFormat = struct {
     /// only what the buffer actually knows about itself — for a buffer with
     /// no colour attachments, expect `colorSpace()` to be null and to have to
     /// set it before building a converter.
-    pub fn createWithCVPixelBuffer(buffer: *CVPixelBuffer) VImageError!CVImageFormat {
+    pub fn initWithCVPixelBuffer(buffer: *CVPixelBuffer) Error!CVImageFormat {
         const ref = c.vImageCVImageFormat_CreateWithCVPixelBuffer(buffer) orelse
-            return VImageError.InvalidCVImageFormat;
+            return Error.InvalidCVImageFormat;
         return adopt(ref);
     }
 
@@ -104,27 +105,27 @@ pub const CVImageFormat = struct {
     ///
     /// `alpha_is_one` asserts that the format has an alpha channel whose
     /// every value is opaque, which lets vImage skip the alpha work entirely.
-    pub fn create(
+    pub fn init(
         format_type: u32,
         matrix: ?*const ARGBToYpCbCrMatrix,
         chroma_location: cg.CFStringRef,
         base_colorspace: ?*cg.CGColorSpace,
         alpha_is_one: bool,
-    ) VImageError!CVImageFormat {
+    ) Error!CVImageFormat {
         const ref = c.vImageCVImageFormat_Create(
             format_type,
             matrix,
             chroma_location,
             base_colorspace,
             @intFromBool(alpha_is_one),
-        ) orelse return VImageError.InvalidCVImageFormat;
+        ) orelse return Error.InvalidCVImageFormat;
         return adopt(ref);
     }
 
     /// An independent copy that can be mutated without disturbing the
     /// original. `vImageCVImageFormat_Copy`.
-    pub fn copy(self: CVImageFormat) VImageError!CVImageFormat {
-        const ref = c.vImageCVImageFormat_Copy(self.ref) orelse return VImageError.MemoryAllocationError;
+    pub fn copy(self: CVImageFormat) Error!CVImageFormat {
+        const ref = c.vImageCVImageFormat_Copy(self.ref) orelse return Error.MemoryAllocationError;
         return adopt(ref);
     }
 
@@ -134,7 +135,7 @@ pub const CVImageFormat = struct {
     }
 
     /// `vImageCVImageFormat_Release`.
-    pub fn deinit(self: CVImageFormat) void {
+    pub fn deinit(self: *CVImageFormat) void {
         c.vImageCVImageFormat_Release(self.ref);
     }
 
@@ -177,7 +178,7 @@ pub const CVImageFormat = struct {
     ///
     /// Fails with `CVImageFormatColorSpace` if the format already has a
     /// colour space that this one contradicts.
-    pub fn setColorSpace(self: CVImageFormat, space: ?*cg.CGColorSpace) VImageError!void {
+    pub fn setColorSpace(self: CVImageFormat, space: ?*cg.CGColorSpace) Error!void {
         _ = try check(c.vImageCVImageFormat_SetColorSpace(self.ref, space));
     }
 
@@ -189,7 +190,7 @@ pub const CVImageFormat = struct {
     }
 
     /// `vImageCVImageFormat_SetChromaSiting`. See `cv.ChromaLocation`.
-    pub fn setChromaSiting(self: CVImageFormat, siting: cg.CFStringRef) VImageError!void {
+    pub fn setChromaSiting(self: CVImageFormat, siting: cg.CFStringRef) Error!void {
         _ = try check(c.vImageCVImageFormat_SetChromaSiting(self.ref, siting));
     }
 
@@ -213,7 +214,7 @@ pub const CVImageFormat = struct {
 
     /// `vImageCVImageFormat_CopyConversionMatrix`. The matrix is copied into
     /// the format, so the argument need not outlive the call.
-    pub fn setConversionMatrix(self: CVImageFormat, matrix: ConversionMatrix) VImageError!void {
+    pub fn setConversionMatrix(self: CVImageFormat, matrix: ConversionMatrix) Error!void {
         switch (matrix) {
             .none => {},
             .argb_to_ypcbcr => |m| _ = try check(c.vImageCVImageFormat_CopyConversionMatrix(self.ref, m, .argb_to_ypcbcr)),
@@ -238,7 +239,7 @@ pub const CVImageFormat = struct {
     }
 
     /// `vImageCVImageFormat_SetAlphaHint`.
-    pub fn setAlphaHint(self: CVImageFormat, alpha_is_one: bool) VImageError!void {
+    pub fn setAlphaHint(self: CVImageFormat, alpha_is_one: bool) Error!void {
         _ = try check(c.vImageCVImageFormat_SetAlphaHint(self.ref, @intFromBool(alpha_is_one)));
     }
 
@@ -250,7 +251,7 @@ pub const CVImageFormat = struct {
     }
 
     /// `vImageCVImageFormat_CopyChannelDescription`. Copied into the format.
-    pub fn setChannelDescription(self: CVImageFormat, channel: BufferTypeCode, desc: *const ChannelDescription) VImageError!void {
+    pub fn setChannelDescription(self: CVImageFormat, channel: BufferTypeCode, desc: *const ChannelDescription) Error!void {
         _ = try check(c.vImageCVImageFormat_CopyChannelDescription(self.ref, desc, channel));
     }
 
@@ -268,7 +269,7 @@ pub const CVImageFormat = struct {
         self: CVImageFormat,
         data: ?*anyopaque,
         release_callback: ?*const fn (fmt: ?*vImageCVImageFormat, data: ?*anyopaque) callconv(.c) void,
-    ) VImageError!void {
+    ) Error!void {
         _ = try check(c.vImageCVImageFormat_SetUserData(self.ref, data, release_callback));
     }
 };
@@ -293,11 +294,11 @@ pub fn bufferInitWithCVPixelBuffer(
     pixel_buffer: *CVPixelBuffer,
     cv_format: ?CVImageFormat,
     background_color: ?[]const CGFloat,
-    flags: vImage_Flags,
-) VImageError!void {
+    flags: Options,
+) Error!void {
     const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
     const fmt: ?*vImageCVImageFormat = if (cv_format) |f| f.ref else null;
-    _ = try check(c.vImageBuffer_InitWithCVPixelBuffer(buf, desired_format, pixel_buffer, fmt, bg, flags));
+    _ = try check(c.vImageBuffer_InitWithCVPixelBuffer(buf, desired_format, pixel_buffer, fmt, bg, flags.bits()));
 }
 
 /// Encode a `vImage_Buffer` into an existing `CVPixelBuffer`.
@@ -310,11 +311,11 @@ pub fn bufferCopyToCVPixelBuffer(
     pixel_buffer: *CVPixelBuffer,
     cv_format: ?CVImageFormat,
     background_color: ?[]const CGFloat,
-    flags: vImage_Flags,
-) VImageError!void {
+    flags: Options,
+) Error!void {
     const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
     const fmt: ?*vImageCVImageFormat = if (cv_format) |f| f.ref else null;
-    _ = try check(c.vImageBuffer_CopyToCVPixelBuffer(buf, buffer_format, pixel_buffer, fmt, bg, flags));
+    _ = try check(c.vImageBuffer_CopyToCVPixelBuffer(buf, buffer_format, pixel_buffer, fmt, bg, flags.bits()));
 }
 
 // ============================================================================
@@ -330,11 +331,11 @@ pub fn converterForCGToCVImageFormat(
     src_format: *const CGImageFormat,
     dest_format: CVImageFormat,
     background_color: ?[]const CGFloat,
-    flags: vImage_Flags,
-) VImageError!Converter {
+    flags: Options,
+) Error!Converter {
     var err: vImage_Error = 0;
     const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
-    const ref = c.vImageConverter_CreateForCGToCVImageFormat(src_format, dest_format.ref, bg, flags, &err);
+    const ref = c.vImageConverter_CreateForCGToCVImageFormat(src_format, dest_format.ref, bg, flags.bits(), &err);
     return finishConverter(ref, err);
 }
 
@@ -343,18 +344,18 @@ pub fn converterForCVToCGImageFormat(
     src_format: CVImageFormat,
     dest_format: *const CGImageFormat,
     background_color: ?[]const CGFloat,
-    flags: vImage_Flags,
-) VImageError!Converter {
+    flags: Options,
+) Error!Converter {
     var err: vImage_Error = 0;
     const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
-    const ref = c.vImageConverter_CreateForCVToCGImageFormat(src_format.ref, dest_format, bg, flags, &err);
+    const ref = c.vImageConverter_CreateForCVToCGImageFormat(src_format.ref, dest_format, bg, flags.bits(), &err);
     return finishConverter(ref, err);
 }
 
-fn finishConverter(ref: ?*vImageConverter, err: vImage_Error) VImageError!Converter {
+fn finishConverter(ref: ?*vImageConverter, err: vImage_Error) Error!Converter {
     if (ref) |r| return Converter.adopt(r);
     _ = try check(err);
-    return VImageError.Unknown;
+    return Error.Unknown;
 }
 
 /// Point an array of `vImage_Buffer`s at a locked pixel buffer's planes, ready
@@ -365,17 +366,18 @@ fn finishConverter(ref: ?*vImageConverter, err: vImage_Error) VImageError!Conver
 /// than one — this is the point of the function, since a YCbCr pixel buffer
 /// becomes two or three vImage buffers.
 ///
-/// Pass `kvImageNoAllocate` to alias the pixel buffer's own memory rather
+/// Set `.do_not_allocate` (`kvImageNoAllocate`) to alias the pixel buffer's
+/// own memory rather
 /// than allocate; the conversion then writes straight into it, and nothing
 /// needs freeing.
 pub fn bufferInitForCopyToCVPixelBuffer(
     buffers: []vImage_Buffer,
     converter: Converter,
     pixel_buffer: *CVPixelBuffer,
-    flags: vImage_Flags,
-) VImageError!void {
+    flags: Options,
+) Error!void {
     std.debug.assert(buffers.len == converter.destinationBufferCount());
-    _ = try check(c.vImageBuffer_InitForCopyToCVPixelBuffer(buffers.ptr, converter.ref, pixel_buffer, flags));
+    _ = try check(c.vImageBuffer_InitForCopyToCVPixelBuffer(buffers.ptr, converter.ref, pixel_buffer, flags.bits()));
 }
 
 /// The mirror image: prepare buffers to be the *source* of a conversion out
@@ -384,10 +386,10 @@ pub fn bufferInitForCopyFromCVPixelBuffer(
     buffers: []vImage_Buffer,
     converter: Converter,
     pixel_buffer: *CVPixelBuffer,
-    flags: vImage_Flags,
-) VImageError!void {
+    flags: Options,
+) Error!void {
     std.debug.assert(buffers.len == converter.sourceBufferCount());
-    _ = try check(c.vImageBuffer_InitForCopyFromCVPixelBuffer(buffers.ptr, converter.ref, pixel_buffer, flags));
+    _ = try check(c.vImageBuffer_InitForCopyFromCVPixelBuffer(buffers.ptr, converter.ref, pixel_buffer, flags.bits()));
 }
 
 // ============================================================================
@@ -403,13 +405,13 @@ pub fn createRGBColorSpace(
     primaries: *const RGBPrimaries,
     tf: *const TransferFunction,
     intent: cg.RenderingIntent,
-    flags: vImage_Flags,
-) VImageError!cg.ColorSpace {
+    flags: Options,
+) Error!cg.ColorSpace {
     var err: vImage_Error = 0;
-    const ref = c.vImageCreateRGBColorSpaceWithPrimariesAndTransferFunction(primaries, tf, intent, flags, &err);
+    const ref = c.vImageCreateRGBColorSpaceWithPrimariesAndTransferFunction(primaries, tf, intent, flags.bits(), &err);
     if (ref) |r| return cg.ColorSpace.adopt(r);
     _ = try check(err);
-    return VImageError.Unknown;
+    return Error.Unknown;
 }
 
 /// `vImageCreateMonochromeColorSpaceWithWhitePointAndTransferFunction`.
@@ -417,13 +419,13 @@ pub fn createMonochromeColorSpace(
     white_point: *const WhitePoint,
     tf: *const TransferFunction,
     intent: cg.RenderingIntent,
-    flags: vImage_Flags,
-) VImageError!cg.ColorSpace {
+    flags: Options,
+) Error!cg.ColorSpace {
     var err: vImage_Error = 0;
-    const ref = c.vImageCreateMonochromeColorSpaceWithWhitePointAndTransferFunction(white_point, tf, intent, flags, &err);
+    const ref = c.vImageCreateMonochromeColorSpaceWithWhitePointAndTransferFunction(white_point, tf, intent, flags.bits(), &err);
     if (ref) |r| return cg.ColorSpace.adopt(r);
     _ = try check(err);
-    return VImageError.Unknown;
+    return Error.Unknown;
 }
 
 // ============================================================================
@@ -434,10 +436,10 @@ const testing = std.testing;
 const conversion = @import("conversion.zig");
 
 test "a format created from a 32BGRA pixel buffer reports that format back" {
-    const pb = try cv.PixelBuffer.init(8, 8, .bgra32);
+    var pb = try cv.PixelBuffer.init(8, 8, .bgra32);
     defer pb.deinit();
 
-    const fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer fmt.deinit();
 
     try testing.expectEqual(cv.fourCC("BGRA"), fmt.formatCode());
@@ -455,10 +457,10 @@ test "a format created from a 32BGRA pixel buffer reports that format back" {
 }
 
 test "a 420v format is YCbCr, needs a matrix, and starts without a colour space" {
-    const pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
+    var pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
     defer pb.deinit();
 
-    const fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer fmt.deinit();
 
     try testing.expectEqual(cv.fourCC("420v"), fmt.formatCode());
@@ -471,19 +473,19 @@ test "a 420v format is YCbCr, needs a matrix, and starts without a colour space"
     // can be built.
     try testing.expect(fmt.colorSpace() == null);
 
-    const srgb = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+    var srgb = try cg.ColorSpace.initNamed(cg.ColorSpaceName.srgb());
     defer srgb.deinit();
     try fmt.setColorSpace(srgb.ref);
     try testing.expect(fmt.colorSpace() != null);
 }
 
 test "a YCbCr format built from scratch keeps the matrix it was given" {
-    const srgb = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+    var srgb = try cg.ColorSpace.initNamed(cg.ColorSpaceName.srgb());
     defer srgb.deinit();
 
     const argb_matrix = conversion.ycbcr.argbToYpCbCrMatrix601();
 
-    const fmt = try CVImageFormat.create(
+    var fmt = try CVImageFormat.init(
         cv.fourCC("420v"),
         argb_matrix,
         cv.ChromaLocation.center(),
@@ -510,9 +512,9 @@ test "a YCbCr format built from scratch keeps the matrix it was given" {
 }
 
 test "the alpha hint is zero-or-non-zero, and 'no alpha at all' counts as set" {
-    const pb = try cv.PixelBuffer.init(8, 8, .bgra32);
+    var pb = try cv.PixelBuffer.init(8, 8, .bgra32);
     defer pb.deinit();
-    const fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer fmt.deinit();
 
     // A format with an alpha channel and no promise about it reports 0.
@@ -524,18 +526,18 @@ test "the alpha hint is zero-or-non-zero, and 'no alpha at all' counts as set" {
     // A format with no alpha channel at all also reports non-zero — and the
     // specific value is 2, not 1. Treating the hint as a boolean-valued int
     // rather than as `!= 0` would get this wrong.
-    const pb2 = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
+    var pb2 = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
     defer pb2.deinit();
-    const fmt2 = try CVImageFormat.createWithCVPixelBuffer(pb2.ref);
+    var fmt2 = try CVImageFormat.initWithCVPixelBuffer(pb2.ref);
     defer fmt2.deinit();
     try testing.expectEqual(@as(c_int, 2), fmt2.alphaHint());
     try testing.expect(fmt2.alphaIsOne());
 }
 
 test "a 420v format describes its luma channel with a video range" {
-    const pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
+    var pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
     defer pb.deinit();
-    const fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer fmt.deinit();
 
     // "Video range" 8-bit luma is the classic 16..235 encoding; this is the
@@ -551,12 +553,12 @@ test "a 420v format describes its luma channel with a video range" {
 }
 
 test "copy produces a format that can be mutated independently" {
-    const pb = try cv.PixelBuffer.init(8, 8, .bgra32);
+    var pb = try cv.PixelBuffer.init(8, 8, .bgra32);
     defer pb.deinit();
-    const original = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var original = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer original.deinit();
 
-    const duplicate = try original.copy();
+    var duplicate = try original.copy();
     defer duplicate.deinit();
 
     try testing.expect(duplicate.ref != original.ref);
@@ -579,9 +581,9 @@ test "the user-data release callback runs when the format is destroyed" {
     var payload: u32 = 0xDEADBEEF;
 
     {
-        const pb = try cv.PixelBuffer.init(8, 8, .bgra32);
+        var pb = try cv.PixelBuffer.init(8, 8, .bgra32);
         defer pb.deinit();
-        const fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+        var fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
         try fmt.setUserData(&payload, releaseUserData);
 
         const back: *u32 = @ptrCast(@alignCast(fmt.userData().?));
@@ -595,20 +597,20 @@ test "the user-data release callback runs when the format is destroyed" {
 }
 
 test "retain and release balance out on a CV image format" {
-    const pb = try cv.PixelBuffer.init(8, 8, .bgra32);
+    var pb = try cv.PixelBuffer.init(8, 8, .bgra32);
     defer pb.deinit();
-    const fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer fmt.deinit();
 
     const before = cg.CFGetRetainCount(fmt.ref);
-    const second = fmt.retain();
+    var second = fmt.retain();
     try testing.expectEqual(before + 1, cg.CFGetRetainCount(fmt.ref));
     second.deinit();
     try testing.expectEqual(before, cg.CFGetRetainCount(fmt.ref));
 }
 
 test "pixels round-trip from a vImage_Buffer through a BGRA pixel buffer and back" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     // A 4x4 image with a distinct byte in every channel of every pixel.
@@ -622,7 +624,7 @@ test "pixels round-trip from a vImage_Buffer through a BGRA pixel buffer and bac
     const src = vImage_Buffer{ .data = &src_storage, .height = 4, .width = 4, .rowBytes = 16 };
     const fmt = CGImageFormat.argb8888(rgb.ref);
 
-    const pb = try cv.PixelBuffer.init(4, 4, .bgra32);
+    var pb = try cv.PixelBuffer.init(4, 4, .bgra32);
     defer pb.deinit();
 
     // A CVPixelBuffer created without attributes carries no colour
@@ -630,23 +632,23 @@ test "pixels round-trip from a vImage_Buffer through a BGRA pixel buffer and bac
     // `InvalidCVImageFormat` (-21782) — vImage has nothing to interpret the
     // pixels with. Supplying a format with a colour space is what makes the
     // bridge work on a bare buffer.
-    const cv_fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var cv_fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer cv_fmt.deinit();
     try cv_fmt.setColorSpace(rgb.ref);
 
     try testing.expectError(
-        VImageError.InvalidCVImageFormat,
-        bufferCopyToCVPixelBuffer(&src, &fmt, pb.ref, null, null, 0),
+        Error.InvalidCVImageFormat,
+        bufferCopyToCVPixelBuffer(&src, &fmt, pb.ref, null, null, .{}),
     );
 
     try pb.lock(0);
-    try bufferCopyToCVPixelBuffer(&src, &fmt, pb.ref, cv_fmt, null, 0);
+    try bufferCopyToCVPixelBuffer(&src, &fmt, pb.ref, cv_fmt, null, .{});
     try pb.unlock(0);
 
     var dst_fmt = fmt;
     var dst: vImage_Buffer = undefined;
     try pb.lock(cv.lock_read_only);
-    try bufferInitWithCVPixelBuffer(&dst, &dst_fmt, pb.ref, cv_fmt, null, 0);
+    try bufferInitWithCVPixelBuffer(&dst, &dst_fmt, pb.ref, cv_fmt, null, .{});
     try pb.unlock(cv.lock_read_only);
     defer utilities.bufferFree(&dst);
 
@@ -661,12 +663,12 @@ test "pixels round-trip from a vImage_Buffer through a BGRA pixel buffer and bac
 }
 
 test "a CG-to-CV converter for 420v splits the destination into two planes" {
-    const srgb = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+    var srgb = try cg.ColorSpace.initNamed(cg.ColorSpaceName.srgb());
     defer srgb.deinit();
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
-    const cv_fmt = try CVImageFormat.create(
+    var cv_fmt = try CVImageFormat.init(
         cv.fourCC("420v"),
         conversion.ycbcr.argbToYpCbCrMatrix601(),
         cv.ChromaLocation.center(),
@@ -676,7 +678,7 @@ test "a CG-to-CV converter for 420v splits the destination into two planes" {
     defer cv_fmt.deinit();
 
     const cg_fmt = CGImageFormat.argb8888(rgb.ref);
-    const conv = try converterForCGToCVImageFormat(&cg_fmt, cv_fmt, &[_]CGFloat{ 0, 0, 0 }, 0);
+    var conv = try converterForCGToCVImageFormat(&cg_fmt, cv_fmt, &[_]CGFloat{ 0, 0, 0 }, .{});
     defer conv.deinit();
 
     // One interleaved ARGB buffer in, two planes out: Y' and interleaved
@@ -688,28 +690,28 @@ test "a CG-to-CV converter for 420v splits the destination into two planes" {
 }
 
 test "InitForCopyToCVPixelBuffer aliases the pixel buffer's own planes" {
-    const srgb = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+    var srgb = try cg.ColorSpace.initNamed(cg.ColorSpaceName.srgb());
     defer srgb.deinit();
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
-    const pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
+    var pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
     defer pb.deinit();
 
-    const cv_fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var cv_fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer cv_fmt.deinit();
     try cv_fmt.setColorSpace(srgb.ref);
     try cv_fmt.setConversionMatrix(.{ .argb_to_ypcbcr = conversion.ycbcr.argbToYpCbCrMatrix601() });
     try cv_fmt.setChromaSiting(cv.ChromaLocation.center());
 
     const cg_fmt = CGImageFormat.argb8888(rgb.ref);
-    const conv = try converterForCGToCVImageFormat(&cg_fmt, cv_fmt, &[_]CGFloat{ 0, 0, 0 }, 0);
+    var conv = try converterForCGToCVImageFormat(&cg_fmt, cv_fmt, &[_]CGFloat{ 0, 0, 0 }, .{});
     defer conv.deinit();
 
     var planes: [2]vImage_Buffer = undefined;
     try pb.lock(0);
     defer pb.unlock(0) catch {};
-    try bufferInitForCopyToCVPixelBuffer(&planes, conv, pb.ref, types.Flags.kvImageNoAllocate);
+    try bufferInitForCopyToCVPixelBuffer(&planes, conv, pb.ref, .{ .do_not_allocate = true });
 
     // kvImageNoAllocate means the vImage buffers point straight at the pixel
     // buffer's planes rather than at new memory — so the addresses must
@@ -733,7 +735,7 @@ test "InitForCopyToCVPixelBuffer aliases the pixel buffer's own planes" {
     // And the conversion actually runs into them.
     var src_storage: [16 * 16 * 4]u8 = @splat(0xFF);
     const src = vImage_Buffer{ .data = &src_storage, .height = 16, .width = 16, .rowBytes = 16 * 4 };
-    _ = try conv.convert(&.{src}, &planes, null, 0);
+    _ = try conv.convert(&.{src}, &planes, null, .{});
 
     // Opaque white in video-range luma is 235.
     const luma: [*]const u8 = @ptrCast(planes[0].data.?);
@@ -741,7 +743,7 @@ test "InitForCopyToCVPixelBuffer aliases the pixel buffer's own planes" {
 }
 
 test "a colour space can be built from primaries and a transfer function" {
-    const space = try createRGBColorSpace(&RGBPrimaries.itur_709, &TransferFunction.itur_709, .default, 0);
+    var space = try createRGBColorSpace(&RGBPrimaries.itur_709, &TransferFunction.itur_709, .default, .{});
     defer space.deinit();
 
     try testing.expectEqual(@as(usize, 3), space.componentCount());
@@ -749,7 +751,7 @@ test "a colour space can be built from primaries and a transfer function" {
 }
 
 test "a monochrome colour space can be built from a white point" {
-    const space = try createMonochromeColorSpace(&WhitePoint.d65, &TransferFunction.gammaOnly(2.2), .default, 0);
+    var space = try createMonochromeColorSpace(&WhitePoint.d65, &TransferFunction.gammaOnly(2.2), .default, .{});
     defer space.deinit();
 
     try testing.expectEqual(@as(usize, 1), space.componentCount());
@@ -757,21 +759,21 @@ test "a monochrome colour space can be built from a white point" {
 }
 
 test "a CV-to-CG converter runs the YCbCr decode back to ARGB" {
-    const srgb = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+    var srgb = try cg.ColorSpace.initNamed(cg.ColorSpaceName.srgb());
     defer srgb.deinit();
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
-    const pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
+    var pb = try cv.PixelBuffer.init(16, 16, .ycbcr420_biplanar_video);
     defer pb.deinit();
-    const cv_fmt = try CVImageFormat.createWithCVPixelBuffer(pb.ref);
+    var cv_fmt = try CVImageFormat.initWithCVPixelBuffer(pb.ref);
     defer cv_fmt.deinit();
     try cv_fmt.setColorSpace(srgb.ref);
     try cv_fmt.setConversionMatrix(.{ .argb_to_ypcbcr = conversion.ycbcr.argbToYpCbCrMatrix601() });
     try cv_fmt.setChromaSiting(cv.ChromaLocation.center());
 
     const cg_fmt = CGImageFormat.argb8888(rgb.ref);
-    const conv = try converterForCVToCGImageFormat(cv_fmt, &cg_fmt, &[_]CGFloat{ 0, 0, 0 }, 0);
+    var conv = try converterForCVToCGImageFormat(cv_fmt, &cg_fmt, &[_]CGFloat{ 0, 0, 0 }, .{});
     defer conv.deinit();
 
     try testing.expectEqual(@as(usize, 2), conv.sourceBufferCount());
@@ -781,7 +783,7 @@ test "a CV-to-CG converter runs the YCbCr decode back to ARGB" {
     try pb.lock(0);
     defer pb.unlock(0) catch {};
     var planes: [2]vImage_Buffer = undefined;
-    try bufferInitForCopyFromCVPixelBuffer(&planes, conv, pb.ref, types.Flags.kvImageNoAllocate);
+    try bufferInitForCopyFromCVPixelBuffer(&planes, conv, pb.ref, .{ .do_not_allocate = true });
     {
         const luma: [*]u8 = @ptrCast(planes[0].data.?);
         @memset(luma[0 .. planes[0].rowBytes * planes[0].height], 235);
@@ -791,7 +793,7 @@ test "a CV-to-CG converter runs the YCbCr decode back to ARGB" {
 
     var dst_storage: [16 * 16 * 4]u8 = @splat(0);
     const dst = vImage_Buffer{ .data = &dst_storage, .height = 16, .width = 16, .rowBytes = 16 * 4 };
-    _ = try conv.convert(&planes, &.{dst}, null, 0);
+    _ = try conv.convert(&planes, &.{dst}, null, .{});
 
     // Video-range white decodes back to full-range white, within rounding.
     try testing.expectEqual(@as(u8, 0xFF), dst_storage[0]);

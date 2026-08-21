@@ -48,7 +48,7 @@ pub const Status = c.Status;
 
 /// Genuine failures. Not reaching the requested tolerance is *not* one of
 /// these; see `Result.status`.
-pub const QuadratureError = error{
+pub const Error = error{
     /// Accelerate rejected an argument. The wrappers here validate the cases
     /// that are checkable in Zig, so reaching this means something the binding
     /// does not yet know to check.
@@ -209,32 +209,32 @@ fn ScalarTrampoline(comptime Context: type) type {
     };
 }
 
-fn validate(a: f64, b: f64, options: Options) QuadratureError!void {
+fn validate(a: f64, b: f64, options: Options) Error!void {
     // Only QAGS accepts an infinite bound. QNG reports an invalid argument,
     // but QAG returns NaN with a max-eval status, which is a bad way to find
     // out - so reject both here.
     const infinite = std.math.isInf(a) or std.math.isInf(b);
-    if (infinite and options.integrator != .qags) return QuadratureError.InvalidArgument;
-    if (std.math.isNan(a) or std.math.isNan(b)) return QuadratureError.InvalidArgument;
+    if (infinite and options.integrator != .qags) return Error.InvalidArgument;
+    if (std.math.isNan(a) or std.math.isNan(b)) return Error.InvalidArgument;
 
     // Measured: 0 is rejected with status -2 by both adaptive integrators.
     switch (options.integrator) {
         .qng => {},
         .qag, .qags => if (options.integrator.maxIntervals() == 0) {
-            return QuadratureError.InvalidArgument;
+            return Error.InvalidArgument;
         },
     }
 }
 
-fn mapStatus(status: Status) QuadratureError!void {
+fn mapStatus(status: Status) Error!void {
     return switch (status) {
         // Convergence outcomes travel in `Result.status`, not as errors.
         .success, .integrate_max_eval_error, .integrate_bad_behaviour_error => {},
-        .invalid_arg_error => QuadratureError.InvalidArgument,
-        .alloc_error => QuadratureError.OutOfMemory,
-        .internal_error => QuadratureError.Internal,
-        .generic_error => QuadratureError.Failed,
-        _ => QuadratureError.Unknown,
+        .invalid_arg_error => Error.InvalidArgument,
+        .alloc_error => Error.OutOfMemory,
+        .internal_error => Error.Internal,
+        .generic_error => Error.Failed,
+        _ => Error.Unknown,
     };
 }
 
@@ -254,7 +254,7 @@ pub fn integrateWithWorkspace(
     b: f64,
     options: Options,
     workspace: []u8,
-) QuadratureError!Result {
+) Error!Result {
     try validate(a, b, options);
     std.debug.assert(workspace.len >= options.integrator.workspaceSize());
 
@@ -292,7 +292,7 @@ pub fn integrate(
     b: f64,
     options: Options,
     allocator: std.mem.Allocator,
-) (QuadratureError || std.mem.Allocator.Error)!Result {
+) (Error || std.mem.Allocator.Error)!Result {
     const size = options.integrator.workspaceSize();
     const workspace = try allocator.alloc(u8, size);
     defer allocator.free(workspace);
@@ -312,7 +312,7 @@ pub fn integrateScalar(
     b: f64,
     options: Options,
     allocator: std.mem.Allocator,
-) (QuadratureError || std.mem.Allocator.Error)!Result {
+) (Error || std.mem.Allocator.Error)!Result {
     const T = ScalarTrampoline(Context);
     const wrapper = T{ .ctx = ctx, .f = f };
     return integrate(*const T, &wrapper, &T.apply, a, b, options, allocator);
@@ -327,7 +327,7 @@ pub fn integrateScalarWithWorkspace(
     b: f64,
     options: Options,
     workspace: []u8,
-) QuadratureError!Result {
+) Error!Result {
     const T = ScalarTrampoline(Context);
     const wrapper = T{ .ctx = ctx, .f = f };
     return integrateWithWorkspace(*const T, &wrapper, &T.apply, a, b, options, workspace);
@@ -443,7 +443,7 @@ test "an infinite bound outside QAGS is rejected, not silently NaN" {
     // Measured: QNG reports invalid-argument, but QAG returns NaN with a
     // max-eval status - a bad way to discover the integrator was wrong.
     inline for (.{ Integrator{ .qng = {} }, Integrator{ .qag = .{} } }) |integrator| {
-        try testing.expectError(QuadratureError.InvalidArgument, integrateScalar(
+        try testing.expectError(Error.InvalidArgument, integrateScalar(
             void,
             {},
             one,
@@ -463,7 +463,7 @@ test "max_intervals of zero is rejected" {
         Integrator{ .qag = .{ .max_intervals = 0 } },
         Integrator{ .qags = .{ .max_intervals = 0 } },
     }) |integrator| {
-        try testing.expectError(QuadratureError.InvalidArgument, integrateScalar(
+        try testing.expectError(Error.InvalidArgument, integrateScalar(
             void,
             {},
             square,
@@ -680,7 +680,7 @@ test "Options.raw maps the union onto the flat C struct" {
 
 test "NaN bounds are rejected" {
     const nan = std.math.nan(f64);
-    try testing.expectError(QuadratureError.InvalidArgument, integrateScalar(
+    try testing.expectError(Error.InvalidArgument, integrateScalar(
         void,
         {},
         square,
@@ -689,7 +689,7 @@ test "NaN bounds are rejected" {
         .{},
         testing.allocator,
     ));
-    try testing.expectError(QuadratureError.InvalidArgument, integrateScalar(
+    try testing.expectError(Error.InvalidArgument, integrateScalar(
         void,
         {},
         square,

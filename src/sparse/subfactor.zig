@@ -22,7 +22,7 @@ const types = @import("types.zig");
 const matrix = @import("matrix.zig");
 const factor = @import("factor.zig");
 
-const SparseError = types.SparseError;
+const Error = types.Error;
 
 /// A retained reference to one factor of a `Factorization`.
 ///
@@ -41,10 +41,10 @@ pub fn Subfactor(comptime T: type) type {
         /// Fails with `error.ParameterError` if the combination is not
         /// meaningful - `.d` of a Cholesky factorization, say, which has no
         /// diagonal factor. See `types.Subfactor.isValidFor`.
-        pub fn init(which: types.Subfactor, parent: *const factor.Factorization(T)) SparseError!Self {
+        pub fn init(which: types.Subfactor, parent: *const factor.Factorization(T)) Error!Self {
             const parent_kind = parent.raw.symbolicFactorization.type;
-            if (!which.isValidFor(parent_kind)) return SparseError.ParameterError;
-            if (parent.raw.numericFactorization == null) return SparseError.ParameterError;
+            if (!which.isValidFor(parent_kind)) return Error.ParameterError;
+            if (parent.raw.numericFactorization == null) return Error.ParameterError;
             try types.check(parent.raw.symbolicFactorization.status);
             try types.check(parent.raw.status);
 
@@ -141,7 +141,7 @@ pub fn Subfactor(comptime T: type) type {
         }
 
         /// `x <- F^-1 b`, or `x <- F^-1 x` when `b` is null.
-        pub fn solve(self: Self, allocator: std.mem.Allocator, b: ?Dense, x: Dense) (SparseError || std.mem.Allocator.Error)!void {
+        pub fn solve(self: Self, allocator: std.mem.Allocator, b: ?Dense, x: Dense) (Error || std.mem.Allocator.Error)!void {
             const workspace = try allocator.alignedAlloc(u8, .@"16", self.workspaceSize(x.rhsCount()));
             defer allocator.free(workspace);
             return self.solveWithWorkspace(b, x, workspace);
@@ -149,7 +149,7 @@ pub fn Subfactor(comptime T: type) type {
 
         /// `solve` with a caller-supplied buffer of at least
         /// `workspaceSize(x.rhsCount())` bytes.
-        pub fn solveWithWorkspace(self: Self, b: ?Dense, x: Dense, workspace: []align(16) u8) SparseError!void {
+        pub fn solveWithWorkspace(self: Self, b: ?Dense, x: Dense, workspace: []align(16) u8) Error!void {
             std.debug.assert(workspace.len >= self.workspaceSize(x.rhsCount()));
             try self.checkOperands(b, x);
 
@@ -162,14 +162,14 @@ pub fn Subfactor(comptime T: type) type {
         }
 
         /// `y <- F x`, or `x <- F x` in place when `x` is null.
-        pub fn multiply(self: Self, allocator: std.mem.Allocator, x: ?Dense, y: Dense) (SparseError || std.mem.Allocator.Error)!void {
+        pub fn multiply(self: Self, allocator: std.mem.Allocator, x: ?Dense, y: Dense) (Error || std.mem.Allocator.Error)!void {
             const workspace = try allocator.alignedAlloc(u8, .@"16", self.workspaceSize(y.rhsCount()));
             defer allocator.free(workspace);
             return self.multiplyWithWorkspace(x, y, workspace);
         }
 
         /// `multiply` with a caller-supplied buffer.
-        pub fn multiplyWithWorkspace(self: Self, x: ?Dense, y: Dense, workspace: []align(16) u8) SparseError!void {
+        pub fn multiplyWithWorkspace(self: Self, x: ?Dense, y: Dense, workspace: []align(16) u8) Error!void {
             std.debug.assert(workspace.len >= self.workspaceSize(y.rhsCount()));
             try self.checkOperands(x, y);
 
@@ -183,17 +183,17 @@ pub fn Subfactor(comptime T: type) type {
 
         /// The shape checks the C wrappers perform before dispatching. Doing
         /// them here is what keeps a mismatch from reaching `_SparseTrap`.
-        fn checkOperands(self: Self, in: ?Dense, out: Dense) SparseError!void {
+        fn checkOperands(self: Self, in: ?Dense, out: Dense) Error!void {
             const m, const n = self.dimensions();
-            if (out.rhsCount() == 0) return SparseError.ParameterError;
+            if (out.rhsCount() == 0) return Error.ParameterError;
 
             if (in) |src| {
-                if (src.rhsCount() != out.rhsCount()) return SparseError.ParameterError;
-                if (src.size() != n or out.size() != m) return SparseError.ParameterError;
+                if (src.rhsCount() != out.rhsCount()) return Error.ParameterError;
+                if (src.size() != n or out.size() != m) return Error.ParameterError;
             } else {
                 // In place, one buffer holds both sides, so it is sized by the
                 // larger dimension.
-                if (out.size() != @max(m, n)) return SparseError.ParameterError;
+                if (out.size() != @max(m, n)) return Error.ParameterError;
             }
         }
     };
@@ -378,7 +378,7 @@ test "invalid subfactor/factorization combinations are rejected" {
 
     // Cholesky has no diagonal or scaling factor, and no Q or R.
     for ([_]types.Subfactor{ .d, .s, .q, .r, .rp, .invalid }) |which| {
-        try testing.expectError(SparseError.ParameterError, Subfactor(f64).init(which, &chol));
+        try testing.expectError(Error.ParameterError, Subfactor(f64).init(which, &chol));
     }
     // But L, P and PLPS are fine.
     for ([_]types.Subfactor{ .l, .p, .plps }) |which| {
@@ -426,12 +426,12 @@ test "mismatched operand shapes are rejected rather than trapped" {
     const workspace = try testing.allocator.alignedAlloc(u8, .@"16", l.workspaceSize(1));
     defer testing.allocator.free(workspace);
 
-    try testing.expectError(SparseError.ParameterError, l.solveWithWorkspace(
+    try testing.expectError(Error.ParameterError, l.solveWithWorkspace(
         Dense64.fromSlice(&short),
         Dense64.fromSlice(&ok),
         workspace,
     ));
-    try testing.expectError(SparseError.ParameterError, l.multiplyWithWorkspace(
+    try testing.expectError(Error.ParameterError, l.multiplyWithWorkspace(
         Dense64.fromSlice(&short),
         Dense64.fromSlice(&ok),
         workspace,
@@ -487,7 +487,7 @@ test "LU exposes P, Q, Sr and Sc, and refuses L, D, R" {
         try testing.expectEqual(which, sub.contents());
     }
     inline for (.{ types.Subfactor.l, .d, .s, .r, .rp, .plps }) |which| {
-        try testing.expectError(SparseError.ParameterError, Subfactor(f64).init(which, &fac));
+        try testing.expectError(Error.ParameterError, Subfactor(f64).init(which, &fac));
     }
 }
 
@@ -497,6 +497,6 @@ test "Sr and Sc are rejected for a non-LU factorization" {
     var fac = try factor.Factorization(f64).init(.ldlt, a, .{});
     defer fac.deinit();
 
-    try testing.expectError(SparseError.ParameterError, Subfactor(f64).init(.sr, &fac));
-    try testing.expectError(SparseError.ParameterError, Subfactor(f64).init(.sc, &fac));
+    try testing.expectError(Error.ParameterError, Subfactor(f64).init(.sr, &fac));
+    try testing.expectError(Error.ParameterError, Subfactor(f64).init(.sc, &fac));
 }

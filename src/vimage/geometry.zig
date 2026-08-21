@@ -4,7 +4,7 @@ const vImage_Buffer = types.vImage_Buffer;
 const vImagePixelCount = types.vImagePixelCount;
 const vImage_Flags = types.vImage_Flags;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImage_AffineTransform = types.vImage_AffineTransform;
 const vImage_AffineTransform_Double = types.vImage_AffineTransform_Double;
@@ -29,6 +29,7 @@ const Pixel_16F16F = types.Pixel_16F16F;
 const Pixel_32U = types.Pixel_32U;
 const ResamplingFilter = types.ResamplingFilter;
 const Flags = types.Flags;
+const Options = types.Options;
 const c = @import("c.zig");
 
 // ============================================================================
@@ -95,23 +96,23 @@ pub fn rotate(
     tempBuffer: ?*anyopaque,
     angleInRadians: f32,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageRotate_Planar8(src, dest, tempBuffer, angleInRadians, backColor, flags),
-        Pixel_F => c.vImageRotate_PlanarF(src, dest, tempBuffer, angleInRadians, backColor, flags),
-        f16 => c.vImageRotate_Planar16F(src, dest, tempBuffer, angleInRadians, halfBits(backColor), flags),
-        Pixel_8888 => c.vImageRotate_ARGB8888(src, dest, tempBuffer, angleInRadians, backColor, flags),
-        Pixel_FFFF => c.vImageRotate_ARGBFFFF(src, dest, tempBuffer, angleInRadians, backColor, flags),
-        Pixel_ARGB_16U => c.vImageRotate_ARGB16U(src, dest, tempBuffer, angleInRadians, backColor, flags),
-        Pixel_ARGB_16S => c.vImageRotate_ARGB16S(src, dest, tempBuffer, angleInRadians, backColor, flags),
+        Pixel_8 => c.vImageRotate_Planar8(src, dest, tempBuffer, angleInRadians, backColor, flags.bits()),
+        Pixel_F => c.vImageRotate_PlanarF(src, dest, tempBuffer, angleInRadians, backColor, flags.bits()),
+        f16 => c.vImageRotate_Planar16F(src, dest, tempBuffer, angleInRadians, halfBits(backColor), flags.bits()),
+        Pixel_8888 => c.vImageRotate_ARGB8888(src, dest, tempBuffer, angleInRadians, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageRotate_ARGBFFFF(src, dest, tempBuffer, angleInRadians, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageRotate_ARGB16U(src, dest, tempBuffer, angleInRadians, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageRotate_ARGB16S(src, dest, tempBuffer, angleInRadians, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageRotate_ARGB16F(src, dest, tempBuffer, angleInRadians, &bg, flags);
+            break :blk c.vImageRotate_ARGB16F(src, dest, tempBuffer, angleInRadians, &bg, flags.bits());
         },
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageRotate_CbCr16F(src, dest, tempBuffer, angleInRadians, &bg, flags);
+            break :blk c.vImageRotate_CbCr16F(src, dest, tempBuffer, angleInRadians, &bg, flags.bits());
         },
         else => @compileError("rotate supports only: " ++ "`Pixel_8`, `Pixel_F`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `[2]f16`"),
     });
@@ -134,23 +135,23 @@ pub fn scale(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     tempBuffer: ?*anyopaque,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageScale_Planar8(src, dest, tempBuffer, flags),
-        Pixel_F => c.vImageScale_PlanarF(src, dest, tempBuffer, flags),
-        Pixel_16U => c.vImageScale_Planar16U(src, dest, tempBuffer, flags),
-        Pixel_16S => c.vImageScale_Planar16S(src, dest, tempBuffer, flags),
-        f16 => c.vImageScale_Planar16F(src, dest, tempBuffer, flags),
-        Pixel_32U => c.vImageScale_XRGB2101010W(src, dest, tempBuffer, flags),
-        Pixel_8888 => c.vImageScale_ARGB8888(src, dest, tempBuffer, flags),
-        Pixel_FFFF => c.vImageScale_ARGBFFFF(src, dest, tempBuffer, flags),
-        Pixel_ARGB_16U => c.vImageScale_ARGB16U(src, dest, tempBuffer, flags),
-        Pixel_ARGB_16S => c.vImageScale_ARGB16S(src, dest, tempBuffer, flags),
-        [4]f16 => c.vImageScale_ARGB16F(src, dest, tempBuffer, flags),
-        Pixel_88 => c.vImageScale_CbCr8(src, dest, tempBuffer, flags),
-        Pixel_16U16U => c.vImageScale_CbCr16U(src, dest, tempBuffer, flags),
-        [2]f16 => c.vImageScale_CbCr16F(src, dest, tempBuffer, flags),
+        Pixel_8 => c.vImageScale_Planar8(src, dest, tempBuffer, flags.bits()),
+        Pixel_F => c.vImageScale_PlanarF(src, dest, tempBuffer, flags.bits()),
+        Pixel_16U => c.vImageScale_Planar16U(src, dest, tempBuffer, flags.bits()),
+        Pixel_16S => c.vImageScale_Planar16S(src, dest, tempBuffer, flags.bits()),
+        f16 => c.vImageScale_Planar16F(src, dest, tempBuffer, flags.bits()),
+        Pixel_32U => c.vImageScale_XRGB2101010W(src, dest, tempBuffer, flags.bits()),
+        Pixel_8888 => c.vImageScale_ARGB8888(src, dest, tempBuffer, flags.bits()),
+        Pixel_FFFF => c.vImageScale_ARGBFFFF(src, dest, tempBuffer, flags.bits()),
+        Pixel_ARGB_16U => c.vImageScale_ARGB16U(src, dest, tempBuffer, flags.bits()),
+        Pixel_ARGB_16S => c.vImageScale_ARGB16S(src, dest, tempBuffer, flags.bits()),
+        [4]f16 => c.vImageScale_ARGB16F(src, dest, tempBuffer, flags.bits()),
+        Pixel_88 => c.vImageScale_CbCr8(src, dest, tempBuffer, flags.bits()),
+        Pixel_16U16U => c.vImageScale_CbCr16U(src, dest, tempBuffer, flags.bits()),
+        [2]f16 => c.vImageScale_CbCr16F(src, dest, tempBuffer, flags.bits()),
         else => @compileError("scale supports only: " ++ "`Pixel_8`, `Pixel_F`, `Pixel_16U`, `Pixel_16S`, `f16`, `Pixel_32U`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `Pixel_88`, `Pixel_16U16U`, `[2]f16`"),
     });
 }
@@ -168,19 +169,19 @@ pub fn horizontalReflect(
     comptime T: type,
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageHorizontalReflect_Planar8(src, dest, flags),
-        Pixel_F => c.vImageHorizontalReflect_PlanarF(src, dest, flags),
-        Pixel_16U => c.vImageHorizontalReflect_Planar16U(src, dest, flags),
-        f16 => c.vImageHorizontalReflect_Planar16F(src, dest, flags),
-        Pixel_8888 => c.vImageHorizontalReflect_ARGB8888(src, dest, flags),
-        Pixel_FFFF => c.vImageHorizontalReflect_ARGBFFFF(src, dest, flags),
-        Pixel_ARGB_16U => c.vImageHorizontalReflect_ARGB16U(src, dest, flags),
-        Pixel_ARGB_16S => c.vImageHorizontalReflect_ARGB16S(src, dest, flags),
-        [4]f16 => c.vImageHorizontalReflect_ARGB16F(src, dest, flags),
-        [2]f16 => c.vImageHorizontalReflect_CbCr16F(src, dest, flags),
+        Pixel_8 => c.vImageHorizontalReflect_Planar8(src, dest, flags.bits()),
+        Pixel_F => c.vImageHorizontalReflect_PlanarF(src, dest, flags.bits()),
+        Pixel_16U => c.vImageHorizontalReflect_Planar16U(src, dest, flags.bits()),
+        f16 => c.vImageHorizontalReflect_Planar16F(src, dest, flags.bits()),
+        Pixel_8888 => c.vImageHorizontalReflect_ARGB8888(src, dest, flags.bits()),
+        Pixel_FFFF => c.vImageHorizontalReflect_ARGBFFFF(src, dest, flags.bits()),
+        Pixel_ARGB_16U => c.vImageHorizontalReflect_ARGB16U(src, dest, flags.bits()),
+        Pixel_ARGB_16S => c.vImageHorizontalReflect_ARGB16S(src, dest, flags.bits()),
+        [4]f16 => c.vImageHorizontalReflect_ARGB16F(src, dest, flags.bits()),
+        [2]f16 => c.vImageHorizontalReflect_CbCr16F(src, dest, flags.bits()),
         else => @compileError("horizontalReflect supports only: " ++ "`Pixel_8`, `Pixel_F`, `Pixel_16U`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `[2]f16`"),
     });
 }
@@ -194,19 +195,19 @@ pub fn verticalReflect(
     comptime T: type,
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageVerticalReflect_Planar8(src, dest, flags),
-        Pixel_F => c.vImageVerticalReflect_PlanarF(src, dest, flags),
-        Pixel_16U => c.vImageVerticalReflect_Planar16U(src, dest, flags),
-        f16 => c.vImageVerticalReflect_Planar16F(src, dest, flags),
-        Pixel_8888 => c.vImageVerticalReflect_ARGB8888(src, dest, flags),
-        Pixel_FFFF => c.vImageVerticalReflect_ARGBFFFF(src, dest, flags),
-        Pixel_ARGB_16U => c.vImageVerticalReflect_ARGB16U(src, dest, flags),
-        Pixel_ARGB_16S => c.vImageVerticalReflect_ARGB16S(src, dest, flags),
-        [4]f16 => c.vImageVerticalReflect_ARGB16F(src, dest, flags),
-        [2]f16 => c.vImageVerticalReflect_CbCr16F(src, dest, flags),
+        Pixel_8 => c.vImageVerticalReflect_Planar8(src, dest, flags.bits()),
+        Pixel_F => c.vImageVerticalReflect_PlanarF(src, dest, flags.bits()),
+        Pixel_16U => c.vImageVerticalReflect_Planar16U(src, dest, flags.bits()),
+        f16 => c.vImageVerticalReflect_Planar16F(src, dest, flags.bits()),
+        Pixel_8888 => c.vImageVerticalReflect_ARGB8888(src, dest, flags.bits()),
+        Pixel_FFFF => c.vImageVerticalReflect_ARGBFFFF(src, dest, flags.bits()),
+        Pixel_ARGB_16U => c.vImageVerticalReflect_ARGB16U(src, dest, flags.bits()),
+        Pixel_ARGB_16S => c.vImageVerticalReflect_ARGB16S(src, dest, flags.bits()),
+        [4]f16 => c.vImageVerticalReflect_ARGB16F(src, dest, flags.bits()),
+        [2]f16 => c.vImageVerticalReflect_CbCr16F(src, dest, flags.bits()),
         else => @compileError("verticalReflect supports only: " ++ "`Pixel_8`, `Pixel_F`, `Pixel_16U`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `[2]f16`"),
     });
 }
@@ -242,25 +243,25 @@ pub fn rotate90(
     dest: *const vImage_Buffer,
     rotationConstant: RotationConstant,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     const rc = @intFromEnum(rotationConstant);
     return check(switch (T) {
-        Pixel_8 => c.vImageRotate90_Planar8(src, dest, rc, backColor, flags),
-        Pixel_F => c.vImageRotate90_PlanarF(src, dest, rc, backColor, flags),
-        Pixel_16U => c.vImageRotate90_Planar16U(src, dest, rc, backColor, flags),
-        f16 => c.vImageRotate90_Planar16F(src, dest, rc, halfBits(backColor), flags),
-        Pixel_8888 => c.vImageRotate90_ARGB8888(src, dest, rc, backColor, flags),
-        Pixel_FFFF => c.vImageRotate90_ARGBFFFF(src, dest, rc, backColor, flags),
-        Pixel_ARGB_16U => c.vImageRotate90_ARGB16U(src, dest, rc, backColor, flags),
-        Pixel_ARGB_16S => c.vImageRotate90_ARGB16S(src, dest, rc, backColor, flags),
+        Pixel_8 => c.vImageRotate90_Planar8(src, dest, rc, backColor, flags.bits()),
+        Pixel_F => c.vImageRotate90_PlanarF(src, dest, rc, backColor, flags.bits()),
+        Pixel_16U => c.vImageRotate90_Planar16U(src, dest, rc, backColor, flags.bits()),
+        f16 => c.vImageRotate90_Planar16F(src, dest, rc, halfBits(backColor), flags.bits()),
+        Pixel_8888 => c.vImageRotate90_ARGB8888(src, dest, rc, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageRotate90_ARGBFFFF(src, dest, rc, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageRotate90_ARGB16U(src, dest, rc, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageRotate90_ARGB16S(src, dest, rc, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageRotate90_ARGB16F(src, dest, rc, &bg, flags);
+            break :blk c.vImageRotate90_ARGB16F(src, dest, rc, &bg, flags.bits());
         },
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageRotate90_CbCr16F(src, dest, rc, &bg, flags);
+            break :blk c.vImageRotate90_CbCr16F(src, dest, rc, &bg, flags.bits());
         },
         else => @compileError("rotate90 supports only: " ++ "`Pixel_8`, `Pixel_F`, `Pixel_16U`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `[2]f16`"),
     });
@@ -290,23 +291,23 @@ pub fn affineWarp(
     tempBuffer: ?*anyopaque,
     transform: *const vImage_AffineTransform,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageAffineWarp_Planar8(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_F => c.vImageAffineWarp_PlanarF(src, dest, tempBuffer, transform, backColor, flags),
-        f16 => c.vImageAffineWarp_Planar16F(src, dest, tempBuffer, transform, halfBits(backColor), flags),
-        Pixel_8888 => c.vImageAffineWarp_ARGB8888(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_FFFF => c.vImageAffineWarp_ARGBFFFF(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_ARGB_16U => c.vImageAffineWarp_ARGB16U(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_ARGB_16S => c.vImageAffineWarp_ARGB16S(src, dest, tempBuffer, transform, backColor, flags),
+        Pixel_8 => c.vImageAffineWarp_Planar8(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_F => c.vImageAffineWarp_PlanarF(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        f16 => c.vImageAffineWarp_Planar16F(src, dest, tempBuffer, transform, halfBits(backColor), flags.bits()),
+        Pixel_8888 => c.vImageAffineWarp_ARGB8888(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageAffineWarp_ARGBFFFF(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageAffineWarp_ARGB16U(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageAffineWarp_ARGB16S(src, dest, tempBuffer, transform, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageAffineWarp_ARGB16F(src, dest, tempBuffer, transform, &bg, flags);
+            break :blk c.vImageAffineWarp_ARGB16F(src, dest, tempBuffer, transform, &bg, flags.bits());
         },
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageAffineWarp_CbCr16F(src, dest, tempBuffer, transform, &bg, flags);
+            break :blk c.vImageAffineWarp_CbCr16F(src, dest, tempBuffer, transform, &bg, flags.bits());
         },
         else => @compileError("affineWarp supports only: " ++ "`Pixel_8`, `Pixel_F`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `[2]f16`"),
     });
@@ -324,23 +325,23 @@ pub fn affineWarpD(
     tempBuffer: ?*anyopaque,
     transform: *const vImage_AffineTransform_Double,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageAffineWarpD_Planar8(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_F => c.vImageAffineWarpD_PlanarF(src, dest, tempBuffer, transform, backColor, flags),
-        f16 => c.vImageAffineWarpD_Planar16F(src, dest, tempBuffer, transform, halfBits(backColor), flags),
-        Pixel_8888 => c.vImageAffineWarpD_ARGB8888(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_FFFF => c.vImageAffineWarpD_ARGBFFFF(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_ARGB_16U => c.vImageAffineWarpD_ARGB16U(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_ARGB_16S => c.vImageAffineWarpD_ARGB16S(src, dest, tempBuffer, transform, backColor, flags),
+        Pixel_8 => c.vImageAffineWarpD_Planar8(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_F => c.vImageAffineWarpD_PlanarF(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        f16 => c.vImageAffineWarpD_Planar16F(src, dest, tempBuffer, transform, halfBits(backColor), flags.bits()),
+        Pixel_8888 => c.vImageAffineWarpD_ARGB8888(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageAffineWarpD_ARGBFFFF(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageAffineWarpD_ARGB16U(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageAffineWarpD_ARGB16S(src, dest, tempBuffer, transform, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageAffineWarpD_ARGB16F(src, dest, tempBuffer, transform, &bg, flags);
+            break :blk c.vImageAffineWarpD_ARGB16F(src, dest, tempBuffer, transform, &bg, flags.bits());
         },
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageAffineWarpD_CbCr16F(src, dest, tempBuffer, transform, &bg, flags);
+            break :blk c.vImageAffineWarpD_CbCr16F(src, dest, tempBuffer, transform, &bg, flags.bits());
         },
         else => @compileError("affineWarpD supports only: " ++ "`Pixel_8`, `Pixel_F`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `[2]f16`"),
     });
@@ -361,15 +362,15 @@ pub fn affineWarpCG(
     tempBuffer: ?*anyopaque,
     transform: *const vImage_CGAffineTransform,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageAffineWarpCG_Planar8(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_F => c.vImageAffineWarpCG_PlanarF(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_8888 => c.vImageAffineWarpCG_ARGB8888(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_FFFF => c.vImageAffineWarpCG_ARGBFFFF(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_ARGB_16U => c.vImageAffineWarpCG_ARGB16U(src, dest, tempBuffer, transform, backColor, flags),
-        Pixel_ARGB_16S => c.vImageAffineWarpCG_ARGB16S(src, dest, tempBuffer, transform, backColor, flags),
+        Pixel_8 => c.vImageAffineWarpCG_Planar8(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_F => c.vImageAffineWarpCG_PlanarF(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_8888 => c.vImageAffineWarpCG_ARGB8888(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageAffineWarpCG_ARGBFFFF(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageAffineWarpCG_ARGB16U(src, dest, tempBuffer, transform, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageAffineWarpCG_ARGB16S(src, dest, tempBuffer, transform, backColor, flags.bits()),
         else => @compileError("affineWarpCG supports only: " ++ "`Pixel_8`, `Pixel_F`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`"),
     });
 }
@@ -388,9 +389,9 @@ pub fn getPerspectiveWarp(
     srcPoints: *const [4][2]f32,
     destPoints: *const [4][2]f32,
     transform: *vImage_PerspectiveTransform,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageGetPerspectiveWarp(srcPoints, destPoints, transform, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageGetPerspectiveWarp(srcPoints, destPoints, transform, flags.bits()));
 }
 
 /// Apply a perspective (projective) transform to an image.
@@ -414,17 +415,17 @@ pub fn perspectiveWarp(
     transform: *const vImage_PerspectiveTransform,
     interpolation: WarpInterpolation,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImagePerspectiveWarp_Planar8(src, dest, tempBuffer, transform, interpolation, backColor, flags),
-        Pixel_16U => c.vImagePerspectiveWarp_Planar16U(src, dest, tempBuffer, transform, interpolation, backColor, flags),
-        f16 => c.vImagePerspectiveWarp_Planar16F(src, dest, tempBuffer, transform, interpolation, halfBits(backColor), flags),
-        Pixel_8888 => c.vImagePerspectiveWarp_ARGB8888(src, dest, tempBuffer, transform, interpolation, backColor, flags),
-        Pixel_ARGB_16U => c.vImagePerspectiveWarp_ARGB16U(src, dest, tempBuffer, transform, interpolation, backColor, flags),
+        Pixel_8 => c.vImagePerspectiveWarp_Planar8(src, dest, tempBuffer, transform, interpolation, backColor, flags.bits()),
+        Pixel_16U => c.vImagePerspectiveWarp_Planar16U(src, dest, tempBuffer, transform, interpolation, backColor, flags.bits()),
+        f16 => c.vImagePerspectiveWarp_Planar16F(src, dest, tempBuffer, transform, interpolation, halfBits(backColor), flags.bits()),
+        Pixel_8888 => c.vImagePerspectiveWarp_ARGB8888(src, dest, tempBuffer, transform, interpolation, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImagePerspectiveWarp_ARGB16U(src, dest, tempBuffer, transform, interpolation, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImagePerspectiveWarp_ARGB16F(src, dest, tempBuffer, transform, interpolation, &bg, flags);
+            break :blk c.vImagePerspectiveWarp_ARGB16F(src, dest, tempBuffer, transform, interpolation, &bg, flags.bits());
         },
         else => @compileError("perspectiveWarp supports only: " ++ "`Pixel_8`, `Pixel_16U`, `f16`, `Pixel_8888`, `Pixel_ARGB_16U`, `[4]f16`"),
     });
@@ -453,29 +454,29 @@ pub fn horizontalShear(
     shearSlope: f32,
     filter: ResamplingFilter,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageHorizontalShear_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_F => c.vImageHorizontalShear_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16U => c.vImageHorizontalShear_Planar16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16S => c.vImageHorizontalShear_Planar16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        f16 => c.vImageHorizontalShear_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, halfBits(backColor), flags),
-        Pixel_32U => c.vImageHorizontalShear_XRGB2101010W(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_8888 => c.vImageHorizontalShear_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_FFFF => c.vImageHorizontalShear_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16U => c.vImageHorizontalShear_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16S => c.vImageHorizontalShear_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
+        Pixel_8 => c.vImageHorizontalShear_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_F => c.vImageHorizontalShear_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16U => c.vImageHorizontalShear_Planar16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16S => c.vImageHorizontalShear_Planar16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        f16 => c.vImageHorizontalShear_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, halfBits(backColor), flags.bits()),
+        Pixel_32U => c.vImageHorizontalShear_XRGB2101010W(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_8888 => c.vImageHorizontalShear_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageHorizontalShear_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageHorizontalShear_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageHorizontalShear_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageHorizontalShear_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageHorizontalShear_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags.bits());
         },
-        Pixel_88 => c.vImageHorizontalShear_CbCr8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16U16U => c.vImageHorizontalShear_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16S16S => c.vImageHorizontalShear_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
+        Pixel_88 => c.vImageHorizontalShear_CbCr8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16U16U => c.vImageHorizontalShear_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16S16S => c.vImageHorizontalShear_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageHorizontalShear_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageHorizontalShear_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags.bits());
         },
         else => @compileError("horizontalShear supports only: " ++ "`Pixel_8`, `Pixel_F`, `Pixel_16U`, `Pixel_16S`, `f16`, `Pixel_32U`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `Pixel_88`, `Pixel_16U16U`, `Pixel_16S16S`, `[2]f16`"),
     });
@@ -499,29 +500,29 @@ pub fn verticalShear(
     shearSlope: f32,
     filter: ResamplingFilter,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageVerticalShear_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_F => c.vImageVerticalShear_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16U => c.vImageVerticalShear_Planar16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16S => c.vImageVerticalShear_Planar16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        f16 => c.vImageVerticalShear_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, halfBits(backColor), flags),
-        Pixel_32U => c.vImageVerticalShear_XRGB2101010W(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_8888 => c.vImageVerticalShear_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_FFFF => c.vImageVerticalShear_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16U => c.vImageVerticalShear_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16S => c.vImageVerticalShear_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
+        Pixel_8 => c.vImageVerticalShear_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_F => c.vImageVerticalShear_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16U => c.vImageVerticalShear_Planar16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16S => c.vImageVerticalShear_Planar16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        f16 => c.vImageVerticalShear_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, halfBits(backColor), flags.bits()),
+        Pixel_32U => c.vImageVerticalShear_XRGB2101010W(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_8888 => c.vImageVerticalShear_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageVerticalShear_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageVerticalShear_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageVerticalShear_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageVerticalShear_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageVerticalShear_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags.bits());
         },
-        Pixel_88 => c.vImageVerticalShear_CbCr8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16U16U => c.vImageVerticalShear_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16S16S => c.vImageVerticalShear_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
+        Pixel_88 => c.vImageVerticalShear_CbCr8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16U16U => c.vImageVerticalShear_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16S16S => c.vImageVerticalShear_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageVerticalShear_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageVerticalShear_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags.bits());
         },
         else => @compileError("verticalShear supports only: " ++ "`Pixel_8`, `Pixel_F`, `Pixel_16U`, `Pixel_16S`, `f16`, `Pixel_32U`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `Pixel_88`, `Pixel_16U16U`, `Pixel_16S16S`, `[2]f16`"),
     });
@@ -546,25 +547,25 @@ pub fn horizontalShearD(
     shearSlope: f64,
     filter: ResamplingFilter,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageHorizontalShearD_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_F => c.vImageHorizontalShearD_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        f16 => c.vImageHorizontalShearD_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, halfBits(backColor), flags),
-        Pixel_8888 => c.vImageHorizontalShearD_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_FFFF => c.vImageHorizontalShearD_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16U => c.vImageHorizontalShearD_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16S => c.vImageHorizontalShearD_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
+        Pixel_8 => c.vImageHorizontalShearD_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_F => c.vImageHorizontalShearD_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        f16 => c.vImageHorizontalShearD_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, halfBits(backColor), flags.bits()),
+        Pixel_8888 => c.vImageHorizontalShearD_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageHorizontalShearD_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageHorizontalShearD_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageHorizontalShearD_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageHorizontalShearD_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageHorizontalShearD_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags.bits());
         },
-        Pixel_16U16U => c.vImageHorizontalShearD_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16S16S => c.vImageHorizontalShearD_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags),
+        Pixel_16U16U => c.vImageHorizontalShearD_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16S16S => c.vImageHorizontalShearD_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, backColor, flags.bits()),
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageHorizontalShearD_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageHorizontalShearD_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, xTranslate, shearSlope, filter, &bg, flags.bits());
         },
         else => @compileError("horizontalShearD supports only: " ++ "`Pixel_8`, `Pixel_F`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `Pixel_16U16U`, `Pixel_16S16S`, `[2]f16`"),
     });
@@ -585,25 +586,25 @@ pub fn verticalShearD(
     shearSlope: f64,
     filter: ResamplingFilter,
     backColor: BackColor(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageVerticalShearD_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_F => c.vImageVerticalShearD_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        f16 => c.vImageVerticalShearD_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, halfBits(backColor), flags),
-        Pixel_8888 => c.vImageVerticalShearD_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_FFFF => c.vImageVerticalShearD_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16U => c.vImageVerticalShearD_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_ARGB_16S => c.vImageVerticalShearD_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
+        Pixel_8 => c.vImageVerticalShearD_Planar8(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_F => c.vImageVerticalShearD_PlanarF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        f16 => c.vImageVerticalShearD_Planar16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, halfBits(backColor), flags.bits()),
+        Pixel_8888 => c.vImageVerticalShearD_ARGB8888(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_FFFF => c.vImageVerticalShearD_ARGBFFFF(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16U => c.vImageVerticalShearD_ARGB16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_ARGB_16S => c.vImageVerticalShearD_ARGB16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
         [4]f16 => blk: {
             const bg = halfBits4(backColor.*);
-            break :blk c.vImageVerticalShearD_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageVerticalShearD_ARGB16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags.bits());
         },
-        Pixel_16U16U => c.vImageVerticalShearD_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
-        Pixel_16S16S => c.vImageVerticalShearD_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags),
+        Pixel_16U16U => c.vImageVerticalShearD_CbCr16U(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
+        Pixel_16S16S => c.vImageVerticalShearD_CbCr16S(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, backColor, flags.bits()),
         [2]f16 => blk: {
             const bg = halfBits2(backColor.*);
-            break :blk c.vImageVerticalShearD_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags);
+            break :blk c.vImageVerticalShearD_CbCr16F(src, dest, srcOffsetToROI_X, srcOffsetToROI_Y, yTranslate, shearSlope, filter, &bg, flags.bits());
         },
         else => @compileError("verticalShearD supports only: " ++ "`Pixel_8`, `Pixel_F`, `f16`, `Pixel_8888`, `Pixel_FFFF`, `Pixel_ARGB_16U`, `Pixel_ARGB_16S`, `[4]f16`, `Pixel_16U16U`, `Pixel_16S16S`, `[2]f16`"),
     });
@@ -624,8 +625,8 @@ pub fn verticalShearD(
 /// shape matters.
 ///
 /// Destroy the result with `destroyResamplingFilter`.
-pub fn newResamplingFilter(scale_factor: f32, flags: vImage_Flags) ResamplingFilter {
-    return c.vImageNewResamplingFilter(scale_factor, flags);
+pub fn newResamplingFilter(scale_factor: f32, flags: Options) ResamplingFilter {
+    return c.vImageNewResamplingFilter(scale_factor, flags.bits());
 }
 
 /// Destroy a resampling filter previously created with `newResamplingFilter`.
@@ -643,8 +644,8 @@ pub fn destroyResamplingFilter(filter: ResamplingFilter) void {
 /// Note that `kernelFunc` is a parameter: the size depends on the kernel, not
 /// only on the numbers, so passing a different function here than to the
 /// build call is a way to under-allocate.
-pub fn resamplingFilterSize(scale_factor: f32, kernelFunc: KernelFunc, kernelWidth: f32, flags: vImage_Flags) usize {
-    return c.vImageGetResamplingFilterSize(scale_factor, kernelFunc, kernelWidth, flags);
+pub fn resamplingFilterSize(scale_factor: f32, kernelFunc: KernelFunc, kernelWidth: f32, flags: Options) usize {
+    return c.vImageGetResamplingFilterSize(scale_factor, kernelFunc, kernelWidth, flags.bits());
 }
 
 /// The maximum sampling radius of an existing filter: how far, in source
@@ -659,8 +660,8 @@ pub fn resamplingFilterSize(scale_factor: f32, kernelFunc: KernelFunc, kernelWid
 /// what you call before you have a filter. Getting these two the same way
 /// round is the natural mistake: the wrong signature still links, and returns
 /// zero rather than failing.
-pub fn resamplingFilterExtent(filter: ResamplingFilter, flags: vImage_Flags) vImagePixelCount {
-    return c.vImageGetResamplingFilterExtent(filter, flags);
+pub fn resamplingFilterExtent(filter: ResamplingFilter, flags: Options) vImagePixelCount {
+    return c.vImageGetResamplingFilterExtent(filter, flags.bits());
 }
 
 /// Build a resampling filter with a caller-supplied kernel shape, in
@@ -680,11 +681,11 @@ pub fn newResamplingFilterForFunction(
     kernelFunc: KernelFunc,
     kernelWidth: f32,
     userData: ?*anyopaque,
-    flags: vImage_Flags,
-) VImageError!ResamplingFilter {
+    flags: Options,
+) Error!ResamplingFilter {
     std.debug.assert(buffer.len >= resamplingFilterSize(scale_factor, kernelFunc, kernelWidth, flags));
     const filter: ResamplingFilter = @ptrCast(buffer.ptr);
-    _ = try check(c.vImageNewResamplingFilterForFunctionUsingBuffer(filter, scale_factor, kernelFunc, kernelWidth, userData, flags));
+    _ = try check(c.vImageNewResamplingFilterForFunctionUsingBuffer(filter, scale_factor, kernelFunc, kernelWidth, userData, flags.bits()));
     return filter;
 }
 
@@ -747,7 +748,7 @@ test "horizontalReflect_Planar8: mirrors columns (x), not rows" {
     var dest = try makePlanar8Buffer(allocator, 3, 5, 3);
     defer allocator.free(dest.mem);
 
-    const err = horizontalReflect(Pixel_8, &src.buf, &dest.buf, Flags.kvImageNoFlags);
+    const err = horizontalReflect(Pixel_8, &src.buf, &dest.buf, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 0), marker.y);
@@ -765,7 +766,7 @@ test "verticalReflect_Planar8: mirrors rows (y), not columns" {
     var dest = try makePlanar8Buffer(allocator, 5, 3, 3);
     defer allocator.free(dest.mem);
 
-    const err = verticalReflect(Pixel_8, &src.buf, &dest.buf, Flags.kvImageNoFlags);
+    const err = verticalReflect(Pixel_8, &src.buf, &dest.buf, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 3), marker.y);
@@ -805,7 +806,7 @@ test "rotate90: RotationConstant values match Geometry.h's kRotate*DegreesClockw
     for (cases) |case| {
         var dest = try makePlanar8Buffer(allocator, case.dest_h, case.dest_w, 2);
         defer allocator.free(dest.mem);
-        const err = rotate90(Pixel_8, &src.buf, &dest.buf, case.rc, 0, Flags.kvImageNoFlags);
+        const err = rotate90(Pixel_8, &src.buf, &dest.buf, case.rc, 0, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
         const marker = findMarker(dest.buf);
         try std.testing.expectEqual(case.exp_y, marker.y);
@@ -832,7 +833,7 @@ test "affineWarp: pure translation (a=1,b=0,c=0,d=1) shifts by exactly (tx,ty) p
     defer allocator.free(dest.mem);
 
     const transform = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
-    const err = affineWarp(Pixel_8, &src.buf, &dest.buf, null, &transform, 0, Flags.kvImageBackgroundColorFill);
+    const err = affineWarp(Pixel_8, &src.buf, &dest.buf, null, &transform, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(u8, 200), marker.v);
@@ -845,7 +846,7 @@ test "affineWarp: pure translation (a=1,b=0,c=0,d=1) shifts by exactly (tx,ty) p
     var dest2 = try makePlanar8Buffer(allocator, 5, 5, 1);
     defer allocator.free(dest2.mem);
     const transform2 = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 0, .ty = 1 };
-    const err2 = affineWarp(Pixel_8, &src.buf, &dest2.buf, null, &transform2, 0, Flags.kvImageBackgroundColorFill);
+    const err2 = affineWarp(Pixel_8, &src.buf, &dest2.buf, null, &transform2, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err2);
     const marker2 = findMarker(dest2.buf);
     try std.testing.expectEqual(@as(u8, 200), marker2.v);
@@ -868,13 +869,13 @@ test "affineWarpD: matches affineWarp for an equivalent single/double-precision 
     var dest_f = try makePlanar8Buffer(allocator, 5, 5, 1);
     defer allocator.free(dest_f.mem);
     const tf = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
-    const err_f = affineWarp(Pixel_8, &src.buf, &dest_f.buf, null, &tf, 0, Flags.kvImageBackgroundColorFill);
+    const err_f = affineWarp(Pixel_8, &src.buf, &dest_f.buf, null, &tf, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err_f);
 
     var dest_d = try makePlanar8Buffer(allocator, 5, 5, 3);
     defer allocator.free(dest_d.mem);
     const td = vImage_AffineTransform_Double{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
-    const err_d = affineWarpD(Pixel_8, &src.buf, &dest_d.buf, null, &td, 0, Flags.kvImageBackgroundColorFill);
+    const err_d = affineWarpD(Pixel_8, &src.buf, &dest_d.buf, null, &td, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err_d);
 
     const marker_f = findMarker(dest_f.buf);
@@ -893,13 +894,13 @@ test "affineWarpCG: matches affineWarp for an equivalent transform (vImage_CGAff
     var dest_f = try makePlanar8Buffer(allocator, 5, 5, 2);
     defer allocator.free(dest_f.mem);
     const tf = vImage_AffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
-    const err_f = affineWarp(Pixel_8, &src.buf, &dest_f.buf, null, &tf, 0, Flags.kvImageBackgroundColorFill);
+    const err_f = affineWarp(Pixel_8, &src.buf, &dest_f.buf, null, &tf, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err_f);
 
     var dest_cg = try makePlanar8Buffer(allocator, 5, 5, 3);
     defer allocator.free(dest_cg.mem);
     const tcg = vImage_CGAffineTransform{ .a = 1, .b = 0, .c = 0, .d = 1, .tx = 1, .ty = 0 };
-    const err_cg = affineWarpCG(Pixel_8, &src.buf, &dest_cg.buf, null, &tcg, 0, Flags.kvImageBackgroundColorFill);
+    const err_cg = affineWarpCG(Pixel_8, &src.buf, &dest_cg.buf, null, &tcg, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err_cg);
 
     const marker_f = findMarker(dest_f.buf);
@@ -936,7 +937,7 @@ test "rotate: positive angleInRadians is a standard mathematical CCW rotation (r
     var dest = try makePlanar8Buffer(allocator, 9, 9, 1);
     defer allocator.free(dest.mem);
 
-    const err = rotate(Pixel_8, &src.buf, &dest.buf, null, std.math.pi / 6.0, 0, Flags.kvImageBackgroundColorFill);
+    const err = rotate(Pixel_8, &src.buf, &dest.buf, null, std.math.pi / 6.0, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 3), marker.y);
@@ -954,7 +955,7 @@ test "scale: resizes to the destination buffer's dimensions" {
     var dest = try makePlanar8Buffer(allocator, 2, 2, 2);
     defer allocator.free(dest.mem);
 
-    const err = scale(Pixel_8, &src.buf, &dest.buf, null, Flags.kvImageNoFlags);
+    const err = scale(Pixel_8, &src.buf, &dest.buf, null, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     // Uniform input -> uniform (approximately, resampled) output; the key
     // check is that the call succeeds and writes into the *dest*-sized
@@ -966,7 +967,7 @@ test "scale: resizes to the destination buffer's dimensions" {
 
 test "newResamplingFilter/destroyResamplingFilter: create-use-destroy lifecycle, and horizontalShear/verticalShear axis mapping" {
     const allocator = std.testing.allocator;
-    const filter = newResamplingFilter(1.0, Flags.kvImageNoFlags);
+    const filter = newResamplingFilter(1.0, .{});
     try std.testing.expect(filter != null);
     defer destroyResamplingFilter(filter);
 
@@ -979,7 +980,7 @@ test "newResamplingFilter/destroyResamplingFilter: create-use-destroy lifecycle,
     // a real shear call and that "horizontal" moves columns not rows.
     var dest_h = try makePlanar8Buffer(allocator, 5, 5, 1);
     defer allocator.free(dest_h.mem);
-    const err_h = horizontalShear(Pixel_8, &src.buf, &dest_h.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
+    const err_h = horizontalShear(Pixel_8, &src.buf, &dest_h.buf, 0, 0, 1, 0, filter, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err_h);
     const marker_h = findMarker(dest_h.buf);
     // Runtime-confirmed: col 2 -> 3 (row unchanged), matching affineWarp's
@@ -990,7 +991,7 @@ test "newResamplingFilter/destroyResamplingFilter: create-use-destroy lifecycle,
     // verticalShear with shearSlope=0 and yTranslate=1: "vertical" moves rows not columns.
     var dest_v = try makePlanar8Buffer(allocator, 5, 5, 3);
     defer allocator.free(dest_v.mem);
-    const err_v = verticalShear(Pixel_8, &src.buf, &dest_v.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
+    const err_v = verticalShear(Pixel_8, &src.buf, &dest_v.buf, 0, 0, 1, 0, filter, 0, .{ .background_color_fill = true });
     try std.testing.expectEqual(@as(usize, 0), try err_v);
     const marker_v = findMarker(dest_v.buf);
     // Runtime-confirmed: row 2 -> 1 (col unchanged), matching affineWarp's
@@ -1029,7 +1030,7 @@ test "getPerspectiveWarp: the identity quadrilateral gives the identity transfor
     // transform with vx = vy = 0 and v = 1 is exactly an affine one.
     const pts = [4][2]f32{ .{ 0, 0 }, .{ 4, 0 }, .{ 4, 4 }, .{ 0, 4 } };
     var t: vImage_PerspectiveTransform = undefined;
-    _ = try getPerspectiveWarp(&pts, &pts, &t, Flags.kvImageNoFlags);
+    _ = try getPerspectiveWarp(&pts, &pts, &t, .{});
 
     try std.testing.expectApproxEqAbs(@as(f32, 1), t.a, 1e-5);
     try std.testing.expectApproxEqAbs(@as(f32, 0), t.b, 1e-5);
@@ -1067,7 +1068,7 @@ test "perspectiveWarp: a translation-only transform moves the marker like affine
         .vy = 0,
         .v = 1,
     };
-    _ = try perspectiveWarp(Pixel_8, &src.buf, &dest.buf, null, &t, .nearest, 0, Flags.kvImageBackgroundColorFill);
+    _ = try perspectiveWarp(Pixel_8, &src.buf, &dest.buf, null, &t, .nearest, 0, .{ .background_color_fill = true });
 
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 2), marker.y);
@@ -1097,11 +1098,11 @@ test "perspectiveWarp: linear interpolation spreads a marker that nearest keeps 
 
     var sharp = try makePlanar8Buffer(allocator, 5, 5, 1);
     defer allocator.free(sharp.mem);
-    _ = try perspectiveWarp(Pixel_8, &src.buf, &sharp.buf, null, &t, .nearest, 0, Flags.kvImageBackgroundColorFill);
+    _ = try perspectiveWarp(Pixel_8, &src.buf, &sharp.buf, null, &t, .nearest, 0, .{ .background_color_fill = true });
 
     var soft = try makePlanar8Buffer(allocator, 5, 5, 1);
     defer allocator.free(soft.mem);
-    _ = try perspectiveWarp(Pixel_8, &src.buf, &soft.buf, null, &t, .linear, 0, Flags.kvImageBackgroundColorFill);
+    _ = try perspectiveWarp(Pixel_8, &src.buf, &soft.buf, null, &t, .linear, 0, .{ .background_color_fill = true });
 
     // Nearest keeps the full 200 somewhere; linear cannot, because half of it
     // has gone to the neighbouring column.
@@ -1115,7 +1116,7 @@ test "horizontalShearD and verticalShearD agree with the f32 versions" {
     // wrapper passed a float where a double is expected the arguments would
     // land in the wrong registers and this would not merely be imprecise.
     const allocator = std.testing.allocator;
-    const filter = newResamplingFilter(1.0, Flags.kvImageNoFlags);
+    const filter = newResamplingFilter(1.0, .{});
     try std.testing.expect(filter != null);
     defer destroyResamplingFilter(filter);
 
@@ -1128,8 +1129,8 @@ test "horizontalShearD and verticalShearD agree with the f32 versions" {
     var double = try makePlanar8Buffer(allocator, 5, 5, 3);
     defer allocator.free(double.mem);
 
-    _ = try horizontalShear(Pixel_8, &src.buf, &single.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
-    _ = try horizontalShearD(Pixel_8, &src.buf, &double.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
+    _ = try horizontalShear(Pixel_8, &src.buf, &single.buf, 0, 0, 1, 0, filter, 0, .{ .background_color_fill = true });
+    _ = try horizontalShearD(Pixel_8, &src.buf, &double.buf, 0, 0, 1, 0, filter, 0, .{ .background_color_fill = true });
     for (0..5) |y| {
         for (0..5) |x| {
             try std.testing.expectEqual(getPlanar8(single.buf, y, x), getPlanar8(double.buf, y, x));
@@ -1138,8 +1139,8 @@ test "horizontalShearD and verticalShearD agree with the f32 versions" {
 
     @memset(single.mem, 0);
     @memset(double.mem, 0);
-    _ = try verticalShear(Pixel_8, &src.buf, &single.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
-    _ = try verticalShearD(Pixel_8, &src.buf, &double.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
+    _ = try verticalShear(Pixel_8, &src.buf, &single.buf, 0, 0, 1, 0, filter, 0, .{ .background_color_fill = true });
+    _ = try verticalShearD(Pixel_8, &src.buf, &double.buf, 0, 0, 1, 0, filter, 0, .{ .background_color_fill = true });
     for (0..5) |y| {
         for (0..5) |x| {
             try std.testing.expectEqual(getPlanar8(single.buf, y, x), getPlanar8(double.buf, y, x));
@@ -1151,7 +1152,7 @@ test "horizontalShearD and verticalShearD agree with the f32 versions" {
     // characterization of the D path running, not a claim they agree.
     var fine = try makePlanar8Buffer(allocator, 5, 5, 2);
     defer allocator.free(fine.mem);
-    _ = try horizontalShearD(Pixel_8, &src.buf, &fine.buf, 0, 0, 0, 1.0 / 3.0, filter, 0, Flags.kvImageBackgroundColorFill);
+    _ = try horizontalShearD(Pixel_8, &src.buf, &fine.buf, 0, 0, 0, 1.0 / 3.0, filter, 0, .{ .background_color_fill = true });
     try std.testing.expect(findMarker(fine.buf).v > 0);
 }
 
@@ -1167,14 +1168,14 @@ test "the 16F formats: half-precision pixels through reflect, rotate90 and shear
     {
         var dest = try makePlanar16FBuffer(allocator, 3, 5, 1);
         defer allocator.free(dest.mem);
-        _ = try horizontalReflect(f16, &src.buf, &dest.buf, Flags.kvImageNoFlags);
+        _ = try horizontalReflect(f16, &src.buf, &dest.buf, .{});
         // Column 1 of 5 mirrors to column 3; the row is untouched.
         try std.testing.expectApproxEqAbs(@as(f16, 8.0), getPlanar16F(dest.buf, 0, 3), 0.01);
     }
     {
         var dest = try makePlanar16FBuffer(allocator, 3, 5, 1);
         defer allocator.free(dest.mem);
-        _ = try verticalReflect(f16, &src.buf, &dest.buf, Flags.kvImageNoFlags);
+        _ = try verticalReflect(f16, &src.buf, &dest.buf, .{});
         // Row 0 of 3 mirrors to row 2; the column is untouched.
         try std.testing.expectApproxEqAbs(@as(f16, 8.0), getPlanar16F(dest.buf, 2, 1), 0.01);
     }
@@ -1182,15 +1183,15 @@ test "the 16F formats: half-precision pixels through reflect, rotate90 and shear
         // 180 degrees is the one rotation that keeps a 3x5 image 3x5.
         var dest = try makePlanar16FBuffer(allocator, 3, 5, 1);
         defer allocator.free(dest.mem);
-        _ = try rotate90(f16, &src.buf, &dest.buf, .rotate_180, 0.0, Flags.kvImageBackgroundColorFill);
+        _ = try rotate90(f16, &src.buf, &dest.buf, .rotate_180, 0.0, .{ .background_color_fill = true });
         try std.testing.expectApproxEqAbs(@as(f16, 8.0), getPlanar16F(dest.buf, 2, 3), 0.01);
     }
     {
-        const filter = newResamplingFilter(1.0, Flags.kvImageNoFlags);
+        const filter = newResamplingFilter(1.0, .{});
         defer destroyResamplingFilter(filter);
         var dest = try makePlanar16FBuffer(allocator, 3, 5, 1);
         defer allocator.free(dest.mem);
-        _ = try horizontalShear(f16, &src.buf, &dest.buf, 0, 0, 1, 0, filter, 0.0, Flags.kvImageBackgroundColorFill);
+        _ = try horizontalShear(f16, &src.buf, &dest.buf, 0, 0, 1, 0, filter, 0.0, .{ .background_color_fill = true });
         try std.testing.expectApproxEqAbs(@as(f16, 8.0), getPlanar16F(dest.buf, 0, 2), 0.01);
     }
 }
@@ -1216,13 +1217,13 @@ test "the ARGB16F and CbCr16F formats: pointer background colours converted at t
         @memset(dmem, 0);
         const dest = vImage_Buffer{ .data = dmem.ptr, .height = h, .width = w, .rowBytes = row_elems * @sizeOf(f16) };
 
-        _ = try horizontalReflect([4]f16, &src, &dest, Flags.kvImageNoFlags);
+        _ = try horizontalReflect([4]f16, &src, &dest, .{});
         // Column 1 of 4 mirrors to column 2.
         try std.testing.expectApproxEqAbs(@as(f16, 8.0), dmem[0 * row_elems + 2 * 4], 0.01);
 
         @memset(dmem, 0);
         const bg = [4]f16{ 1.0, 0.5, 0.25, 0.0 };
-        _ = try rotate90([4]f16, &src, &dest, .rotate_180, &bg, Flags.kvImageBackgroundColorFill);
+        _ = try rotate90([4]f16, &src, &dest, .rotate_180, &bg, .{ .background_color_fill = true });
         try std.testing.expectApproxEqAbs(@as(f16, 8.0), dmem[2 * row_elems + 2 * 4], 0.01);
     }
     {
@@ -1241,7 +1242,7 @@ test "the ARGB16F and CbCr16F formats: pointer background colours converted at t
         const dest = vImage_Buffer{ .data = dmem.ptr, .height = h, .width = w, .rowBytes = row_elems * @sizeOf(f16) };
 
         const bg = [2]f16{ 0.0, 0.0 };
-        _ = try rotate90([2]f16, &src, &dest, .rotate_180, &bg, Flags.kvImageBackgroundColorFill);
+        _ = try rotate90([2]f16, &src, &dest, .rotate_180, &bg, .{ .background_color_fill = true });
         try std.testing.expectApproxEqAbs(@as(f16, 8.0), dmem[2 * row_elems + 2 * 2], 0.01);
     }
 }
@@ -1269,7 +1270,7 @@ test "CbCr8 and Planar16U scale through the widened format set" {
         @memset(dst_mem, 0);
         const dest = vImage_Buffer{ .data = dst_mem.ptr, .height = 2, .width = 2, .rowBytes = 4 * @sizeOf(u16) };
 
-        _ = try scale(Pixel_16U, &src, &dest, null, Flags.kvImageHighQualityResampling);
+        _ = try scale(Pixel_16U, &src, &dest, null, .{ .high_quality_resampling = true });
         // A constant image stays constant under any resampling filter.
         try std.testing.expectEqual(@as(u16, 1000), dst_mem[0]);
     }
@@ -1290,7 +1291,7 @@ test "CbCr8 and Planar16U scale through the widened format set" {
         @memset(dst_mem, 0);
         const dest = vImage_Buffer{ .data = dst_mem.ptr, .height = 2, .width = 2, .rowBytes = 6 };
 
-        _ = try scale(Pixel_88, &src, &dest, null, Flags.kvImageHighQualityResampling);
+        _ = try scale(Pixel_88, &src, &dest, null, .{ .high_quality_resampling = true });
         try std.testing.expectEqual(@as(u8, 100), dst_mem[0]);
         try std.testing.expectEqual(@as(u8, 200), dst_mem[1]);
     }
@@ -1308,7 +1309,7 @@ fn tentKernel(xArray: [*]const f32, yArray: [*]f32, count: c_ulong, userData: ?*
 
 test "newResamplingFilterForFunction builds a usable filter in caller memory" {
     const allocator = std.testing.allocator;
-    const flags = Flags.kvImageNoFlags;
+    const flags: Options = .{};
 
     const size = resamplingFilterSize(1.0, tentKernel, 2.0, flags);
     try std.testing.expect(size > 0);
@@ -1332,7 +1333,7 @@ test "newResamplingFilterForFunction builds a usable filter in caller memory" {
 
     var dest = try makePlanar8Buffer(allocator, 5, 5, 1);
     defer allocator.free(dest.mem);
-    _ = try horizontalShear(Pixel_8, &src.buf, &dest.buf, 0, 0, 1, 0, filter, 0, Flags.kvImageBackgroundColorFill);
+    _ = try horizontalShear(Pixel_8, &src.buf, &dest.buf, 0, 0, 1, 0, filter, 0, .{ .background_color_fill = true });
 
     const marker = findMarker(dest.buf);
     try std.testing.expectEqual(@as(usize, 2), marker.y);

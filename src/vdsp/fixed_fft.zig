@@ -273,7 +273,7 @@ test "fft16_zopv forward cross-checked against FFT(f32).zip at N=16" {
 
     var re2 = in_re;
     var im2 = in_im;
-    const setup = try fft.FFT(f32).init(4, .radix2); // N = 1 << 4 = 16
+    var setup = try fft.FFT(f32).init(4, .radix2); // N = 1 << 4 = 16
     defer setup.deinit();
     const io = SS(f32).init(&re2, &im2);
     setup.zip(io, .forward);
@@ -294,7 +294,7 @@ test "fft32_zopv forward cross-checked against FFT(f32).zip at N=32" {
 
     var re2 = in_re;
     var im2 = in_im;
-    const setup = try fft.FFT(f32).init(5, .radix2); // N = 1 << 5 = 32
+    var setup = try fft.FFT(f32).init(5, .radix2); // N = 1 << 5 = 32
     defer setup.deinit();
     const io = SS(f32).init(&re2, &im2);
     setup.zip(io, .forward);

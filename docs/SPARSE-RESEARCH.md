@@ -199,8 +199,8 @@ a translation:
   so routing them would need a process-global, which is worse than libc.
   Implementation passes libc's and says so.
 - **Errors currently trap.** With `options.reportError == NULL` the C macros call
-  `_SparseTrap()` — `__builtin_trap()`. A `SparseError` error set in the style of
-  `vimage.VImageError` turns an abort into a `try`, and the `status` fields
+  `_SparseTrap()` — `__builtin_trap()`. A `sparse.Error` error set in the style of
+  `vimage.Error` turns an abort into a `try`, and the `status` fields
   (`SparseStatusOK`, `SparseMatrixIsSingular`, …) are already there to map from.
 
 CSC/block-CSC construction is the other design question: `SparseConvertFromCoordinate`

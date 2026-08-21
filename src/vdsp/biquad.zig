@@ -158,7 +158,7 @@ pub fn Biquadm(comptime T: type) type {
         }
 
         /// Frees the memory allocated by init.
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             switch (T) {
                 f32 => c.vDSP_biquadm_DestroySetup(self.setup),
                 f64 => c.vDSP_biquadm_DestroySetupD(self.setup),
@@ -641,7 +641,7 @@ test "Biquadm init: (sections, channels) argument order, pinned with an asymmetr
     const coeffs = one_pole ++ identity ++ one_pole ++ identity ++ one_pole ++ identity;
     try std.testing.expectEqual(@as(usize, 5 * 3 * 2), coeffs.len);
 
-    const filter = try Biquadm(f64).init(&coeffs, 3, 2);
+    var filter = try Biquadm(f64).init(&coeffs, 3, 2);
     defer filter.deinit();
     try std.testing.expectEqual(@as(Length, 3), filter.sections);
     try std.testing.expectEqual(@as(Length, 2), filter.channels);

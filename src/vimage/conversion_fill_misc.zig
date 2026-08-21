@@ -43,7 +43,7 @@ const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImage_Flags = types.vImage_Flags;
 const vImagePixelCount = types.vImagePixelCount;
@@ -60,6 +60,7 @@ const Pixel_ARGB_16U = types.Pixel_ARGB_16U;
 const Pixel_ARGB_16S = types.Pixel_ARGB_16S;
 const Pixel_ARGB_16F = types.Pixel_ARGB_16F;
 const Flags = types.Flags;
+const Options = types.Options;
 
 // ============================================================================
 // Local types
@@ -103,16 +104,16 @@ fn halfBits4(value: [4]f16) Pixel_ARGB_16F {
 ///
 /// Works for any 4-channel 16U ordering (ARGB16U, RGBA16U, ...); the channels
 /// are written in the order given, no interpretation is applied.
-pub fn bufferFillARGB16U(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16U, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageBufferFill_ARGB16U(dest, color, flags));
+pub fn bufferFillARGB16U(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16U, flags: Options) Error!usize {
+    return check(c.vImageBufferFill_ARGB16U(dest, color, flags.bits()));
 }
 
 /// Fill every pixel of a 4-channel 16-bit signed buffer with `color`.
 ///
 /// The full `[-32768, 32767]` range is written verbatim; nothing is clamped
 /// to a video or unsigned range.
-pub fn bufferFillARGB16S(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16S, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageBufferFill_ARGB16S(dest, color, flags));
+pub fn bufferFillARGB16S(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16S, flags: Options) Error!usize {
+    return check(c.vImageBufferFill_ARGB16S(dest, color, flags.bits()));
 }
 
 /// Fill every pixel of a 4-channel half-float buffer with `color`.
@@ -120,17 +121,17 @@ pub fn bufferFillARGB16S(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16
 /// `color` is given as real `f16` values and bit-cast to the `uint16_t` pair
 /// vImage expects. Values outside the binary16 range (magnitude above 65504)
 /// become infinities, since no conversion happens - only a bit cast.
-pub fn bufferFillARGB16F(dest: *const vImage_Buffer, color: [4]f16, flags: vImage_Flags) VImageError!usize {
+pub fn bufferFillARGB16F(dest: *const vImage_Buffer, color: [4]f16, flags: Options) Error!usize {
     const bits = halfBits4(color);
-    return check(c.vImageBufferFill_ARGB16F(dest, &bits, flags));
+    return check(c.vImageBufferFill_ARGB16F(dest, &bits, flags.bits()));
 }
 
 /// Fill every pixel of a 2-channel 8-bit chroma plane with `color` (Cb, Cr).
 ///
 /// `dest.width` counts CbCr *pairs*, so a row is `width * 2` bytes. For
 /// neutral (grey) chroma in a full-range 8-bit format use `.{ 128, 128 }`.
-pub fn bufferFillCbCr8(dest: *const vImage_Buffer, color: *const Pixel_88, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageBufferFill_CbCr8(dest, color, flags));
+pub fn bufferFillCbCr8(dest: *const vImage_Buffer, color: *const Pixel_88, flags: Options) Error!usize {
+    return check(c.vImageBufferFill_CbCr8(dest, color, flags.bits()));
 }
 
 /// Fill every pixel of a 2-channel 16-bit unsigned chroma plane with `color`.
@@ -139,16 +140,16 @@ pub fn bufferFillCbCr8(dest: *const vImage_Buffer, color: *const Pixel_88, flags
 /// 10 or 12 bits of real precision left-justified or right-justified in the
 /// 16-bit container; this function does not know which, it stores the value
 /// you give it.
-pub fn bufferFillCbCr16U(dest: *const vImage_Buffer, color: *const Pixel_16U16U, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageBufferFill_CbCr16U(dest, color, flags));
+pub fn bufferFillCbCr16U(dest: *const vImage_Buffer, color: *const Pixel_16U16U, flags: Options) Error!usize {
+    return check(c.vImageBufferFill_CbCr16U(dest, color, flags.bits()));
 }
 
 /// Fill every pixel of a 2-channel 16-bit signed chroma plane with `color`.
 ///
 /// A row is `width * 4` bytes. Signed chroma is normally zero-centred, so the
 /// neutral fill is `.{ 0, 0 }` rather than a mid-range constant.
-pub fn bufferFillCbCr16S(dest: *const vImage_Buffer, color: *const Pixel_16S16S, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageBufferFill_CbCr16S(dest, color, flags));
+pub fn bufferFillCbCr16S(dest: *const vImage_Buffer, color: *const Pixel_16S16S, flags: Options) Error!usize {
+    return check(c.vImageBufferFill_CbCr16S(dest, color, flags.bits()));
 }
 
 // ============================================================================
@@ -166,29 +167,29 @@ pub fn bufferFillCbCr16S(dest: *const vImage_Buffer, color: *const Pixel_16S16S,
 /// May run in place when `src.data == dest.data` and
 /// `src.rowBytes >= dest.rowBytes` (add `kvImageDoNotTile` if the rowBytes
 /// differ).
-pub fn overwriteChannelsWithPixelARGB16U(the_pixel: *const Pixel_ARGB_16U, src: *const vImage_Buffer, dest: *const vImage_Buffer, copyMask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithPixel_ARGB16U(the_pixel, src, dest, copyMask, flags));
+pub fn overwriteChannelsWithPixelARGB16U(the_pixel: *const Pixel_ARGB_16U, src: *const vImage_Buffer, dest: *const vImage_Buffer, copyMask: u8, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithPixel_ARGB16U(the_pixel, src, dest, copyMask, flags.bits()));
 }
 
 /// Fill a Planar16U buffer with `scalar`.
 ///
 /// Despite the name there is no mask and no source: for a planar buffer the
 /// only channel is the whole image, so this is a buffer fill.
-pub fn overwriteChannelsWithScalarPlanar16U(scalar: Pixel_16U, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithScalar_Planar16U(scalar, dest, flags));
+pub fn overwriteChannelsWithScalarPlanar16U(scalar: Pixel_16U, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithScalar_Planar16U(scalar, dest, flags.bits()));
 }
 
 /// Fill a Planar16S buffer with `scalar`. Negative values are stored as-is.
-pub fn overwriteChannelsWithScalarPlanar16S(scalar: Pixel_16S, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithScalar_Planar16S(scalar, dest, flags));
+pub fn overwriteChannelsWithScalarPlanar16S(scalar: Pixel_16S, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithScalar_Planar16S(scalar, dest, flags.bits()));
 }
 
 /// Fill a Planar16F (half-float) buffer with `scalar`.
 ///
 /// Takes a real `f16` and bit-casts it; the buffer holds the binary16 bit
 /// pattern, one `u16` per pixel.
-pub fn overwriteChannelsWithScalarPlanar16F(scalar: f16, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithScalar_Planar16F(halfBits(scalar), dest, flags));
+pub fn overwriteChannelsWithScalarPlanar16F(scalar: f16, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithScalar_Planar16F(halfBits(scalar), dest, flags.bits()));
 }
 
 // ============================================================================
@@ -202,8 +203,8 @@ pub fn overwriteChannelsWithScalarPlanar16F(scalar: f16, dest: *const vImage_Buf
 /// works for any 4-channel 16-bit-per-channel format (RGBA16F, BGRA16F,
 /// AYUV16F) - and, since it never inspects the values, equally well for
 /// 16U/16S data that happens to be typed as 16F.
-pub fn permuteChannelsARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannels_ARGB16F(src, dest, permuteMap, flags));
+pub fn permuteChannelsARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannels_ARGB16F(src, dest, permuteMap, flags.bits()));
 }
 
 /// Permute channels, then overwrite the channels selected by `copyMask` with
@@ -217,21 +218,21 @@ pub fn permuteChannelsARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buf
 /// detects that case and reroutes to the buffer fill). `backgroundColor` is in
 /// destination channel order, i.e. it is indexed after the permute, not
 /// before.
-pub fn permuteChannelsWithMaskedInsertARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_8888, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannelsWithMaskedInsert_ARGB8888(src, dest, permuteMap, copyMask, backgroundColor, flags));
+pub fn permuteChannelsWithMaskedInsertARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_8888, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannelsWithMaskedInsert_ARGB8888(src, dest, permuteMap, copyMask, backgroundColor, flags.bits()));
 }
 
 /// `permuteChannelsWithMaskedInsertARGB8888` for 32-bit float channels.
 ///
 /// No clamping is applied, so the background may be outside [0, 1] if that is
 /// what your pipeline wants.
-pub fn permuteChannelsWithMaskedInsertARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_FFFF, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannelsWithMaskedInsert_ARGBFFFF(src, dest, permuteMap, copyMask, backgroundColor, flags));
+pub fn permuteChannelsWithMaskedInsertARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_FFFF, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannelsWithMaskedInsert_ARGBFFFF(src, dest, permuteMap, copyMask, backgroundColor, flags.bits()));
 }
 
 /// `permuteChannelsWithMaskedInsertARGB8888` for 16-bit unsigned channels.
-pub fn permuteChannelsWithMaskedInsertARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_ARGB_16U, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannelsWithMaskedInsert_ARGB16U(src, dest, permuteMap, copyMask, backgroundColor, flags));
+pub fn permuteChannelsWithMaskedInsertARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_ARGB_16U, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannelsWithMaskedInsert_ARGB16U(src, dest, permuteMap, copyMask, backgroundColor, flags.bits()));
 }
 
 // ============================================================================
@@ -245,8 +246,8 @@ pub fn permuteChannelsWithMaskedInsertARGB16U(src: *const vImage_Buffer, dest: *
 /// counts 16-bit pixels, so a row is `width * 2` bytes; for an interleaved
 /// 4-channel 16-bit image multiply `width` by 4 and swap the whole thing at
 /// once. May be used in place.
-pub fn byteSwapPlanar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageByteSwap_Planar16U(src, dest, flags));
+pub fn byteSwapPlanar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageByteSwap_Planar16U(src, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -282,9 +283,9 @@ pub fn pngDecompressionFilter(
     bitsPerPixel: u32,
     filterMethodNumber: u32,
     filterType: PNGFilterValue,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImagePNGDecompressionFilter(buffer, startScanline, scanlineCount, bitsPerPixel, filterMethodNumber, @intFromEnum(filterType), flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImagePNGDecompressionFilter(buffer, startScanline, scanlineCount, bitsPerPixel, filterMethodNumber, @intFromEnum(filterType), flags.bits()));
 }
 
 // ============================================================================
@@ -338,7 +339,7 @@ test "bufferFillARGB16U/16S: every pixel gets the colour, pad bytes untouched" {
     var u = try Image(u16).init(allocator, 3, 5, 4);
     defer u.deinit(allocator);
     const color_u: Pixel_ARGB_16U = .{ 0xFFFF, 0x1234, 0x0000, 0xABCD };
-    try std.testing.expectEqual(@as(usize, 0), try bufferFillARGB16U(&u.buf, &color_u, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try bufferFillARGB16U(&u.buf, &color_u, .{}));
     for (0..3) |y| {
         for (0..5) |x| try std.testing.expectEqualSlices(u16, &color_u, u.at(y, x));
         // The 4 pad channels at the end of each row must still be zero.
@@ -349,7 +350,7 @@ test "bufferFillARGB16U/16S: every pixel gets the colour, pad bytes untouched" {
     var s = try Image(i16).init(allocator, 2, 3, 4);
     defer s.deinit(allocator);
     const color_s: Pixel_ARGB_16S = .{ -32768, -1, 0, 32767 };
-    try std.testing.expectEqual(@as(usize, 0), try bufferFillARGB16S(&s.buf, &color_s, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try bufferFillARGB16S(&s.buf, &color_s, .{}));
     for (0..2) |y| for (0..3) |x| try std.testing.expectEqualSlices(i16, &color_s, s.at(y, x));
 }
 
@@ -360,7 +361,7 @@ test "bufferFillARGB16F: f16 colour survives the bit cast exactly" {
 
     // All four are exactly representable in binary16, so this is not lossy.
     const color: [4]f16 = .{ 1.0, 0.5, -2.25, 0.0 };
-    try std.testing.expectEqual(@as(usize, 0), try bufferFillARGB16F(&img.buf, color, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try bufferFillARGB16F(&img.buf, color, .{}));
 
     for (0..2) |y| {
         for (0..4) |x| {
@@ -381,7 +382,7 @@ test "bufferFillCbCr8/16U/16S: two-channel chroma planes" {
     var b8 = try Image(u8).init(allocator, 4, 3, 2);
     defer b8.deinit(allocator);
     const neutral: Pixel_88 = .{ 128, 130 };
-    try std.testing.expectEqual(@as(usize, 0), try bufferFillCbCr8(&b8.buf, &neutral, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try bufferFillCbCr8(&b8.buf, &neutral, .{}));
     for (0..4) |y| for (0..3) |x| try std.testing.expectEqualSlices(u8, &neutral, b8.at(y, x));
     // rowBytes for CbCr8 is width*2 (+pad here): the byte after the last
     // pixel of row 0 must be pad, not a third channel.
@@ -390,13 +391,13 @@ test "bufferFillCbCr8/16U/16S: two-channel chroma planes" {
     var b16u = try Image(u16).init(allocator, 2, 2, 2);
     defer b16u.deinit(allocator);
     const cbcr_u: Pixel_16U16U = .{ 0x8000, 0x4000 };
-    try std.testing.expectEqual(@as(usize, 0), try bufferFillCbCr16U(&b16u.buf, &cbcr_u, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try bufferFillCbCr16U(&b16u.buf, &cbcr_u, .{}));
     for (0..2) |y| for (0..2) |x| try std.testing.expectEqualSlices(u16, &cbcr_u, b16u.at(y, x));
 
     var b16s = try Image(i16).init(allocator, 2, 2, 2);
     defer b16s.deinit(allocator);
     const cbcr_s: Pixel_16S16S = .{ -1000, 2000 };
-    try std.testing.expectEqual(@as(usize, 0), try bufferFillCbCr16S(&b16s.buf, &cbcr_s, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try bufferFillCbCr16S(&b16s.buf, &cbcr_s, .{}));
     for (0..2) |y| for (0..2) |x| try std.testing.expectEqualSlices(i16, &cbcr_s, b16s.at(y, x));
 }
 
@@ -416,7 +417,7 @@ test "overwriteChannelsWithPixelARGB16U: copyMask 0x8|0x2 replaces channels 0 an
 
     const pixel: Pixel_ARGB_16U = .{ 0xFFFF, 0xEEEE, 0xDDDD, 0xCCCC };
     // 0x8 -> channel 0, 0x2 -> channel 2.
-    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithPixelARGB16U(&pixel, &src.buf, &dest.buf, 0x8 | 0x2, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithPixelARGB16U(&pixel, &src.buf, &dest.buf, 0x8 | 0x2, .{}));
 
     for (0..2) |y| {
         for (0..3) |x| {
@@ -440,12 +441,12 @@ test "overwriteChannelsWithPixelARGB16U: copyMask bits above 0x0F are ignored, n
     // That is not what the shipping implementation does: the high bits are
     // masked off and the call succeeds. Pinning the real behaviour here so a
     // caller does not use an out-of-range mask as an error probe.
-    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithPixelARGB16U(&pixel, &src.buf, &dest.buf, 0x10, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithPixelARGB16U(&pixel, &src.buf, &dest.buf, 0x10, .{}));
     // 0x10 behaves as 0x00: a plain copy, no channel replaced.
     try std.testing.expectEqualSlices(u16, &.{ 1, 2, 3, 4 }, dest.at(0, 0));
 
     // 0x18 behaves as 0x08: only channel 0 replaced.
-    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithPixelARGB16U(&pixel, &src.buf, &dest.buf, 0x18, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithPixelARGB16U(&pixel, &src.buf, &dest.buf, 0x18, .{}));
     try std.testing.expectEqualSlices(u16, &.{ 100, 2, 3, 4 }, dest.at(0, 0));
 }
 
@@ -454,17 +455,17 @@ test "overwriteChannelsWithScalarPlanar16U/16S/16F: planar fills" {
 
     var u = try Image(u16).init(allocator, 3, 4, 1);
     defer u.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithScalarPlanar16U(0xBEEF, &u.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithScalarPlanar16U(0xBEEF, &u.buf, .{}));
     for (0..3) |y| for (0..4) |x| try std.testing.expectEqual(@as(u16, 0xBEEF), u.at(y, x)[0]);
 
     var s = try Image(i16).init(allocator, 3, 4, 1);
     defer s.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithScalarPlanar16S(-12345, &s.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithScalarPlanar16S(-12345, &s.buf, .{}));
     for (0..3) |y| for (0..4) |x| try std.testing.expectEqual(@as(i16, -12345), s.at(y, x)[0]);
 
     var h = try Image(u16).init(allocator, 3, 4, 1);
     defer h.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithScalarPlanar16F(0.25, &h.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try overwriteChannelsWithScalarPlanar16F(0.25, &h.buf, .{}));
     // 0.25 == 0x3400 in binary16.
     for (0..3) |y| for (0..4) |x| {
         try std.testing.expectEqual(@as(u16, 0x3400), h.at(y, x)[0]);
@@ -483,7 +484,7 @@ test "permuteChannelsARGB16F: map {3,2,1,0} reverses channels, {0,1,2,3} copies"
     for (0..2) |y| for (0..3) |x| src.set(y, x, &halfBits4(vals));
 
     const reverse = [4]u8{ 3, 2, 1, 0 };
-    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsARGB16F(&src.buf, &dest.buf, &reverse, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsARGB16F(&src.buf, &dest.buf, &reverse, .{}));
     for (0..2) |y| for (0..3) |x| {
         const px = dest.at(y, x);
         try std.testing.expectEqual(@as(f16, 8.0), @as(f16, @bitCast(px[0])));
@@ -495,11 +496,11 @@ test "permuteChannelsARGB16F: map {3,2,1,0} reverses channels, {0,1,2,3} copies"
     // Permuting twice by the same reversal is the identity.
     var back = try Image(u16).init(allocator, 2, 3, 4);
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsARGB16F(&dest.buf, &back.buf, &reverse, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsARGB16F(&dest.buf, &back.buf, &reverse, .{}));
     for (0..2) |y| for (0..3) |x| try std.testing.expectEqualSlices(u16, &halfBits4(vals), back.at(y, x));
 
     const bad = [4]u8{ 0, 1, 2, 4 };
-    try std.testing.expectError(VImageError.InvalidParameter, permuteChannelsARGB16F(&src.buf, &dest.buf, &bad, Flags.kvImageNoFlags));
+    try std.testing.expectError(Error.InvalidParameter, permuteChannelsARGB16F(&src.buf, &dest.buf, &bad, .{}));
 }
 
 test "permuteChannelsWithMaskedInsertARGB8888: mask selects background, not source" {
@@ -516,15 +517,15 @@ test "permuteChannelsWithMaskedInsertARGB8888: mask selects background, not sour
 
     // copyMask 0x4 == the i == 1 bit (0x8 >> 1), so only dest channel 1 comes
     // from the background. The rest is the permute: {4, ., 2, 1}.
-    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB8888(&src.buf, &dest.buf, &map, 0x4, &bg, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB8888(&src.buf, &dest.buf, &map, 0x4, &bg, .{}));
     for (0..2) |y| for (0..3) |x| try std.testing.expectEqualSlices(u8, &.{ 4, 201, 2, 1 }, dest.at(y, x));
 
     // copyMask 0 is a plain permute.
-    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB8888(&src.buf, &dest.buf, &map, 0x0, &bg, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB8888(&src.buf, &dest.buf, &map, 0x0, &bg, .{}));
     for (0..2) |y| for (0..3) |x| try std.testing.expectEqualSlices(u8, &.{ 4, 3, 2, 1 }, dest.at(y, x));
 
     // copyMask 0x0F is a whole-buffer fill with the background.
-    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB8888(&src.buf, &dest.buf, &map, 0x0F, &bg, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB8888(&src.buf, &dest.buf, &map, 0x0F, &bg, .{}));
     for (0..2) |y| for (0..3) |x| try std.testing.expectEqualSlices(u8, &bg, dest.at(y, x));
 }
 
@@ -540,7 +541,7 @@ test "permuteChannelsWithMaskedInsertARGBFFFF/ARGB16U: same semantics at other d
     defer f_dest.deinit(allocator);
     for (0..2) |y| for (0..2) |x| f_src.set(y, x, &.{ 0.0, 0.25, 0.5, 0.75 });
     const f_bg: Pixel_FFFF = .{ -1.0, -2.0, -3.0, -4.0 };
-    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGBFFFF(&f_src.buf, &f_dest.buf, &map, mask, &f_bg, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGBFFFF(&f_src.buf, &f_dest.buf, &map, mask, &f_bg, .{}));
     // permute gives {0.25, 0.0, 0.75, 0.5}; channels 0 and 3 become bg[0], bg[3].
     for (0..2) |y| for (0..2) |x| try std.testing.expectEqualSlices(f32, &.{ -1.0, 0.0, 0.75, -4.0 }, f_dest.at(y, x));
 
@@ -550,7 +551,7 @@ test "permuteChannelsWithMaskedInsertARGBFFFF/ARGB16U: same semantics at other d
     defer u_dest.deinit(allocator);
     for (0..2) |y| for (0..2) |x| u_src.set(y, x, &.{ 10, 20, 30, 40 });
     const u_bg: Pixel_ARGB_16U = .{ 0xFFFF, 0xFFFE, 0xFFFD, 0xFFFC };
-    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB16U(&u_src.buf, &u_dest.buf, &map, mask, &u_bg, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try permuteChannelsWithMaskedInsertARGB16U(&u_src.buf, &u_dest.buf, &map, mask, &u_bg, .{}));
     for (0..2) |y| for (0..2) |x| try std.testing.expectEqualSlices(u16, &.{ 0xFFFF, 10, 40, 0xFFFC }, u_dest.at(y, x));
 }
 
@@ -564,12 +565,12 @@ test "byteSwapPlanar16U: swaps the bytes of each 16-bit pixel and is its own inv
     const vals = [4]u16{ 0x0102, 0xFF00, 0x1234, 0xABCD };
     for (0..2) |y| for (vals, 0..) |v, x| src.set(y, x, &.{v});
 
-    try std.testing.expectEqual(@as(usize, 0), try byteSwapPlanar16U(&src.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try byteSwapPlanar16U(&src.buf, &dest.buf, .{}));
     const swapped = [4]u16{ 0x0201, 0x00FF, 0x3412, 0xCDAB };
     for (0..2) |y| for (swapped, 0..) |want, x| try std.testing.expectEqual(want, dest.at(y, x)[0]);
 
     // Round trip in place restores the original.
-    try std.testing.expectEqual(@as(usize, 0), try byteSwapPlanar16U(&dest.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try byteSwapPlanar16U(&dest.buf, &dest.buf, .{}));
     for (0..2) |y| for (vals, 0..) |want, x| try std.testing.expectEqual(want, dest.at(y, x)[0]);
 }
 
@@ -581,7 +582,7 @@ test "pngDecompressionFilter: sub filter accumulates left neighbour" {
     defer img.deinit(allocator);
     for ([_]u8{ 10, 20, 30, 40 }, 0..) |v, x| img.set(0, x, &.{v});
 
-    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&img.buf, 0, 1, 8, 0, .sub, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&img.buf, 0, 1, 8, 0, .sub, .{}));
     for ([_]u8{ 10, 30, 60, 100 }, 0..) |want, x| try std.testing.expectEqual(want, img.at(0, x)[0]);
 }
 
@@ -597,7 +598,7 @@ test "pngDecompressionFilter: sub filter at 32bpp strides 4 bytes and wraps mod 
     img.set(0, 1, &.{ 10, 20, 30, 40 });
     img.set(0, 2, &.{ 100, 200, 250, 255 });
 
-    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&img.buf, 0, 1, 32, 0, .sub, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&img.buf, 0, 1, 32, 0, .sub, .{}));
     try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, img.at(0, 0));
     try std.testing.expectEqualSlices(u8, &.{ 11, 22, 33, 44 }, img.at(0, 1));
     try std.testing.expectEqualSlices(u8, &.{ 111, 222, 27, 43 }, img.at(0, 2));
@@ -614,7 +615,7 @@ test "pngDecompressionFilter: up and avg filters read the prior scanline" {
     for ([_]u8{ 1, 2, 3, 250 }, 0..) |v, x| img.set(1, x, &.{v});
 
     // up: Raw(x) = Filt(x) + Prior(x) -> {6, 12, 18, 270 % 256 = 14}
-    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&img.buf, 1, 1, 8, 0, .up, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&img.buf, 1, 1, 8, 0, .up, .{}));
     for ([_]u8{ 5, 10, 15, 20 }, 0..) |want, x| try std.testing.expectEqual(want, img.at(0, x)[0]);
     for ([_]u8{ 6, 12, 18, 14 }, 0..) |want, x| try std.testing.expectEqual(want, img.at(1, x)[0]);
 
@@ -628,7 +629,7 @@ test "pngDecompressionFilter: up and avg filters read the prior scanline" {
     defer avg.deinit(allocator);
     for ([_]u8{ 5, 10, 15, 20 }, 0..) |v, x| avg.set(0, x, &.{v});
     for ([_]u8{ 1, 2, 3, 4 }, 0..) |v, x| avg.set(1, x, &.{v});
-    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&avg.buf, 1, 1, 8, 0, .avg, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&avg.buf, 1, 1, 8, 0, .avg, .{}));
     for ([_]u8{ 3, 8, 14, 21 }, 0..) |want, x| try std.testing.expectEqual(want, avg.at(1, x)[0]);
 }
 
@@ -658,7 +659,7 @@ test "pngDecompressionFilter: paeth filter with a real prior row" {
     defer p2.deinit(allocator);
     for (0..4) |x| p2.set(0, x, &.{10});
     for (0..4) |x| p2.set(1, x, &.{0});
-    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&p2.buf, 1, 1, 8, 0, .paeth, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&p2.buf, 1, 1, 8, 0, .paeth, .{}));
     for (0..4) |x| try std.testing.expectEqual(@as(u8, 10), p2.at(1, x)[0]);
 }
 
@@ -667,6 +668,6 @@ test "pngDecompressionFilter: none leaves the bytes alone" {
     var n = try Image(u8).init(allocator, 1, 3, 1);
     defer n.deinit(allocator);
     for ([_]u8{ 9, 8, 7 }, 0..) |v, x| n.set(0, x, &.{v});
-    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&n.buf, 0, 1, 8, 0, .none, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try pngDecompressionFilter(&n.buf, 0, 1, 8, 0, .none, .{}));
     for ([_]u8{ 9, 8, 7 }, 0..) |want, x| try std.testing.expectEqual(want, n.at(0, x)[0]);
 }

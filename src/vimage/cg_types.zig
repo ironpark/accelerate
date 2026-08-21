@@ -370,7 +370,7 @@ test "BufferTypeCode values match the kvImageBufferTypeCode_ constants" {
 
 test "the format constructors produce the bitmapInfo CoreGraphics expects" {
     const testing = std.testing;
-    const cs = try cg.ColorSpace.deviceRGB();
+    var cs = try cg.ColorSpace.initDeviceRGB();
     defer cs.deinit();
 
     // BGRA is ARGB plus a 32-bit little-endian swap; getting this wrong is

@@ -22,9 +22,10 @@ const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImage_Flags = types.vImage_Flags;
+const Options = types.Options;
 
 // ============================================================================
 // Alpha Blend (non-premultiplied)
@@ -37,10 +38,10 @@ const vImage_Flags = types.vImage_Flags;
 ///
 /// The `alpha` buffer must be pre-calculated. For planar data, compute it via:
 ///     premultipliedAlphaBlend(srcTopAlpha, srcTopAlpha, srcBottomAlpha, alpha, flags)
-pub fn alphaBlendPlanar(comptime T: type, srcTop: *const vImage_Buffer, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, srcBottomAlpha: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn alphaBlendPlanar(comptime T: type, srcTop: *const vImage_Buffer, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, srcBottomAlpha: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageAlphaBlend_Planar8(srcTop, srcTopAlpha, srcBottom, srcBottomAlpha, alpha, dest, flags),
-        f32 => c.vImageAlphaBlend_PlanarF(srcTop, srcTopAlpha, srcBottom, srcBottomAlpha, alpha, dest, flags),
+        u8 => c.vImageAlphaBlend_Planar8(srcTop, srcTopAlpha, srcBottom, srcBottomAlpha, alpha, dest, flags.bits()),
+        f32 => c.vImageAlphaBlend_PlanarF(srcTop, srcTopAlpha, srcBottom, srcBottomAlpha, alpha, dest, flags.bits()),
         else => @compileError("alphaBlendPlanar requires u8 or f32"),
     });
 }
@@ -49,10 +50,10 @@ pub fn alphaBlendPlanar(comptime T: type, srcTop: *const vImage_Buffer, srcTopAl
 ///
 /// For each color channel:
 ///     destColor = (srcTopColor * srcTopAlpha + (1 - srcTopAlpha) * srcBottomAlpha * srcBottomColor) / alpha
-pub fn alphaBlendARGB(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn alphaBlendARGB(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageAlphaBlend_ARGB8888(srcTop, srcBottom, dest, flags),
-        f32 => c.vImageAlphaBlend_ARGBFFFF(srcTop, srcBottom, dest, flags),
+        u8 => c.vImageAlphaBlend_ARGB8888(srcTop, srcBottom, dest, flags.bits()),
+        f32 => c.vImageAlphaBlend_ARGBFFFF(srcTop, srcBottom, dest, flags.bits()),
         else => @compileError("alphaBlendARGB requires u8 or f32"),
     });
 }
@@ -66,42 +67,42 @@ pub fn alphaBlendARGB(comptime T: type, srcTop: *const vImage_Buffer, srcBottom:
 /// For each color channel:
 ///     u8:  destColor = srcTopColor + ((255 - srcTopAlpha) * srcBottomColor + 127) / 255
 ///     f32: destColor = srcTopColor + (1.0 - srcTopAlpha) * srcBottomColor
-pub fn premultipliedAlphaBlendPlanar(comptime T: type, srcTop: *const vImage_Buffer, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultipliedAlphaBlendPlanar(comptime T: type, srcTop: *const vImage_Buffer, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultipliedAlphaBlend_Planar8(srcTop, srcTopAlpha, srcBottom, dest, flags),
-        f32 => c.vImagePremultipliedAlphaBlend_PlanarF(srcTop, srcTopAlpha, srcBottom, dest, flags),
+        u8 => c.vImagePremultipliedAlphaBlend_Planar8(srcTop, srcTopAlpha, srcBottom, dest, flags.bits()),
+        f32 => c.vImagePremultipliedAlphaBlend_PlanarF(srcTop, srcTopAlpha, srcBottom, dest, flags.bits()),
         else => @compileError("premultipliedAlphaBlendPlanar requires u8 or f32"),
     });
 }
 
 /// Blend two premultiplied ARGB (alpha-first) interleaved images.
-pub fn premultipliedAlphaBlendARGB(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultipliedAlphaBlendARGB(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultipliedAlphaBlend_ARGB8888(srcTop, srcBottom, dest, flags),
-        f32 => c.vImagePremultipliedAlphaBlend_ARGBFFFF(srcTop, srcBottom, dest, flags),
+        u8 => c.vImagePremultipliedAlphaBlend_ARGB8888(srcTop, srcBottom, dest, flags.bits()),
+        f32 => c.vImagePremultipliedAlphaBlend_ARGBFFFF(srcTop, srcBottom, dest, flags.bits()),
         else => @compileError("premultipliedAlphaBlendARGB requires u8 or f32"),
     });
 }
 
 /// Blend two premultiplied BGRA/RGBA (alpha-last) interleaved images.
-pub fn premultipliedAlphaBlendBGRA(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultipliedAlphaBlendBGRA(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultipliedAlphaBlend_BGRA8888(srcTop, srcBottom, dest, flags),
-        f32 => c.vImagePremultipliedAlphaBlend_BGRAFFFF(srcTop, srcBottom, dest, flags),
+        u8 => c.vImagePremultipliedAlphaBlend_BGRA8888(srcTop, srcBottom, dest, flags.bits()),
+        f32 => c.vImagePremultipliedAlphaBlend_BGRAFFFF(srcTop, srcBottom, dest, flags.bits()),
         else => @compileError("premultipliedAlphaBlendBGRA requires u8 or f32"),
     });
 }
 
 /// Reorder channels of the top premultiplied image via permuteMap, then blend into the bottom
 /// premultiplied ARGB image. Optionally force destination alpha to 0xFF/opaque.
-pub fn premultipliedAlphaBlendWithPermuteARGB(srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, makeDestAlphaOpaque: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePremultipliedAlphaBlendWithPermute_ARGB8888(srcTop, srcBottom, dest, permuteMap, makeDestAlphaOpaque, flags));
+pub fn premultipliedAlphaBlendWithPermuteARGB(srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, makeDestAlphaOpaque: bool, flags: Options) Error!usize {
+    return check(c.vImagePremultipliedAlphaBlendWithPermute_ARGB8888(srcTop, srcBottom, dest, permuteMap, makeDestAlphaOpaque, flags.bits()));
 }
 
 /// Reorder channels of the top premultiplied image via permuteMap, then blend into the bottom
 /// premultiplied RGBA image. Optionally force destination alpha to 0xFF/opaque.
-pub fn premultipliedAlphaBlendWithPermuteRGBA(srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, makeDestAlphaOpaque: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePremultipliedAlphaBlendWithPermute_RGBA8888(srcTop, srcBottom, dest, permuteMap, makeDestAlphaOpaque, flags));
+pub fn premultipliedAlphaBlendWithPermuteRGBA(srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, makeDestAlphaOpaque: bool, flags: Options) Error!usize {
+    return check(c.vImagePremultipliedAlphaBlendWithPermute_RGBA8888(srcTop, srcBottom, dest, permuteMap, makeDestAlphaOpaque, flags.bits()));
 }
 
 // ============================================================================
@@ -118,13 +119,13 @@ pub const BlendMode = enum {
 
 /// Blend two premultiplied RGBA images using the specified SVG blend mode.
 /// The `normal` mode calls the standard premultiplied alpha blend for BGRA/RGBA layout.
-pub fn premultipliedAlphaBlendRGBA(srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, mode: BlendMode, flags: vImage_Flags) VImageError!usize {
+pub fn premultipliedAlphaBlendRGBA(srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, mode: BlendMode, flags: Options) Error!usize {
     return check(switch (mode) {
-        .normal => c.vImagePremultipliedAlphaBlend_BGRA8888(srcTop, srcBottom, dest, flags),
-        .multiply => c.vImagePremultipliedAlphaBlendMultiply_RGBA8888(srcTop, srcBottom, dest, flags),
-        .screen => c.vImagePremultipliedAlphaBlendScreen_RGBA8888(srcTop, srcBottom, dest, flags),
-        .darken => c.vImagePremultipliedAlphaBlendDarken_RGBA8888(srcTop, srcBottom, dest, flags),
-        .lighten => c.vImagePremultipliedAlphaBlendLighten_RGBA8888(srcTop, srcBottom, dest, flags),
+        .normal => c.vImagePremultipliedAlphaBlend_BGRA8888(srcTop, srcBottom, dest, flags.bits()),
+        .multiply => c.vImagePremultipliedAlphaBlendMultiply_RGBA8888(srcTop, srcBottom, dest, flags.bits()),
+        .screen => c.vImagePremultipliedAlphaBlendScreen_RGBA8888(srcTop, srcBottom, dest, flags.bits()),
+        .darken => c.vImagePremultipliedAlphaBlendDarken_RGBA8888(srcTop, srcBottom, dest, flags.bits()),
+        .lighten => c.vImagePremultipliedAlphaBlendLighten_RGBA8888(srcTop, srcBottom, dest, flags.bits()),
     });
 }
 
@@ -136,20 +137,20 @@ pub fn premultipliedAlphaBlendRGBA(srcTop: *const vImage_Buffer, srcBottom: *con
 /// by a constant alpha value in addition to the per-pixel alpha.
 ///
 /// Planar version requires separate alpha buffer.
-pub fn premultipliedConstAlphaBlendPlanar(comptime T: type, srcTop: *const vImage_Buffer, constAlpha: T, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultipliedConstAlphaBlendPlanar(comptime T: type, srcTop: *const vImage_Buffer, constAlpha: T, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultipliedConstAlphaBlend_Planar8(srcTop, constAlpha, srcTopAlpha, srcBottom, dest, flags),
-        f32 => c.vImagePremultipliedConstAlphaBlend_PlanarF(srcTop, constAlpha, srcTopAlpha, srcBottom, dest, flags),
+        u8 => c.vImagePremultipliedConstAlphaBlend_Planar8(srcTop, constAlpha, srcTopAlpha, srcBottom, dest, flags.bits()),
+        f32 => c.vImagePremultipliedConstAlphaBlend_PlanarF(srcTop, constAlpha, srcTopAlpha, srcBottom, dest, flags.bits()),
         else => @compileError("premultipliedConstAlphaBlendPlanar requires u8 or f32"),
     });
 }
 
 /// Blend a premultiplied top ARGB image into a premultiplied bottom image, scaling the top
 /// by a constant alpha value.
-pub fn premultipliedConstAlphaBlendARGB(comptime T: type, srcTop: *const vImage_Buffer, constAlpha: T, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultipliedConstAlphaBlendARGB(comptime T: type, srcTop: *const vImage_Buffer, constAlpha: T, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultipliedConstAlphaBlend_ARGB8888(srcTop, constAlpha, srcBottom, dest, flags),
-        f32 => c.vImagePremultipliedConstAlphaBlend_ARGBFFFF(srcTop, constAlpha, srcBottom, dest, flags),
+        u8 => c.vImagePremultipliedConstAlphaBlend_ARGB8888(srcTop, constAlpha, srcBottom, dest, flags.bits()),
+        f32 => c.vImagePremultipliedConstAlphaBlend_ARGBFFFF(srcTop, constAlpha, srcBottom, dest, flags.bits()),
         else => @compileError("premultipliedConstAlphaBlendARGB requires u8 or f32"),
     });
 }
@@ -160,20 +161,20 @@ pub fn premultipliedConstAlphaBlendARGB(comptime T: type, srcTop: *const vImage_
 
 /// Blend a non-premultiplied top image over a premultiplied bottom image, producing a
 /// premultiplied result. Planar version requires separate alpha buffer.
-pub fn alphaBlendNonpremultipliedToPremultipliedPlanar(comptime T: type, srcTop: *const vImage_Buffer, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn alphaBlendNonpremultipliedToPremultipliedPlanar(comptime T: type, srcTop: *const vImage_Buffer, srcTopAlpha: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_Planar8(srcTop, srcTopAlpha, srcBottom, dest, flags),
-        f32 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_PlanarF(srcTop, srcTopAlpha, srcBottom, dest, flags),
+        u8 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_Planar8(srcTop, srcTopAlpha, srcBottom, dest, flags.bits()),
+        f32 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_PlanarF(srcTop, srcTopAlpha, srcBottom, dest, flags.bits()),
         else => @compileError("alphaBlendNonpremultipliedToPremultipliedPlanar requires u8 or f32"),
     });
 }
 
 /// Blend a non-premultiplied top ARGB image over a premultiplied bottom image, producing a
 /// premultiplied result.
-pub fn alphaBlendNonpremultipliedToPremultipliedARGB(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn alphaBlendNonpremultipliedToPremultipliedARGB(comptime T: type, srcTop: *const vImage_Buffer, srcBottom: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_ARGB8888(srcTop, srcBottom, dest, flags),
-        f32 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_ARGBFFFF(srcTop, srcBottom, dest, flags),
+        u8 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_ARGB8888(srcTop, srcBottom, dest, flags.bits()),
+        f32 => c.vImageAlphaBlend_NonpremultipliedToPremultiplied_ARGBFFFF(srcTop, srcBottom, dest, flags.bits()),
         else => @compileError("alphaBlendNonpremultipliedToPremultipliedARGB requires u8 or f32"),
     });
 }
@@ -186,55 +187,55 @@ pub fn alphaBlendNonpremultipliedToPremultipliedARGB(comptime T: type, srcTop: *
 ///
 ///     u8:  destColor = (src * alpha + 127) / 255
 ///     f32: destColor = src * alpha
-pub fn premultiplyDataPlanar(comptime T: type, src: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultiplyDataPlanar(comptime T: type, src: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultiplyData_Planar8(src, alpha, dest, flags),
-        f32 => c.vImagePremultiplyData_PlanarF(src, alpha, dest, flags),
+        u8 => c.vImagePremultiplyData_Planar8(src, alpha, dest, flags.bits()),
+        f32 => c.vImagePremultiplyData_PlanarF(src, alpha, dest, flags.bits()),
         else => @compileError("premultiplyDataPlanar requires u8 or f32"),
     });
 }
 
 /// Premultiply an ARGB (alpha-first) interleaved image by its alpha channel.
-pub fn premultiplyDataARGB(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultiplyDataARGB(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultiplyData_ARGB8888(src, dest, flags),
-        f32 => c.vImagePremultiplyData_ARGBFFFF(src, dest, flags),
+        u8 => c.vImagePremultiplyData_ARGB8888(src, dest, flags.bits()),
+        f32 => c.vImagePremultiplyData_ARGBFFFF(src, dest, flags.bits()),
         else => @compileError("premultiplyDataARGB requires u8 or f32"),
     });
 }
 
 /// Premultiply an RGBA/BGRA (alpha-last) interleaved image by its alpha channel.
-pub fn premultiplyDataRGBA(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn premultiplyDataRGBA(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImagePremultiplyData_RGBA8888(src, dest, flags),
-        f32 => c.vImagePremultiplyData_RGBAFFFF(src, dest, flags),
+        u8 => c.vImagePremultiplyData_RGBA8888(src, dest, flags.bits()),
+        f32 => c.vImagePremultiplyData_RGBAFFFF(src, dest, flags.bits()),
         else => @compileError("premultiplyDataRGBA requires u8 or f32"),
     });
 }
 
 /// Premultiply an ARGB 16-bit unsigned interleaved image by its alpha channel.
-pub fn premultiplyDataARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePremultiplyData_ARGB16U(src, dest, flags));
+pub fn premultiplyDataARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImagePremultiplyData_ARGB16U(src, dest, flags.bits()));
 }
 
 /// Premultiply an RGBA 16-bit unsigned interleaved image by its alpha channel.
-pub fn premultiplyDataRGBA16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePremultiplyData_RGBA16U(src, dest, flags));
+pub fn premultiplyDataRGBA16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImagePremultiplyData_RGBA16U(src, dest, flags.bits()));
 }
 
 /// Premultiply an ARGB 16Q12 fixed-point interleaved image by its alpha channel.
-pub fn premultiplyDataARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePremultiplyData_ARGB16Q12(src, dest, flags));
+pub fn premultiplyDataARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImagePremultiplyData_ARGB16Q12(src, dest, flags.bits()));
 }
 
 /// Premultiply an RGBA 16Q12 fixed-point interleaved image by its alpha channel.
-pub fn premultiplyDataRGBA16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePremultiplyData_RGBA16Q12(src, dest, flags));
+pub fn premultiplyDataRGBA16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImagePremultiplyData_RGBA16Q12(src, dest, flags.bits()));
 }
 
 /// Premultiply an RGBA half-float (16F) interleaved image by its alpha channel.
-pub fn premultiplyDataRGBA16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePremultiplyData_RGBA16F(src, dest, flags));
+pub fn premultiplyDataRGBA16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImagePremultiplyData_RGBA16F(src, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -250,55 +251,55 @@ pub fn premultiplyDataRGBA16F(src: *const vImage_Buffer, dest: *const vImage_Buf
 ///
 ///     u8:  destColor = (min(src, alpha) * 255 + alpha/2) / alpha  (0 if alpha == 0)
 ///     f32: destColor = src / alpha                                 (0 if alpha == 0)
-pub fn unpremultiplyDataPlanar(comptime T: type, src: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn unpremultiplyDataPlanar(comptime T: type, src: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageUnpremultiplyData_Planar8(src, alpha, dest, flags),
-        f32 => c.vImageUnpremultiplyData_PlanarF(src, alpha, dest, flags),
+        u8 => c.vImageUnpremultiplyData_Planar8(src, alpha, dest, flags.bits()),
+        f32 => c.vImageUnpremultiplyData_PlanarF(src, alpha, dest, flags.bits()),
         else => @compileError("unpremultiplyDataPlanar requires u8 or f32"),
     });
 }
 
 /// Unpremultiply an ARGB (alpha-first) interleaved image.
-pub fn unpremultiplyDataARGB(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn unpremultiplyDataARGB(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageUnpremultiplyData_ARGB8888(src, dest, flags),
-        f32 => c.vImageUnpremultiplyData_ARGBFFFF(src, dest, flags),
+        u8 => c.vImageUnpremultiplyData_ARGB8888(src, dest, flags.bits()),
+        f32 => c.vImageUnpremultiplyData_ARGBFFFF(src, dest, flags.bits()),
         else => @compileError("unpremultiplyDataARGB requires u8 or f32"),
     });
 }
 
 /// Unpremultiply an RGBA/BGRA (alpha-last) interleaved image.
-pub fn unpremultiplyDataRGBA(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn unpremultiplyDataRGBA(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageUnpremultiplyData_RGBA8888(src, dest, flags),
-        f32 => c.vImageUnpremultiplyData_RGBAFFFF(src, dest, flags),
+        u8 => c.vImageUnpremultiplyData_RGBA8888(src, dest, flags.bits()),
+        f32 => c.vImageUnpremultiplyData_RGBAFFFF(src, dest, flags.bits()),
         else => @compileError("unpremultiplyDataRGBA requires u8 or f32"),
     });
 }
 
 /// Unpremultiply an ARGB 16-bit unsigned interleaved image.
-pub fn unpremultiplyDataARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageUnpremultiplyData_ARGB16U(src, dest, flags));
+pub fn unpremultiplyDataARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageUnpremultiplyData_ARGB16U(src, dest, flags.bits()));
 }
 
 /// Unpremultiply an RGBA 16-bit unsigned interleaved image.
-pub fn unpremultiplyDataRGBA16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageUnpremultiplyData_RGBA16U(src, dest, flags));
+pub fn unpremultiplyDataRGBA16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageUnpremultiplyData_RGBA16U(src, dest, flags.bits()));
 }
 
 /// Unpremultiply an ARGB 16Q12 fixed-point interleaved image.
-pub fn unpremultiplyDataARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageUnpremultiplyData_ARGB16Q12(src, dest, flags));
+pub fn unpremultiplyDataARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageUnpremultiplyData_ARGB16Q12(src, dest, flags.bits()));
 }
 
 /// Unpremultiply an RGBA 16Q12 fixed-point interleaved image.
-pub fn unpremultiplyDataRGBA16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageUnpremultiplyData_RGBA16Q12(src, dest, flags));
+pub fn unpremultiplyDataRGBA16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageUnpremultiplyData_RGBA16Q12(src, dest, flags.bits()));
 }
 
 /// Unpremultiply an RGBA half-float (16F) interleaved image.
-pub fn unpremultiplyDataRGBA16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageUnpremultiplyData_RGBA16F(src, dest, flags));
+pub fn unpremultiplyDataRGBA16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageUnpremultiplyData_RGBA16F(src, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -309,30 +310,30 @@ pub fn unpremultiplyDataRGBA16F(src: *const vImage_Buffer, dest: *const vImage_B
 /// Planar version requires separate alpha buffer.
 ///
 /// For each pixel: dest = min(src, alpha)
-pub fn clipToAlphaPlanar(comptime T: type, src: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn clipToAlphaPlanar(comptime T: type, src: *const vImage_Buffer, alpha: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageClipToAlpha_Planar8(src, alpha, dest, flags),
-        f32 => c.vImageClipToAlpha_PlanarF(src, alpha, dest, flags),
+        u8 => c.vImageClipToAlpha_Planar8(src, alpha, dest, flags.bits()),
+        f32 => c.vImageClipToAlpha_PlanarF(src, alpha, dest, flags.bits()),
         else => @compileError("clipToAlphaPlanar requires u8 or f32"),
     });
 }
 
 /// Clip color channel values so they do not exceed the alpha value.
 /// ARGB (alpha-first) interleaved version.
-pub fn clipToAlphaARGB(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn clipToAlphaARGB(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageClipToAlpha_ARGB8888(src, dest, flags),
-        f32 => c.vImageClipToAlpha_ARGBFFFF(src, dest, flags),
+        u8 => c.vImageClipToAlpha_ARGB8888(src, dest, flags.bits()),
+        f32 => c.vImageClipToAlpha_ARGBFFFF(src, dest, flags.bits()),
         else => @compileError("clipToAlphaARGB requires u8 or f32"),
     });
 }
 
 /// Clip color channel values so they do not exceed the alpha value.
 /// RGBA/BGRA (alpha-last) interleaved version.
-pub fn clipToAlphaRGBA(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
+pub fn clipToAlphaRGBA(comptime T: type, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageClipToAlpha_RGBA8888(src, dest, flags),
-        f32 => c.vImageClipToAlpha_RGBAFFFF(src, dest, flags),
+        u8 => c.vImageClipToAlpha_RGBA8888(src, dest, flags.bits()),
+        f32 => c.vImageClipToAlpha_RGBAFFFF(src, dest, flags.bits()),
         else => @compileError("clipToAlphaRGBA requires u8 or f32"),
     });
 }
@@ -376,7 +377,7 @@ test "alphaBlendPlanar PlanarF matches Alpha.h formula (argument-order check)" {
     const b_alpha = bufFromBytes(std.mem.sliceAsBytes(&alpha_buf), h, w, row_bytes);
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, row_bytes);
 
-    const err = alphaBlendPlanar(f32, &b_top, &b_top_a, &b_bottom, &b_bottom_a, &b_alpha, &b_dest, 0);
+    const err = alphaBlendPlanar(f32, &b_top, &b_top_a, &b_bottom, &b_bottom_a, &b_alpha, &b_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
 
     const expected: f32 = (100 * 0.25 + (1 - 0.25) * 0.6 * 20) / alpha_val; // ~48.571
@@ -415,7 +416,7 @@ test "alphaBlendARGB u8 alpha-first channel order, padded rowBytes" {
     const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
 
-    const err = alphaBlendARGB(u8, &b_top, &b_bottom, &b_dest, 0);
+    const err = alphaBlendARGB(u8, &b_top, &b_bottom, &b_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
 
     // Alpha.h:94 alpha = srcTopAlpha + (1-srcTopAlpha)*srcBottomAlpha (compositing
@@ -450,7 +451,7 @@ test "premultipliedAlphaBlendPlanar exact u8/f32 formulas" {
     const b_bottom_u8 = bufFromBytes(&bottom_u8, h, w, row_bytes_u8);
     const b_dest_u8 = bufFromBytes(&dest_u8, h, w, row_bytes_u8);
 
-    const err_u8 = premultipliedAlphaBlendPlanar(u8, &b_top_u8, &b_top_a_u8, &b_bottom_u8, &b_dest_u8, 0);
+    const err_u8 = premultipliedAlphaBlendPlanar(u8, &b_top_u8, &b_top_a_u8, &b_bottom_u8, &b_dest_u8, .{});
     try std.testing.expectEqual(@as(usize, 0), try err_u8);
     const expected_u8: u8 = 200 + @as(u8, @intCast((@as(u32, 255 - 60) * 40 + 127) / 255));
     for (dest_u8) |v| try std.testing.expectEqual(expected_u8, v);
@@ -465,7 +466,7 @@ test "premultipliedAlphaBlendPlanar exact u8/f32 formulas" {
     const b_bottom_f = bufFromBytes(std.mem.sliceAsBytes(&bottom_f), h, w, row_bytes_f);
     const b_dest_f = bufFromBytes(std.mem.sliceAsBytes(&dest_f), h, w, row_bytes_f);
 
-    const err_f = premultipliedAlphaBlendPlanar(f32, &b_top_f, &b_top_a_f, &b_bottom_f, &b_dest_f, 0);
+    const err_f = premultipliedAlphaBlendPlanar(f32, &b_top_f, &b_top_a_f, &b_bottom_f, &b_dest_f, .{});
     try std.testing.expectEqual(@as(usize, 0), try err_f);
     const expected_f: f32 = 200 + (1 - 0.25) * 40;
     for (dest_f) |v| try std.testing.expectApproxEqAbs(expected_f, v, 0.001);
@@ -486,7 +487,7 @@ test "premultipliedAlphaBlendARGB (alpha-first) vs premultipliedAlphaBlendBGRA (
     const b_argb_top = bufFromBytes(&argb_top, h, w, row_bytes);
     const b_argb_bottom = bufFromBytes(&argb_bottom, h, w, row_bytes);
     const b_argb_dest = bufFromBytes(&argb_dest, h, w, row_bytes);
-    const err1 = premultipliedAlphaBlendARGB(u8, &b_argb_top, &b_argb_bottom, &b_argb_dest, 0);
+    const err1 = premultipliedAlphaBlendARGB(u8, &b_argb_top, &b_argb_bottom, &b_argb_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err1);
     // destAlpha = srcTopAlpha + ((255-srcTopAlpha)*srcBottomAlpha + 127)/255
     const expected_alpha: u8 = 64 + @as(u8, @intCast((@as(u32, 255 - 64) * 180 + 127) / 255));
@@ -498,7 +499,7 @@ test "premultipliedAlphaBlendARGB (alpha-first) vs premultipliedAlphaBlendBGRA (
     const b_bgra_top = bufFromBytes(&bgra_top, h, w, row_bytes);
     const b_bgra_bottom = bufFromBytes(&bgra_bottom, h, w, row_bytes);
     const b_bgra_dest = bufFromBytes(&bgra_dest, h, w, row_bytes);
-    const err2 = premultipliedAlphaBlendBGRA(u8, &b_bgra_top, &b_bgra_bottom, &b_bgra_dest, 0);
+    const err2 = premultipliedAlphaBlendBGRA(u8, &b_bgra_top, &b_bgra_bottom, &b_bgra_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err2);
     try std.testing.expectEqual(expected_alpha, bgra_dest[3]);
 }
@@ -519,7 +520,7 @@ test "premultipliedAlphaBlendWithPermuteARGB reorders top channels before blendi
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
     const permute = [4]u8{ 3, 2, 1, 0 }; // reverse: dest[i] source = top[permute[i]]
 
-    const err = premultipliedAlphaBlendWithPermuteARGB(&b_top, &b_bottom, &b_dest, &permute, true, 0);
+    const err = premultipliedAlphaBlendWithPermuteARGB(&b_top, &b_bottom, &b_dest, &permute, true, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     // makeDestAlphaOpaque forces alpha (index 0) to 0xFF regardless of blend math.
     try std.testing.expectEqual(@as(u8, 0xFF), dest[0]);
@@ -537,7 +538,7 @@ test "premultipliedAlphaBlendWithPermuteRGBA reorders top channels before blendi
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
     const permute = [4]u8{ 3, 2, 1, 0 };
 
-    const err = premultipliedAlphaBlendWithPermuteRGBA(&b_top, &b_bottom, &b_dest, &permute, true, 0);
+    const err = premultipliedAlphaBlendWithPermuteRGBA(&b_top, &b_bottom, &b_dest, &permute, true, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     // RGBA/BGRA layout: alpha is last (index 3).
     try std.testing.expectEqual(@as(u8, 0xFF), dest[3]);
@@ -561,7 +562,7 @@ test "premultipliedAlphaBlendRGBA dispatches distinct blend modes" {
         const b_top = bufFromBytes(&top, h, w, row_bytes);
         const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
         const b_dest = bufFromBytes(&dest, h, w, row_bytes);
-        const err = premultipliedAlphaBlendRGBA(&b_top, &b_bottom, &b_dest, mode, 0);
+        const err = premultipliedAlphaBlendRGBA(&b_top, &b_bottom, &b_dest, mode, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
         results[i] = dest;
     }
@@ -590,7 +591,7 @@ test "premultipliedConstAlphaBlendPlanar exact u8 formula" {
     const b_dest = bufFromBytes(&dest, h, w, w);
 
     const const_alpha: u8 = 100;
-    const err = premultipliedConstAlphaBlendPlanar(u8, &b_top, const_alpha, &b_top_a, &b_bottom, &b_dest, 0);
+    const err = premultipliedConstAlphaBlendPlanar(u8, &b_top, const_alpha, &b_top_a, &b_bottom, &b_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
 
     const top_c: u64 = 150;
@@ -612,7 +613,7 @@ test "premultipliedConstAlphaBlendARGB succeeds and blends distinct pixels" {
     const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
 
-    const err = premultipliedConstAlphaBlendARGB(u8, &b_top, 128, &b_bottom, &b_dest, 0);
+    const err = premultipliedConstAlphaBlendARGB(u8, &b_top, 128, &b_bottom, &b_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     // Result should land strictly between top and bottom color values for a
     // partial constAlpha, per channel.
@@ -637,7 +638,7 @@ test "alphaBlendNonpremultipliedToPremultipliedPlanar PlanarF matches formula" {
     const b_bottom = bufFromBytes(std.mem.sliceAsBytes(&bottom), h, w, rb);
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
 
-    const err = alphaBlendNonpremultipliedToPremultipliedPlanar(f32, &b_top, &b_top_a, &b_bottom, &b_dest, 0);
+    const err = alphaBlendNonpremultipliedToPremultipliedPlanar(f32, &b_top, &b_top_a, &b_bottom, &b_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     const expected: f32 = 80 * 0.3 + (1 - 0.3) * 20;
     try std.testing.expectApproxEqAbs(expected, dest[0], 0.001);
@@ -654,7 +655,7 @@ test "alphaBlendNonpremultipliedToPremultipliedARGB succeeds, alpha-first" {
     const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
 
-    const err = alphaBlendNonpremultipliedToPremultipliedARGB(u8, &b_top, &b_bottom, &b_dest, 0);
+    const err = alphaBlendNonpremultipliedToPremultipliedARGB(u8, &b_top, &b_bottom, &b_dest, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     // Dest color channels must be <= max(top color premultiplied by its alpha, bottom)
     // roughly; just sanity check they're not raw-copied top (which would ignore alpha).
@@ -674,14 +675,14 @@ test "premultiplyDataPlanar / unpremultiplyDataPlanar round trip (u8 and f32, no
         const b_color = bufFromBytes(&color_u8, h, w, w);
         const b_alpha = bufFromBytes(&alpha_u8, h, w, w);
         const b_dest = bufFromBytes(&premult_u8, h, w, w);
-        const err = premultiplyDataPlanar(u8, &b_color, &b_alpha, &b_dest, 0);
+        const err = premultiplyDataPlanar(u8, &b_color, &b_alpha, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     {
         const b_premult = bufFromBytes(&premult_u8, h, w, w);
         const b_alpha = bufFromBytes(&alpha_u8, h, w, w);
         const b_dest = bufFromBytes(&recovered_u8, h, w, w);
-        const err = unpremultiplyDataPlanar(u8, &b_premult, &b_alpha, &b_dest, 0);
+        const err = unpremultiplyDataPlanar(u8, &b_premult, &b_alpha, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     // u8 round trip may be off by a small amount due to integer rounding twice.
@@ -696,11 +697,11 @@ test "premultiplyDataPlanar / unpremultiplyDataPlanar round trip (u8 and f32, no
         const b_color = bufFromBytes(std.mem.sliceAsBytes(&color_f), h, w, rb);
         const b_alpha = bufFromBytes(std.mem.sliceAsBytes(&alpha_f), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&premult_f), h, w, rb);
-        const err = premultiplyDataPlanar(f32, &b_color, &b_alpha, &b_dest, 0);
+        const err = premultiplyDataPlanar(f32, &b_color, &b_alpha, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
         const b_premult = bufFromBytes(std.mem.sliceAsBytes(&premult_f), h, w, rb);
         const b_dest2 = bufFromBytes(std.mem.sliceAsBytes(&recovered_f), h, w, rb);
-        const err2 = unpremultiplyDataPlanar(f32, &b_premult, &b_alpha, &b_dest2, 0);
+        const err2 = unpremultiplyDataPlanar(f32, &b_premult, &b_alpha, &b_dest2, .{});
         try std.testing.expectEqual(@as(usize, 0), try err2);
     }
     try std.testing.expectApproxEqAbs(color_f[0], recovered_f[0], 1e-5);
@@ -716,14 +717,14 @@ test "premultiplyDataARGB / unpremultiplyDataARGB round trip, alpha-first" {
     {
         const b_src = bufFromBytes(&pixel, h, w, row_bytes);
         const b_dest = bufFromBytes(&premult, h, w, row_bytes);
-        const err = premultiplyDataARGB(u8, &b_src, &b_dest, 0);
+        const err = premultiplyDataARGB(u8, &b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     try std.testing.expectEqual(pixel[0], premult[0]); // alpha channel passes through
     {
         const b_src = bufFromBytes(&premult, h, w, row_bytes);
         const b_dest = bufFromBytes(&recovered, h, w, row_bytes);
-        const err = unpremultiplyDataARGB(u8, &b_src, &b_dest, 0);
+        const err = unpremultiplyDataARGB(u8, &b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     for (1..4) |i| {
@@ -741,14 +742,14 @@ test "premultiplyDataRGBA / unpremultiplyDataRGBA round trip, alpha-last" {
     {
         const b_src = bufFromBytes(&pixel, h, w, row_bytes);
         const b_dest = bufFromBytes(&premult, h, w, row_bytes);
-        const err = premultiplyDataRGBA(u8, &b_src, &b_dest, 0);
+        const err = premultiplyDataRGBA(u8, &b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     try std.testing.expectEqual(pixel[3], premult[3]); // alpha channel (last) passes through
     {
         const b_src = bufFromBytes(&premult, h, w, row_bytes);
         const b_dest = bufFromBytes(&recovered, h, w, row_bytes);
-        const err = unpremultiplyDataRGBA(u8, &b_src, &b_dest, 0);
+        const err = unpremultiplyDataRGBA(u8, &b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     for (0..3) |i| {
@@ -767,14 +768,14 @@ test "premultiplyDataARGB16U / unpremultiplyDataARGB16U round trip" {
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&pixel), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
-        const err = premultiplyDataARGB16U(&b_src, &b_dest, 0);
+        const err = premultiplyDataARGB16U(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     try std.testing.expectEqual(pixel[0], premult[0]);
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&recovered), h, w, rb);
-        const err = unpremultiplyDataARGB16U(&b_src, &b_dest, 0);
+        const err = unpremultiplyDataARGB16U(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     for (1..4) |i| {
@@ -793,14 +794,14 @@ test "premultiplyDataRGBA16U / unpremultiplyDataRGBA16U round trip, alpha-last" 
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&pixel), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
-        const err = premultiplyDataRGBA16U(&b_src, &b_dest, 0);
+        const err = premultiplyDataRGBA16U(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     try std.testing.expectEqual(pixel[3], premult[3]);
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&recovered), h, w, rb);
-        const err = unpremultiplyDataRGBA16U(&b_src, &b_dest, 0);
+        const err = unpremultiplyDataRGBA16U(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     for (0..3) |i| {
@@ -821,14 +822,14 @@ test "premultiplyDataARGB16Q12 / unpremultiplyDataARGB16Q12 round trip" {
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&pixel), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
-        const err = premultiplyDataARGB16Q12(&b_src, &b_dest, 0);
+        const err = premultiplyDataARGB16Q12(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     try std.testing.expectEqual(pixel[0], premult[0]);
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&recovered), h, w, rb);
-        const err = unpremultiplyDataARGB16Q12(&b_src, &b_dest, 0);
+        const err = unpremultiplyDataARGB16Q12(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     for (1..4) |i| {
@@ -847,14 +848,14 @@ test "premultiplyDataRGBA16Q12 / unpremultiplyDataRGBA16Q12 round trip, alpha-la
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&pixel), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
-        const err = premultiplyDataRGBA16Q12(&b_src, &b_dest, 0);
+        const err = premultiplyDataRGBA16Q12(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     try std.testing.expectEqual(pixel[3], premult[3]);
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&recovered), h, w, rb);
-        const err = unpremultiplyDataRGBA16Q12(&b_src, &b_dest, 0);
+        const err = unpremultiplyDataRGBA16Q12(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     for (0..3) |i| {
@@ -884,14 +885,14 @@ test "premultiplyDataRGBA16F / unpremultiplyDataRGBA16F round trip" {
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&pixel), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
-        const err = premultiplyDataRGBA16F(&b_src, &b_dest, 0);
+        const err = premultiplyDataRGBA16F(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     try std.testing.expectApproxEqAbs(half.toF32(pixel[3]), half.toF32(premult[3]), 0.01);
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&recovered), h, w, rb);
-        const err = unpremultiplyDataRGBA16F(&b_src, &b_dest, 0);
+        const err = unpremultiplyDataRGBA16F(&b_src, &b_dest, .{});
         try std.testing.expectEqual(@as(usize, 0), try err);
     }
     for (0..3) |i| {
@@ -910,7 +911,7 @@ test "clipToAlphaPlanar/ARGB/RGBA clamp color to alpha (dest = min(src, alpha))"
     const b_src_p = bufFromBytes(&src_p, h, w, w);
     const b_alpha_p = bufFromBytes(&alpha_p, h, w, w);
     const b_dest_p = bufFromBytes(&dest_p, h, w, w);
-    const err_p = clipToAlphaPlanar(u8, &b_src_p, &b_alpha_p, &b_dest_p, 0);
+    const err_p = clipToAlphaPlanar(u8, &b_src_p, &b_alpha_p, &b_dest_p, .{});
     try std.testing.expectEqual(@as(usize, 0), try err_p);
     try std.testing.expectEqual(@as(u8, 90), dest_p[0]);
 
@@ -919,7 +920,7 @@ test "clipToAlphaPlanar/ARGB/RGBA clamp color to alpha (dest = min(src, alpha))"
     var dest_argb = [_]u8{0} ** 4;
     const b_src_argb = bufFromBytes(&src_argb, h, w, row_bytes);
     const b_dest_argb = bufFromBytes(&dest_argb, h, w, row_bytes);
-    const err_argb = clipToAlphaARGB(u8, &b_src_argb, &b_dest_argb, 0);
+    const err_argb = clipToAlphaARGB(u8, &b_src_argb, &b_dest_argb, .{});
     try std.testing.expectEqual(@as(usize, 0), try err_argb);
     try std.testing.expectEqual(@as(u8, 90), dest_argb[0]); // alpha itself unchanged
     try std.testing.expectEqual(@as(u8, 90), dest_argb[1]); // R clamped down to alpha
@@ -930,7 +931,7 @@ test "clipToAlphaPlanar/ARGB/RGBA clamp color to alpha (dest = min(src, alpha))"
     var dest_rgba = [_]u8{0} ** 4;
     const b_src_rgba = bufFromBytes(&src_rgba, h, w, row_bytes);
     const b_dest_rgba = bufFromBytes(&dest_rgba, h, w, row_bytes);
-    const err_rgba = clipToAlphaRGBA(u8, &b_src_rgba, &b_dest_rgba, 0);
+    const err_rgba = clipToAlphaRGBA(u8, &b_src_rgba, &b_dest_rgba, .{});
     try std.testing.expectEqual(@as(usize, 0), try err_rgba);
     try std.testing.expectEqual(@as(u8, 90), dest_rgba[0]); // R clamped down to alpha
     try std.testing.expectEqual(@as(u8, 50), dest_rgba[1]);

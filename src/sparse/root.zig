@@ -56,7 +56,7 @@
 //!
 //! ## Two things worth knowing before you start
 //!
-//! * **Errors are `SparseError`, not process death.** Left to itself, Sparse
+//! * **Errors are `Error`, not process death.** Left to itself, Sparse
 //!   reacts to a bad argument by calling `__builtin_trap()`. This binding
 //!   validates first and installs a `reportError` callback, so mistakes come
 //!   back as errors. `lastErrorMessage()` carries Sparse's own text.
@@ -112,7 +112,7 @@ pub const Scaling = types.Scaling;
 pub const SubfactorKind = types.Subfactor;
 
 // -- Errors --
-pub const SparseError = types.SparseError;
+pub const Error = types.Error;
 pub const Status = types.Status;
 pub const check = types.check;
 pub const lastErrorMessage = types.lastErrorMessage;

@@ -303,9 +303,15 @@ pub const Options = packed struct(u32) {
     }
 };
 
-/// The raw `kvImage*` constants, kept for direct correspondence with
-/// `vImage_Types.h` and for callers holding flags as plain integers. Prefer
-/// `Options` in new code - it cannot express a bit vImage does not define.
+/// The raw `kvImage*` constants, for direct correspondence with
+/// `vImage_Types.h` and for code that carries flags as plain integers across
+/// an FFI boundary.
+///
+/// Every wrapper in this package takes `Options`, not one of these. `Options`
+/// cannot express a bit vImage does not define, which matters because
+/// `kvImageUnknownFlagsBit` is a failure vImage really does return. Use
+/// `Options.from(raw)` to come in from an integer and `Options.bits()` to go
+/// back out.
 pub const Flags = struct {
     pub const kvImageNoFlags: vImage_Flags = 0;
     pub const kvImageLeaveAlphaUnchanged: vImage_Flags = 1;
@@ -359,7 +365,7 @@ pub const Connectivity = enum(c_int) {
 // Error codes
 // ============================================================================
 
-pub const Error = struct {
+pub const ErrorCode = struct {
     pub const kvImageNoError: vImage_Error = 0;
     pub const kvImageRoiLargerThanInputBuffer: vImage_Error = -21766;
     pub const kvImageInvalidKernelSize: vImage_Error = -21767;
@@ -401,9 +407,9 @@ pub const Error = struct {
 ///
 /// The C API reports failure through the `vImage_Error` (`ssize_t`) return
 /// value, which is easy to drop on the floor: ignoring it is silent and legal.
-/// Wrappers in this binding return `VImageError!usize` instead, so an
+/// Wrappers in this binding return `Error!usize` instead, so an
 /// unhandled failure is a compile error.
-pub const VImageError = error{
+pub const Error = error{
     RoiLargerThanInputBuffer,
     InvalidKernelSize,
     InvalidEdgeStyle,
@@ -448,34 +454,34 @@ pub const VImageError = error{
 /// The returned `usize` is therefore 0 for an ordinary successful call, and
 /// the required temp-buffer size in bytes for a `kvImageGetTempBufferSize`
 /// query.
-pub fn check(e: vImage_Error) VImageError!usize {
+pub fn check(e: vImage_Error) Error!usize {
     if (e >= 0) return @intCast(e);
     return switch (e) {
-        Error.kvImageRoiLargerThanInputBuffer => VImageError.RoiLargerThanInputBuffer,
-        Error.kvImageInvalidKernelSize => VImageError.InvalidKernelSize,
-        Error.kvImageInvalidEdgeStyle => VImageError.InvalidEdgeStyle,
-        Error.kvImageInvalidOffset_X => VImageError.InvalidOffset_X,
-        Error.kvImageInvalidOffset_Y => VImageError.InvalidOffset_Y,
-        Error.kvImageMemoryAllocationError => VImageError.MemoryAllocationError,
-        Error.kvImageNullPointerArgument => VImageError.NullPointerArgument,
-        Error.kvImageInvalidParameter => VImageError.InvalidParameter,
-        Error.kvImageBufferSizeMismatch => VImageError.BufferSizeMismatch,
-        Error.kvImageUnknownFlagsBit => VImageError.UnknownFlagsBit,
-        Error.kvImageInternalError => VImageError.InternalError,
-        Error.kvImageInvalidRowBytes => VImageError.InvalidRowBytes,
-        Error.kvImageInvalidImageFormat => VImageError.InvalidImageFormat,
-        Error.kvImageColorSyncIsAbsent => VImageError.ColorSyncIsAbsent,
-        Error.kvImageOutOfPlaceOperationRequired => VImageError.OutOfPlaceOperationRequired,
-        Error.kvImageInvalidImageObject => VImageError.InvalidImageObject,
-        Error.kvImageInvalidCVImageFormat => VImageError.InvalidCVImageFormat,
-        Error.kvImageUnsupportedConversion => VImageError.UnsupportedConversion,
-        Error.kvImageCoreVideoIsAbsent => VImageError.CoreVideoIsAbsent,
-        Error.kvImageCVImageFormat_ConversionMatrix => VImageError.CVImageFormatConversionMatrix,
-        Error.kvImageCVImageFormat_ChromaSiting => VImageError.CVImageFormatChromaSiting,
-        Error.kvImageCVImageFormat_ColorSpace => VImageError.CVImageFormatColorSpace,
-        Error.kvImageCVImageFormat_VideoChannelDescription => VImageError.CVImageFormatVideoChannelDescription,
-        Error.kvImageCVImageFormat_AlphaIsOneHint => VImageError.CVImageFormatAlphaIsOneHint,
-        else => VImageError.Unknown,
+        ErrorCode.kvImageRoiLargerThanInputBuffer => Error.RoiLargerThanInputBuffer,
+        ErrorCode.kvImageInvalidKernelSize => Error.InvalidKernelSize,
+        ErrorCode.kvImageInvalidEdgeStyle => Error.InvalidEdgeStyle,
+        ErrorCode.kvImageInvalidOffset_X => Error.InvalidOffset_X,
+        ErrorCode.kvImageInvalidOffset_Y => Error.InvalidOffset_Y,
+        ErrorCode.kvImageMemoryAllocationError => Error.MemoryAllocationError,
+        ErrorCode.kvImageNullPointerArgument => Error.NullPointerArgument,
+        ErrorCode.kvImageInvalidParameter => Error.InvalidParameter,
+        ErrorCode.kvImageBufferSizeMismatch => Error.BufferSizeMismatch,
+        ErrorCode.kvImageUnknownFlagsBit => Error.UnknownFlagsBit,
+        ErrorCode.kvImageInternalError => Error.InternalError,
+        ErrorCode.kvImageInvalidRowBytes => Error.InvalidRowBytes,
+        ErrorCode.kvImageInvalidImageFormat => Error.InvalidImageFormat,
+        ErrorCode.kvImageColorSyncIsAbsent => Error.ColorSyncIsAbsent,
+        ErrorCode.kvImageOutOfPlaceOperationRequired => Error.OutOfPlaceOperationRequired,
+        ErrorCode.kvImageInvalidImageObject => Error.InvalidImageObject,
+        ErrorCode.kvImageInvalidCVImageFormat => Error.InvalidCVImageFormat,
+        ErrorCode.kvImageUnsupportedConversion => Error.UnsupportedConversion,
+        ErrorCode.kvImageCoreVideoIsAbsent => Error.CoreVideoIsAbsent,
+        ErrorCode.kvImageCVImageFormat_ConversionMatrix => Error.CVImageFormatConversionMatrix,
+        ErrorCode.kvImageCVImageFormat_ChromaSiting => Error.CVImageFormatChromaSiting,
+        ErrorCode.kvImageCVImageFormat_ColorSpace => Error.CVImageFormatColorSpace,
+        ErrorCode.kvImageCVImageFormat_VideoChannelDescription => Error.CVImageFormatVideoChannelDescription,
+        ErrorCode.kvImageCVImageFormat_AlphaIsOneHint => Error.CVImageFormatAlphaIsOneHint,
+        else => Error.Unknown,
     };
 }
 
@@ -485,13 +491,13 @@ test "check maps negative codes to errors and treats >= 0 as success" {
     // kvImageGetTempBufferSize makes vImage return a SIZE through the error
     // slot. An `== 0` success test would report this as a failure.
     try std.testing.expectEqual(@as(usize, 4096), try check(4096));
-    try std.testing.expectError(VImageError.BufferSizeMismatch, check(-21774));
-    try std.testing.expectError(VImageError.NullPointerArgument, check(-21772));
-    try std.testing.expectError(VImageError.Unknown, check(-1));
+    try std.testing.expectError(Error.BufferSizeMismatch, check(-21774));
+    try std.testing.expectError(Error.NullPointerArgument, check(-21772));
+    try std.testing.expectError(Error.Unknown, check(-1));
     // The vImageCVImageFormatError block lives well away from the main run of
     // codes, so a range-based mapping would have missed it entirely.
-    try std.testing.expectError(VImageError.CVImageFormatColorSpace, check(-21602));
-    try std.testing.expectError(VImageError.CVImageFormatAlphaIsOneHint, check(-21604));
+    try std.testing.expectError(Error.CVImageFormatColorSpace, check(-21602));
+    try std.testing.expectError(Error.CVImageFormatAlphaIsOneHint, check(-21604));
 }
 
 test "a real vImage failure surfaces as a Zig error, not a dropped return value" {
@@ -510,6 +516,6 @@ test "a real vImage failure surfaces as a Zig error, not a dropped return value"
     const b_bottom = vImage_Buffer{ .data = &bottom, .height = 2, .width = 2, .rowBytes = 8 };
     const b_dest = vImage_Buffer{ .data = &dest, .height = 2, .width = 2, .rowBytes = 8 };
 
-    const result = alpha.alphaBlendARGB(u8, &b_top, &b_bottom, &b_dest, Flags.kvImageNoFlags);
-    try std.testing.expectError(VImageError.RoiLargerThanInputBuffer, result);
+    const result = alpha.alphaBlendARGB(u8, &b_top, &b_bottom, &b_dest, .{});
+    try std.testing.expectError(Error.RoiLargerThanInputBuffer, result);
 }

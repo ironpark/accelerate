@@ -4,7 +4,7 @@ const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImage_Flags = types.vImage_Flags;
 const Pixel_8 = types.Pixel_8;
@@ -46,8 +46,8 @@ pub const fill = @import("conversion_fill_misc.zig");
 ///
 /// Can also be used for multichannel float formats (e.g. ARGBFFFF) by
 /// scaling `vImage_Buffer.width` by the channel count.
-pub fn clipPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, max_val: Pixel_F, min_val: Pixel_F, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageClip_PlanarF(src, dest, max_val, min_val, flags));
+pub fn clipPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, max_val: Pixel_F, min_val: Pixel_F, flags: Options) Error!usize {
+    return check(c.vImageClip_PlanarF(src, dest, max_val, min_val, flags.bits()));
 }
 
 // ============================================================================
@@ -57,75 +57,75 @@ pub fn clipPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, max_va
 /// Convert Planar8 to PlanarF.
 ///
 ///     result = (maxFloat - minFloat) * pixel / 255.0 + minFloat
-pub fn planar8ToPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, max_float: Pixel_F, min_float: Pixel_F, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar8toPlanarF(src, dest, max_float, min_float, flags));
+pub fn planar8ToPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, max_float: Pixel_F, min_float: Pixel_F, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar8toPlanarF(src, dest, max_float, min_float, flags.bits()));
 }
 
 /// Convert PlanarF to Planar8.
 ///
 ///     result = CLIP(0, 255, 255.0 * (pixel - minFloat) / (maxFloat - minFloat) + 0.5)
-pub fn planarFToPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, max_float: Pixel_F, min_float: Pixel_F, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_PlanarFtoPlanar8(src, dest, max_float, min_float, flags));
+pub fn planarFToPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, max_float: Pixel_F, min_float: Pixel_F, flags: Options) Error!usize {
+    return check(c.vImageConvert_PlanarFtoPlanar8(src, dest, max_float, min_float, flags.bits()));
 }
 
 /// Convert half-precision float (Planar16F) to single-precision float (PlanarF).
-pub fn planar16FToPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar16FtoPlanarF(src, dest, flags));
+pub fn planar16FToPlanarF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar16FtoPlanarF(src, dest, flags.bits()));
 }
 
 /// Convert single-precision float (PlanarF) to half-precision float (Planar16F).
-pub fn planarFToPlanar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_PlanarFtoPlanar16F(src, dest, flags));
+pub fn planarFToPlanar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_PlanarFtoPlanar16F(src, dest, flags.bits()));
 }
 
 /// Convert Planar8 directly to half-precision float (Planar16F).
-pub fn planar8ToPlanar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar8toPlanar16F(src, dest, flags));
+pub fn planar8ToPlanar16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar8toPlanar16F(src, dest, flags.bits()));
 }
 
 /// Convert half-precision float (Planar16F) to Planar8.
-pub fn planar16FToPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar16FtoPlanar8(src, dest, flags));
+pub fn planar16FToPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar16FtoPlanar8(src, dest, flags.bits()));
 }
 
 /// Convert 16-bit signed integer to PlanarF.
 ///
 ///     result = scale * pixel + offset
-pub fn convert16SToF(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16SToF(src, dest, offset, scale, flags));
+pub fn convert16SToF(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: Options) Error!usize {
+    return check(c.vImageConvert_16SToF(src, dest, offset, scale, flags.bits()));
 }
 
 /// Convert 16-bit unsigned integer to PlanarF.
 ///
 ///     result = scale * pixel + offset
-pub fn convert16UToF(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16UToF(src, dest, offset, scale, flags));
+pub fn convert16UToF(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: Options) Error!usize {
+    return check(c.vImageConvert_16UToF(src, dest, offset, scale, flags.bits()));
 }
 
 /// Convert PlanarF to 16-bit signed integer.
 ///
 ///     result = (pixel - offset) / scale
-pub fn convertFTo16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_FTo16S(src, dest, offset, scale, flags));
+pub fn convertFTo16S(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: Options) Error!usize {
+    return check(c.vImageConvert_FTo16S(src, dest, offset, scale, flags.bits()));
 }
 
 /// Convert PlanarF to 16-bit unsigned integer.
 ///
 ///     result = (pixel - offset) / scale
-pub fn convertFTo16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_FTo16U(src, dest, offset, scale, flags));
+pub fn convertFTo16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, offset: f32, scale: f32, flags: Options) Error!usize {
+    return check(c.vImageConvert_FTo16U(src, dest, offset, scale, flags.bits()));
 }
 
 /// Convert 16-bit unsigned integer to Planar8.
 ///
 ///     result = (pixel * 255 + 32767) / 65535
-pub fn convert16UToPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16UToPlanar8(src, dest, flags));
+pub fn convert16UToPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16UToPlanar8(src, dest, flags.bits()));
 }
 
 /// Convert Planar8 to 16-bit unsigned integer.
-pub fn planar8To16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar8To16U(src, dest, flags));
+pub fn planar8To16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar8To16U(src, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -139,9 +139,9 @@ pub fn planar8ToARGB8888(
     srcG: *const vImage_Buffer,
     srcB: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toARGB8888(srcA, srcR, srcG, srcB, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toARGB8888(srcA, srcR, srcG, srcB, dest, flags.bits()));
 }
 
 /// Combine four PlanarF buffers into a single ARGBFFFF interleaved buffer.
@@ -151,9 +151,9 @@ pub fn planarFToARGBFFFF(
     srcG: *const vImage_Buffer,
     srcB: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFtoARGBFFFF(srcA, srcR, srcG, srcB, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFtoARGBFFFF(srcA, srcR, srcG, srcB, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -167,9 +167,9 @@ pub fn argb8888ToPlanar8(
     destR: *const vImage_Buffer,
     destG: *const vImage_Buffer,
     destB: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888toPlanar8(srcARGB, destA, destR, destG, destB, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB8888toPlanar8(srcARGB, destA, destR, destG, destB, flags.bits()));
 }
 
 /// Split an ARGBFFFF interleaved buffer into four PlanarF buffers.
@@ -179,9 +179,9 @@ pub fn argbFFFFToPlanarF(
     destR: *const vImage_Buffer,
     destG: *const vImage_Buffer,
     destB: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGBFFFFtoPlanarF(srcARGB, destA, destR, destG, destB, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGBFFFFtoPlanarF(srcARGB, destA, destR, destG, destB, flags.bits()));
 }
 
 // ============================================================================
@@ -197,9 +197,9 @@ pub fn planar8ToARGBFFFF(
     dest: *const vImage_Buffer,
     max_float: Pixel_FFFF,
     min_float: Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8ToARGBFFFF(alpha, red, green, blue, dest, &max_float, &min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8ToARGBFFFF(alpha, red, green, blue, dest, &max_float, &min_float, flags.bits()));
 }
 
 /// Split an ARGB8888 buffer into four PlanarF buffers, with per-channel min/max scaling.
@@ -211,9 +211,9 @@ pub fn argb8888ToPlanarF(
     blue: *const vImage_Buffer,
     max_float: Pixel_FFFF,
     min_float: Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888toPlanarF(src, alpha, red, green, blue, &max_float, &min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB8888toPlanarF(src, alpha, red, green, blue, &max_float, &min_float, flags.bits()));
 }
 
 /// Split an ARGBFFFF buffer into four Planar8 buffers, with per-channel min/max scaling.
@@ -225,9 +225,9 @@ pub fn argbFFFFToPlanar8(
     blue: *const vImage_Buffer,
     max_float: Pixel_FFFF,
     min_float: Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGBFFFFtoPlanar8(src, alpha, red, green, blue, &max_float, &min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGBFFFFtoPlanar8(src, alpha, red, green, blue, &max_float, &min_float, flags.bits()));
 }
 
 /// Combine four PlanarF channel buffers into an ARGB8888 buffer, with per-channel min/max scaling.
@@ -239,9 +239,9 @@ pub fn planarFToARGB8888(
     dest: *const vImage_Buffer,
     max_float: Pixel_FFFF,
     min_float: Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFToARGB8888(alpha, red, green, blue, dest, &max_float, &min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFToARGB8888(alpha, red, green, blue, dest, &max_float, &min_float, flags.bits()));
 }
 
 // ============================================================================
@@ -254,9 +254,9 @@ pub fn planar8ToRGB888(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toRGB888(red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toRGB888(red, green, blue, dest, flags.bits()));
 }
 
 /// Combine three PlanarF buffers into an RGBFFF interleaved buffer.
@@ -265,9 +265,9 @@ pub fn planarFToRGBFFF(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFtoRGBFFF(red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFtoRGBFFF(red, green, blue, dest, flags.bits()));
 }
 
 /// Split an RGB888 interleaved buffer into three Planar8 buffers.
@@ -276,9 +276,9 @@ pub fn rgb888ToPlanar8(
     red: *const vImage_Buffer,
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB888toPlanar8(src, red, green, blue, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB888toPlanar8(src, red, green, blue, flags.bits()));
 }
 
 /// Split an RGBFFF interleaved buffer into three PlanarF buffers.
@@ -287,9 +287,9 @@ pub fn rgbFFFToPlanarF(
     red: *const vImage_Buffer,
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGBFFFtoPlanarF(src, red, green, blue, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGBFFFtoPlanarF(src, red, green, blue, flags.bits()));
 }
 
 // ============================================================================
@@ -319,12 +319,12 @@ pub fn rgb888ToInterleaved8888(
     dest: *const vImage_Buffer,
     order: ChannelOrder,
     premultiply: bool,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (order) {
-        .argb => c.vImageConvert_RGB888toARGB8888(rgb_src, alpha_src, alpha, dest, premultiply, flags),
-        .rgba => c.vImageConvert_RGB888toRGBA8888(rgb_src, alpha_src, alpha, dest, premultiply, flags),
-        .bgra => c.vImageConvert_RGB888toBGRA8888(rgb_src, alpha_src, alpha, dest, premultiply, flags),
+        .argb => c.vImageConvert_RGB888toARGB8888(rgb_src, alpha_src, alpha, dest, premultiply, flags.bits()),
+        .rgba => c.vImageConvert_RGB888toRGBA8888(rgb_src, alpha_src, alpha, dest, premultiply, flags.bits()),
+        .bgra => c.vImageConvert_RGB888toBGRA8888(rgb_src, alpha_src, alpha, dest, premultiply, flags.bits()),
     });
 }
 
@@ -333,12 +333,12 @@ pub fn interleaved8888ToRGB888(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     order: ChannelOrder,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (order) {
-        .argb => c.vImageConvert_ARGB8888toRGB888(src, dest, flags),
-        .rgba => c.vImageConvert_RGBA8888toRGB888(src, dest, flags),
-        .bgra => c.vImageConvert_BGRA8888toRGB888(src, dest, flags),
+        .argb => c.vImageConvert_ARGB8888toRGB888(src, dest, flags.bits()),
+        .rgba => c.vImageConvert_RGBA8888toRGB888(src, dest, flags.bits()),
+        .bgra => c.vImageConvert_BGRA8888toRGB888(src, dest, flags.bits()),
     });
 }
 
@@ -351,12 +351,12 @@ pub fn interleavedFFFFToRGBFFF(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     order: ChannelOrder,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (order) {
-        .argb => c.vImageConvert_ARGBFFFFtoRGBFFF(src, dest, flags),
-        .rgba => c.vImageConvert_RGBAFFFFtoRGBFFF(src, dest, flags),
-        .bgra => c.vImageConvert_BGRAFFFFtoRGBFFF(src, dest, flags),
+        .argb => c.vImageConvert_ARGBFFFFtoRGBFFF(src, dest, flags.bits()),
+        .rgba => c.vImageConvert_RGBAFFFFtoRGBFFF(src, dest, flags.bits()),
+        .bgra => c.vImageConvert_BGRAFFFFtoRGBFFF(src, dest, flags.bits()),
     });
 }
 
@@ -372,12 +372,12 @@ pub fn rgbFFFToInterleavedFFFF(
     dest: *const vImage_Buffer,
     order: ChannelOrder,
     premultiply: bool,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (order) {
-        .argb => c.vImageConvert_RGBFFFtoARGBFFFF(rgb_src, alpha_src, alpha, dest, premultiply, flags),
-        .rgba => c.vImageConvert_RGBFFFtoRGBAFFFF(rgb_src, alpha_src, alpha, dest, premultiply, flags),
-        .bgra => c.vImageConvert_RGBFFFtoBGRAFFFF(rgb_src, alpha_src, alpha, dest, premultiply, flags),
+        .argb => c.vImageConvert_RGBFFFtoARGBFFFF(rgb_src, alpha_src, alpha, dest, premultiply, flags.bits()),
+        .rgba => c.vImageConvert_RGBFFFtoRGBAFFFF(rgb_src, alpha_src, alpha, dest, premultiply, flags.bits()),
+        .bgra => c.vImageConvert_RGBFFFtoBGRAFFFF(rgb_src, alpha_src, alpha, dest, premultiply, flags.bits()),
     });
 }
 
@@ -389,12 +389,12 @@ pub fn flatten8888ToRGB888(
     background_color: Pixel_8888,
     order: ChannelOrder,
     is_premultiplied: bool,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (order) {
-        .argb => c.vImageFlatten_ARGB8888ToRGB888(src, dest, &background_color, is_premultiplied, flags),
-        .rgba => c.vImageFlatten_RGBA8888ToRGB888(src, dest, &background_color, is_premultiplied, flags),
-        .bgra => c.vImageFlatten_BGRA8888ToRGB888(src, dest, &background_color, is_premultiplied, flags),
+        .argb => c.vImageFlatten_ARGB8888ToRGB888(src, dest, &background_color, is_premultiplied, flags.bits()),
+        .rgba => c.vImageFlatten_RGBA8888ToRGB888(src, dest, &background_color, is_premultiplied, flags.bits()),
+        .bgra => c.vImageFlatten_BGRA8888ToRGB888(src, dest, &background_color, is_premultiplied, flags.bits()),
     });
 }
 
@@ -406,12 +406,12 @@ pub fn flattenFFFFToRGBFFF(
     background_color: Pixel_FFFF,
     order: ChannelOrder,
     is_premultiplied: bool,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (order) {
-        .argb => c.vImageFlatten_ARGBFFFFToRGBFFF(src, dest, &background_color, is_premultiplied, flags),
-        .rgba => c.vImageFlatten_RGBAFFFFToRGBFFF(src, dest, &background_color, is_premultiplied, flags),
-        .bgra => c.vImageFlatten_BGRAFFFFToRGBFFF(src, dest, &background_color, is_premultiplied, flags),
+        .argb => c.vImageFlatten_ARGBFFFFToRGBFFF(src, dest, &background_color, is_premultiplied, flags.bits()),
+        .rgba => c.vImageFlatten_RGBAFFFFToRGBFFF(src, dest, &background_color, is_premultiplied, flags.bits()),
+        .bgra => c.vImageFlatten_BGRAFFFFToRGBFFF(src, dest, &background_color, is_premultiplied, flags.bits()),
     });
 }
 
@@ -423,26 +423,26 @@ pub fn flattenFFFFToRGBFFF(
 ///
 /// Each value in permuteMap must be 0..3. For example, {3,2,1,0} converts
 /// ARGB -> BGRA.
-pub fn permuteChannelsARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannels_ARGB8888(src, dest, &permute_map, flags));
+pub fn permuteChannelsARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [4]u8, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannels_ARGB8888(src, dest, &permute_map, flags.bits()));
 }
 
 /// Reorder the 4 color channels of an ARGB16U image according to permuteMap.
-pub fn permuteChannelsARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannels_ARGB16U(src, dest, &permute_map, flags));
+pub fn permuteChannelsARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [4]u8, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannels_ARGB16U(src, dest, &permute_map, flags.bits()));
 }
 
 /// Reorder the 4 color channels of an ARGBFFFF image according to permuteMap.
-pub fn permuteChannelsARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannels_ARGBFFFF(src, dest, &permute_map, flags));
+pub fn permuteChannelsARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [4]u8, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannels_ARGBFFFF(src, dest, &permute_map, flags.bits()));
 }
 
 /// Reorder the 3 color channels of an RGB888 image according to permuteMap.
 ///
 /// Each value in permuteMap must be 0..2. For example, {2,1,0} converts
 /// RGB -> BGR.
-pub fn permuteChannelsRGB888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [3]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImagePermuteChannels_RGB888(src, dest, &permute_map, flags));
+pub fn permuteChannelsRGB888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permute_map: [3]u8, flags: Options) Error!usize {
+    return check(c.vImagePermuteChannels_RGB888(src, dest, &permute_map, flags.bits()));
 }
 
 // ============================================================================
@@ -452,18 +452,18 @@ pub fn permuteChannelsRGB888(src: *const vImage_Buffer, dest: *const vImage_Buff
 /// Extract a single channel from a 4-channel 8-bit buffer to a Planar8 buffer.
 ///
 /// channelIndex: 0 = first channel (e.g. A in ARGB), 3 = last channel.
-pub fn extractChannelARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, channel_index: usize, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageExtractChannel_ARGB8888(src, dest, @intCast(channel_index), flags));
+pub fn extractChannelARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, channel_index: usize, flags: Options) Error!usize {
+    return check(c.vImageExtractChannel_ARGB8888(src, dest, @intCast(channel_index), flags.bits()));
 }
 
 /// Extract a single channel from a 4-channel 16U buffer to a Planar16U buffer.
-pub fn extractChannelARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, channel_index: usize, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageExtractChannel_ARGB16U(src, dest, @intCast(channel_index), flags));
+pub fn extractChannelARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, channel_index: usize, flags: Options) Error!usize {
+    return check(c.vImageExtractChannel_ARGB16U(src, dest, @intCast(channel_index), flags.bits()));
 }
 
 /// Extract a single channel from a 4-channel float buffer to a PlanarF buffer.
-pub fn extractChannelARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, channel_index: usize, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageExtractChannel_ARGBFFFF(src, dest, @intCast(channel_index), flags));
+pub fn extractChannelARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, channel_index: usize, flags: Options) Error!usize {
+    return check(c.vImageExtractChannel_ARGBFFFF(src, dest, @intCast(channel_index), flags.bits()));
 }
 
 // ============================================================================
@@ -481,43 +481,43 @@ pub const ChannelMask = struct {
 };
 
 /// Overwrite selected channels of an ARGB8888 image with data from a planar buffer.
-pub fn overwriteChannelsARGB8888(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannels_ARGB8888(new_src, orig_src, dest, copy_mask, flags));
+pub fn overwriteChannelsARGB8888(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannels_ARGB8888(new_src, orig_src, dest, copy_mask, flags.bits()));
 }
 
 /// Overwrite selected channels of an ARGBFFFF image with data from a planar buffer.
-pub fn overwriteChannelsARGBFFFF(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannels_ARGBFFFF(new_src, orig_src, dest, copy_mask, flags));
+pub fn overwriteChannelsARGBFFFF(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannels_ARGBFFFF(new_src, orig_src, dest, copy_mask, flags.bits()));
 }
 
 /// Fill a Planar8 buffer with a scalar value.
-pub fn overwriteScalarPlanar8(scalar: Pixel_8, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithScalar_Planar8(scalar, dest, flags));
+pub fn overwriteScalarPlanar8(scalar: Pixel_8, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithScalar_Planar8(scalar, dest, flags.bits()));
 }
 
 /// Fill a PlanarF buffer with a scalar value.
-pub fn overwriteScalarPlanarF(scalar: Pixel_F, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithScalar_PlanarF(scalar, dest, flags));
+pub fn overwriteScalarPlanarF(scalar: Pixel_F, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithScalar_PlanarF(scalar, dest, flags.bits()));
 }
 
 /// Overwrite selected channels of an ARGB8888 image with a scalar value.
-pub fn overwriteScalarARGB8888(scalar: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithScalar_ARGB8888(scalar, src, dest, copy_mask, flags));
+pub fn overwriteScalarARGB8888(scalar: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithScalar_ARGB8888(scalar, src, dest, copy_mask, flags.bits()));
 }
 
 /// Overwrite selected channels of an ARGBFFFF image with a scalar value.
-pub fn overwriteScalarARGBFFFF(scalar: Pixel_F, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithScalar_ARGBFFFF(scalar, src, dest, copy_mask, flags));
+pub fn overwriteScalarARGBFFFF(scalar: Pixel_F, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithScalar_ARGBFFFF(scalar, src, dest, copy_mask, flags.bits()));
 }
 
 /// Overwrite selected channels of an ARGB8888 image with a pixel value.
-pub fn overwritePixelARGB8888(pixel: Pixel_8888, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithPixel_ARGB8888(&pixel, src, dest, copy_mask, flags));
+pub fn overwritePixelARGB8888(pixel: Pixel_8888, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithPixel_ARGB8888(&pixel, src, dest, copy_mask, flags.bits()));
 }
 
 /// Overwrite selected channels of an ARGBFFFF image with a pixel value.
-pub fn overwritePixelARGBFFFF(pixel: Pixel_FFFF, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageOverwriteChannelsWithPixel_ARGBFFFF(&pixel, src, dest, copy_mask, flags));
+pub fn overwritePixelARGBFFFF(pixel: Pixel_FFFF, src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageOverwriteChannelsWithPixel_ARGBFFFF(&pixel, src, dest, copy_mask, flags.bits()));
 }
 
 // ============================================================================
@@ -525,13 +525,13 @@ pub fn overwritePixelARGBFFFF(pixel: Pixel_FFFF, src: *const vImage_Buffer, dest
 // ============================================================================
 
 /// Select channels from newSrc (ARGB8888 interleaved) to overwrite channels in origSrc.
-pub fn selectChannelsARGB8888(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageSelectChannels_ARGB8888(new_src, orig_src, dest, copy_mask, flags));
+pub fn selectChannelsARGB8888(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageSelectChannels_ARGB8888(new_src, orig_src, dest, copy_mask, flags.bits()));
 }
 
 /// Select channels from newSrc (ARGBFFFF interleaved) to overwrite channels in origSrc.
-pub fn selectChannelsARGBFFFF(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageSelectChannels_ARGBFFFF(new_src, orig_src, dest, copy_mask, flags));
+pub fn selectChannelsARGBFFFF(new_src: *const vImage_Buffer, orig_src: *const vImage_Buffer, dest: *const vImage_Buffer, copy_mask: u8, flags: Options) Error!usize {
+    return check(c.vImageSelectChannels_ARGBFFFF(new_src, orig_src, dest, copy_mask, flags.bits()));
 }
 
 // ============================================================================
@@ -539,13 +539,13 @@ pub fn selectChannelsARGBFFFF(new_src: *const vImage_Buffer, orig_src: *const vI
 // ============================================================================
 
 /// Fill an ARGB8888 buffer with a constant color.
-pub fn fillARGB8888(dest: *const vImage_Buffer, color: Pixel_8888, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageBufferFill_ARGB8888(dest, &color, flags));
+pub fn fillARGB8888(dest: *const vImage_Buffer, color: Pixel_8888, flags: Options) Error!usize {
+    return check(c.vImageBufferFill_ARGB8888(dest, &color, flags.bits()));
 }
 
 /// Fill an ARGBFFFF buffer with a constant color.
-pub fn fillARGBFFFF(dest: *const vImage_Buffer, color: Pixel_FFFF, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageBufferFill_ARGBFFFF(dest, &color, flags));
+pub fn fillARGBFFFF(dest: *const vImage_Buffer, color: Pixel_FFFF, flags: Options) Error!usize {
+    return check(c.vImageBufferFill_ARGBFFFF(dest, &color, flags.bits()));
 }
 
 // ============================================================================
@@ -562,8 +562,8 @@ pub fn tableLookUpARGB8888(
     red_table: ?*const [256]Pixel_8,
     green_table: ?*const [256]Pixel_8,
     blue_table: ?*const [256]Pixel_8,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(c.vImageTableLookUp_ARGB8888(
         src,
         dest,
@@ -571,13 +571,13 @@ pub fn tableLookUpARGB8888(
         if (red_table) |t| @as([*]const Pixel_8, t) else null,
         if (green_table) |t| @as([*]const Pixel_8, t) else null,
         if (blue_table) |t| @as([*]const Pixel_8, t) else null,
-        flags,
+        flags.bits(),
     ));
 }
 
 /// Apply a lookup table to a Planar8 image.
-pub fn tableLookUpPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageTableLookUp_Planar8(src, dest, @as([*]const Pixel_8, table), flags));
+pub fn tableLookUpPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, table: *const [256]Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageTableLookUp_Planar8(src, dest, @as([*]const Pixel_8, table), flags.bits()));
 }
 
 // ============================================================================
@@ -587,8 +587,8 @@ pub fn tableLookUpPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer,
 /// Copy a vImage buffer from src to dest.
 ///
 /// pixel_size is the number of bytes per pixel (e.g., 1 for Planar8, 4 for ARGB8888 or PlanarF, 16 for ARGBFFFF).
-pub fn copyBuffer(src: *const vImage_Buffer, dest: *const vImage_Buffer, pixel_size: usize, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageCopyBuffer(src, dest, pixel_size, flags));
+pub fn copyBuffer(src: *const vImage_Buffer, dest: *const vImage_Buffer, pixel_size: usize, flags: Options) Error!usize {
+    return check(c.vImageCopyBuffer(src, dest, pixel_size, flags.bits()));
 }
 
 // ============================================================================
@@ -633,6 +633,7 @@ const half_1_0: Pixel_F16 = 0x3C00;
 const half_neg1_0: Pixel_F16 = 0xBC00;
 const half_0_5: Pixel_F16 = 0x3800;
 const Pixel_F16 = types.Pixel_16F;
+const Options = types.Options;
 
 test "clipPlanarF" {
     var src = PixelBuf(Pixel_F, 2, 3, 1, 1){};
@@ -642,7 +643,7 @@ test "clipPlanarF" {
 
     var s = src.buffer();
     var d = dst.buffer();
-    const err = clipPlanarF(&s, &d, 10.0, 0.0, Flags.kvImageNoFlags);
+    const err = clipPlanarF(&s, &d, 10.0, 0.0, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
 
     const expected = [_][3]Pixel_F{ .{ 0.0, 3.0, 10.0 }, .{ 0.0, 10.0, 0.0 } };
@@ -661,7 +662,7 @@ test "planar8ToPlanarF and planarFToPlanar8 round-trip formulas" {
 
     var s8 = src8.buffer();
     var dF = dstF.buffer();
-    _ = try planar8ToPlanarF(&s8, &dF, 10.0, -10.0, Flags.kvImageNoFlags);
+    _ = try planar8ToPlanarF(&s8, &dF, 10.0, -10.0, .{});
     try std.testing.expectApproxEqAbs(@as(Pixel_F, -10.0), dstF.get(0, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 10.0), dstF.get(0, 1, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 20.0 * 128.0 / 255.0 - 10.0), dstF.get(1, 2, 0), 1e-4);
@@ -675,7 +676,7 @@ test "planar8ToPlanarF and planarFToPlanar8 round-trip formulas" {
 
     var sF = srcF.buffer();
     var d8 = dst8.buffer();
-    _ = try planarFToPlanar8(&sF, &d8, 10.0, -10.0, Flags.kvImageNoFlags);
+    _ = try planarFToPlanar8(&sF, &d8, 10.0, -10.0, .{});
     try std.testing.expectEqual(@as(Pixel_8, 0), dst8.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 128), dst8.get(0, 1, 0));
     try std.testing.expectEqual(@as(Pixel_8, 255), dst8.get(1, 2, 0));
@@ -690,7 +691,7 @@ test "planar16FToPlanarF and planarFToPlanar16F round-trip exactly-representable
 
     var s16 = src16.buffer();
     var dF = dstF.buffer();
-    _ = try planar16FToPlanarF(&s16, &dF, Flags.kvImageNoFlags);
+    _ = try planar16FToPlanarF(&s16, &dF, .{});
     try std.testing.expectEqual(@as(Pixel_F, 0.0), dstF.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 1.0), dstF.get(0, 1, 0));
     try std.testing.expectEqual(@as(Pixel_F, -1.0), dstF.get(1, 2, 0));
@@ -703,7 +704,7 @@ test "planar16FToPlanarF and planarFToPlanar16F round-trip exactly-representable
 
     var sF = srcF.buffer();
     var d16 = dst16.buffer();
-    _ = try planarFToPlanar16F(&sF, &d16, Flags.kvImageNoFlags);
+    _ = try planarFToPlanar16F(&sF, &d16, .{});
     try std.testing.expectEqual(half_0_0, dst16.get(0, 0, 0));
     try std.testing.expectEqual(half_1_0, dst16.get(0, 1, 0));
     try std.testing.expectEqual(half_0_5, dst16.get(1, 2, 0));
@@ -717,7 +718,7 @@ test "planar8ToPlanar16F and planar16FToPlanar8 endpoint formulas" {
 
     var s8 = src8.buffer();
     var d16 = dst16.buffer();
-    _ = try planar8ToPlanar16F(&s8, &d16, Flags.kvImageNoFlags);
+    _ = try planar8ToPlanar16F(&s8, &d16, .{});
     try std.testing.expectEqual(half_0_0, dst16.get(0, 0, 0));
     try std.testing.expectEqual(half_1_0, dst16.get(0, 1, 0));
 
@@ -730,7 +731,7 @@ test "planar8ToPlanar16F and planar16FToPlanar8 endpoint formulas" {
 
     var s16 = src16.buffer();
     var d8 = dst8.buffer();
-    _ = try planar16FToPlanar8(&s16, &d8, Flags.kvImageNoFlags);
+    _ = try planar16FToPlanar8(&s16, &d8, .{});
     try std.testing.expectEqual(@as(Pixel_8, 0), dst8.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 255), dst8.get(0, 1, 0));
     try std.testing.expectEqual(@as(Pixel_8, 128), dst8.get(1, 2, 0));
@@ -745,7 +746,7 @@ test "convert16SToF and convertFTo16S: result = scale * pixel + offset" {
     var s = src.buffer();
     var d = dst.buffer();
     // offset=1.0, scale=0.1 (asymmetric, non-trivial constants)
-    _ = try convert16SToF(&s, &d, 1.0, 0.1, Flags.kvImageNoFlags);
+    _ = try convert16SToF(&s, &d, 1.0, 0.1, .{});
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 11.0), dst.get(0, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, -19.0), dst.get(0, 1, 0), 1e-4);
 
@@ -756,7 +757,7 @@ test "convert16SToF and convertFTo16S: result = scale * pixel + offset" {
     srcF.set(0, 1, 0, -19.0);
     var sF = srcF.buffer();
     var dS = dstS.buffer();
-    _ = try convertFTo16S(&sF, &dS, 1.0, 0.1, Flags.kvImageNoFlags);
+    _ = try convertFTo16S(&sF, &dS, 1.0, 0.1, .{});
     try std.testing.expectEqual(@as(i16, 100), dstS.get(0, 0, 0));
     try std.testing.expectEqual(@as(i16, -200), dstS.get(0, 1, 0));
 }
@@ -769,7 +770,7 @@ test "convert16UToF and convertFTo16U: result = scale * pixel + offset" {
 
     var s = src.buffer();
     var d = dst.buffer();
-    _ = try convert16UToF(&s, &d, 2.0, 0.01, Flags.kvImageNoFlags);
+    _ = try convert16UToF(&s, &d, 2.0, 0.01, .{});
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 3.0), dst.get(0, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 62.0), dst.get(0, 1, 0), 1e-4);
 
@@ -779,7 +780,7 @@ test "convert16UToF and convertFTo16U: result = scale * pixel + offset" {
     srcF.set(0, 1, 0, 62.0);
     var sF = srcF.buffer();
     var dU = dstU.buffer();
-    _ = try convertFTo16U(&sF, &dU, 2.0, 0.01, Flags.kvImageNoFlags);
+    _ = try convertFTo16U(&sF, &dU, 2.0, 0.01, .{});
     try std.testing.expectEqual(@as(u16, 100), dstU.get(0, 0, 0));
     try std.testing.expectEqual(@as(u16, 6000), dstU.get(0, 1, 0));
 }
@@ -793,7 +794,7 @@ test "convert16UToPlanar8: result = (pixel * 255 + 32767) / 65535" {
 
     var s = src.buffer();
     var d = dst.buffer();
-    _ = try convert16UToPlanar8(&s, &d, Flags.kvImageNoFlags);
+    _ = try convert16UToPlanar8(&s, &d, .{});
     try std.testing.expectEqual(@as(Pixel_8, 0), dst.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 255), dst.get(0, 1, 0));
     try std.testing.expectEqual(@as(Pixel_8, 128), dst.get(1, 2, 0));
@@ -808,7 +809,7 @@ test "planar8To16U: result = (pixel * 65535 + 127) / 255" {
 
     var s = src.buffer();
     var d = dst.buffer();
-    _ = try planar8To16U(&s, &d, Flags.kvImageNoFlags);
+    _ = try planar8To16U(&s, &d, .{});
     try std.testing.expectEqual(@as(u16, 0), dst.get(0, 0, 0));
     try std.testing.expectEqual(@as(u16, 65535), dst.get(0, 1, 0));
     try std.testing.expectEqual(@as(u16, 32896), dst.get(1, 2, 0));
@@ -836,7 +837,7 @@ test "planar8ToARGB8888 and argb8888ToPlanar8: A,R,G,B planar order round-trip" 
     var bg = g.buffer();
     var bb = b.buffer();
     var bd = dest.buffer();
-    _ = try planar8ToARGB8888(&ba, &br, &bg, &bb, &bd, Flags.kvImageNoFlags);
+    _ = try planar8ToARGB8888(&ba, &br, &bg, &bb, &bd, .{});
     try std.testing.expectEqual(@as(Pixel_8, 10), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 2));
@@ -854,7 +855,7 @@ test "planar8ToARGB8888 and argb8888ToPlanar8: A,R,G,B planar order round-trip" 
     var bdr = dr.buffer();
     var bdg = dg.buffer();
     var bdb = db.buffer();
-    _ = try argb8888ToPlanar8(&bd, &bda, &bdr, &bdg, &bdb, Flags.kvImageNoFlags);
+    _ = try argb8888ToPlanar8(&bd, &bda, &bdr, &bdg, &bdb, .{});
     try std.testing.expectEqual(@as(Pixel_8, 10), da.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 20), dr.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 30), dg.get(0, 0, 0));
@@ -881,7 +882,7 @@ test "planarFToARGBFFFF and argbFFFFToPlanarF: A,R,G,B planar order round-trip" 
     var bg = g.buffer();
     var bb = b.buffer();
     var bd = dest.buffer();
-    _ = try planarFToARGBFFFF(&ba, &br, &bg, &bb, &bd, Flags.kvImageNoFlags);
+    _ = try planarFToARGBFFFF(&ba, &br, &bg, &bb, &bd, .{});
     try std.testing.expectEqual(@as(Pixel_F, 1.0), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 2));
@@ -895,7 +896,7 @@ test "planarFToARGBFFFF and argbFFFFToPlanarF: A,R,G,B planar order round-trip" 
     var bdr = dr.buffer();
     var bdg = dg.buffer();
     var bdb = db.buffer();
-    _ = try argbFFFFToPlanarF(&bd, &bda, &bdr, &bdg, &bdb, Flags.kvImageNoFlags);
+    _ = try argbFFFFToPlanarF(&bd, &bda, &bdr, &bdg, &bdb, .{});
     try std.testing.expectEqual(@as(Pixel_F, 1.0), da.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dr.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 3.0), dg.get(0, 0, 0));
@@ -922,7 +923,7 @@ test "planar8ToARGBFFFF: A,R,G,B order with per-channel min/max scaling" {
     // arrays would be caught.
     const max_f: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
     const min_f: Pixel_FFFF = .{ 0.0, 0.0, 0.0, 0.0 };
-    _ = try planar8ToARGBFFFF(&ba, &br, &bg, &bb, &bd, max_f, min_f, Flags.kvImageNoFlags);
+    _ = try planar8ToARGBFFFF(&ba, &br, &bg, &bb, &bd, max_f, min_f, .{});
     // alpha = maxFloat[0]*255/255 = 1.0; green = maxFloat[2]*255/255 = 3.0
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 1.0), dest.get(0, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.0), dest.get(0, 0, 1), 1e-4);
@@ -947,7 +948,7 @@ test "argb8888ToPlanarF and argbFFFFToPlanar8: per-channel min/max scaling" {
     var bb = b.buffer();
     const max_f: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
     const min_f: Pixel_FFFF = .{ 0.0, 0.0, 0.0, 0.0 };
-    _ = try argb8888ToPlanarF(&bs, &ba, &br, &bg, &bb, max_f, min_f, Flags.kvImageNoFlags);
+    _ = try argb8888ToPlanarF(&bs, &ba, &br, &bg, &bb, max_f, min_f, .{});
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 1.0), a.get(0, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.0), r.get(0, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 3.0), g.get(0, 0, 0), 1e-4);
@@ -967,7 +968,7 @@ test "argb8888ToPlanarF and argbFFFFToPlanar8: per-channel min/max scaling" {
     var bdr = dr.buffer();
     var bdg = dg.buffer();
     var bdb = db.buffer();
-    _ = try argbFFFFToPlanar8(&bsF, &bda, &bdr, &bdg, &bdb, max_f, min_f, Flags.kvImageNoFlags);
+    _ = try argbFFFFToPlanar8(&bsF, &bda, &bdr, &bdg, &bdb, max_f, min_f, .{});
     try std.testing.expectEqual(@as(Pixel_8, 255), da.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 0), dr.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 255), dg.get(0, 0, 0));
@@ -992,7 +993,7 @@ test "planarFToARGB8888: A,R,G,B order with per-channel min/max scaling" {
     var bd = dest.buffer();
     const max_f: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
     const min_f: Pixel_FFFF = .{ 0.0, 0.0, 0.0, 0.0 };
-    _ = try planarFToARGB8888(&ba, &br, &bg, &bb, &bd, max_f, min_f, Flags.kvImageNoFlags);
+    _ = try planarFToARGB8888(&ba, &br, &bg, &bb, &bd, max_f, min_f, .{});
     try std.testing.expectEqual(@as(Pixel_8, 255), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 0), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_8, 255), dest.get(0, 0, 2));
@@ -1012,7 +1013,7 @@ test "planar8ToRGB888 and rgb888ToPlanar8: R,G,B planar order round-trip" {
     var bg = g.buffer();
     var bb = b.buffer();
     var bd = dest.buffer();
-    _ = try planar8ToRGB888(&br, &bg, &bb, &bd, Flags.kvImageNoFlags);
+    _ = try planar8ToRGB888(&br, &bg, &bb, &bd, .{});
     try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 2));
@@ -1023,7 +1024,7 @@ test "planar8ToRGB888 and rgb888ToPlanar8: R,G,B planar order round-trip" {
     var bdr = dr.buffer();
     var bdg = dg.buffer();
     var bdb = db.buffer();
-    _ = try rgb888ToPlanar8(&bd, &bdr, &bdg, &bdb, Flags.kvImageNoFlags);
+    _ = try rgb888ToPlanar8(&bd, &bdr, &bdg, &bdb, .{});
     try std.testing.expectEqual(@as(Pixel_8, 20), dr.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 30), dg.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 40), db.get(0, 0, 0));
@@ -1042,7 +1043,7 @@ test "planarFToRGBFFF and rgbFFFToPlanarF: R,G,B planar order round-trip" {
     var bg = g.buffer();
     var bb = b.buffer();
     var bd = dest.buffer();
-    _ = try planarFToRGBFFF(&br, &bg, &bb, &bd, Flags.kvImageNoFlags);
+    _ = try planarFToRGBFFF(&br, &bg, &bb, &bd, .{});
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_F, 4.0), dest.get(0, 0, 2));
@@ -1053,7 +1054,7 @@ test "planarFToRGBFFF and rgbFFFToPlanarF: R,G,B planar order round-trip" {
     var bdr = dr.buffer();
     var bdg = dg.buffer();
     var bdb = db.buffer();
-    _ = try rgbFFFToPlanarF(&bd, &bdr, &bdg, &bdb, Flags.kvImageNoFlags);
+    _ = try rgbFFFToPlanarF(&bd, &bdr, &bdg, &bdb, .{});
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dr.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 3.0), dg.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 4.0), db.get(0, 0, 0));
@@ -1070,7 +1071,7 @@ test "rgb888ToInterleaved8888 and interleaved8888ToRGB888: channel order per var
     {
         var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
         var bd = dest.buffer();
-        _ = try rgb888ToInterleaved8888(&brgb, null, 99, &bd, .argb, false, Flags.kvImageNoFlags);
+        _ = try rgb888ToInterleaved8888(&brgb, null, 99, &bd, .argb, false, .{});
         try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 0));
         try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 1));
         try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 2));
@@ -1078,7 +1079,7 @@ test "rgb888ToInterleaved8888 and interleaved8888ToRGB888: channel order per var
 
         var rgbBack = PixelBuf(Pixel_8, 1, 1, 3, 0){};
         var bb = rgbBack.buffer();
-        _ = try interleaved8888ToRGB888(&bd, &bb, .argb, Flags.kvImageNoFlags);
+        _ = try interleaved8888ToRGB888(&bd, &bb, .argb, .{});
         try std.testing.expectEqual(@as(Pixel_8, 20), rgbBack.get(0, 0, 0));
         try std.testing.expectEqual(@as(Pixel_8, 30), rgbBack.get(0, 0, 1));
         try std.testing.expectEqual(@as(Pixel_8, 40), rgbBack.get(0, 0, 2));
@@ -1088,7 +1089,7 @@ test "rgb888ToInterleaved8888 and interleaved8888ToRGB888: channel order per var
     {
         var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
         var bd = dest.buffer();
-        _ = try rgb888ToInterleaved8888(&brgb, null, 99, &bd, .rgba, false, Flags.kvImageNoFlags);
+        _ = try rgb888ToInterleaved8888(&brgb, null, 99, &bd, .rgba, false, .{});
         try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 0));
         try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
         try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 2));
@@ -1096,7 +1097,7 @@ test "rgb888ToInterleaved8888 and interleaved8888ToRGB888: channel order per var
 
         var rgbBack = PixelBuf(Pixel_8, 1, 1, 3, 0){};
         var bb = rgbBack.buffer();
-        _ = try interleaved8888ToRGB888(&bd, &bb, .rgba, Flags.kvImageNoFlags);
+        _ = try interleaved8888ToRGB888(&bd, &bb, .rgba, .{});
         try std.testing.expectEqual(@as(Pixel_8, 20), rgbBack.get(0, 0, 0));
         try std.testing.expectEqual(@as(Pixel_8, 30), rgbBack.get(0, 0, 1));
         try std.testing.expectEqual(@as(Pixel_8, 40), rgbBack.get(0, 0, 2));
@@ -1106,7 +1107,7 @@ test "rgb888ToInterleaved8888 and interleaved8888ToRGB888: channel order per var
     {
         var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
         var bd = dest.buffer();
-        _ = try rgb888ToInterleaved8888(&brgb, null, 99, &bd, .bgra, false, Flags.kvImageNoFlags);
+        _ = try rgb888ToInterleaved8888(&brgb, null, 99, &bd, .bgra, false, .{});
         try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 0));
         try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
         try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 2));
@@ -1114,7 +1115,7 @@ test "rgb888ToInterleaved8888 and interleaved8888ToRGB888: channel order per var
 
         var rgbBack = PixelBuf(Pixel_8, 1, 1, 3, 0){};
         var bb = rgbBack.buffer();
-        _ = try interleaved8888ToRGB888(&bd, &bb, .bgra, Flags.kvImageNoFlags);
+        _ = try interleaved8888ToRGB888(&bd, &bb, .bgra, .{});
         try std.testing.expectEqual(@as(Pixel_8, 20), rgbBack.get(0, 0, 0));
         try std.testing.expectEqual(@as(Pixel_8, 30), rgbBack.get(0, 0, 1));
         try std.testing.expectEqual(@as(Pixel_8, 40), rgbBack.get(0, 0, 2));
@@ -1130,7 +1131,7 @@ test "rgb888ToInterleaved8888 with premultiply: r' = (a*r + 127) / 255" {
 
     var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
     var bd = dest.buffer();
-    _ = try rgb888ToInterleaved8888(&brgb, null, 128, &bd, .argb, true, Flags.kvImageNoFlags);
+    _ = try rgb888ToInterleaved8888(&brgb, null, 128, &bd, .argb, true, .{});
     try std.testing.expectEqual(@as(Pixel_8, 128), dest.get(0, 0, 0)); // alpha unchanged
     try std.testing.expectEqual(@as(Pixel_8, (128 * 200 + 127) / 255), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_8, (128 * 100 + 127) / 255), dest.get(0, 0, 2));
@@ -1146,7 +1147,7 @@ test "interleavedFFFFToRGBFFF and rgbFFFToInterleavedFFFF: channel order per var
 
     var dest = PixelBuf(Pixel_F, 1, 1, 4, 0){};
     var bd = dest.buffer();
-    _ = try rgbFFFToInterleavedFFFF(&brgb, null, 9.0, &bd, .bgra, false, Flags.kvImageNoFlags);
+    _ = try rgbFFFToInterleavedFFFF(&brgb, null, 9.0, &bd, .bgra, false, .{});
     try std.testing.expectEqual(@as(Pixel_F, 4.0), dest.get(0, 0, 0)); // B
     try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 1)); // G
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 2)); // R
@@ -1154,7 +1155,7 @@ test "interleavedFFFFToRGBFFF and rgbFFFToInterleavedFFFF: channel order per var
 
     var rgbBack = PixelBuf(Pixel_F, 1, 1, 3, 0){};
     var bb = rgbBack.buffer();
-    _ = try interleavedFFFFToRGBFFF(&bd, &bb, .bgra, Flags.kvImageNoFlags);
+    _ = try interleavedFFFFToRGBFFF(&bd, &bb, .bgra, .{});
     try std.testing.expectEqual(@as(Pixel_F, 2.0), rgbBack.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 3.0), rgbBack.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_F, 4.0), rgbBack.get(0, 0, 2));
@@ -1171,7 +1172,7 @@ test "flatten8888ToRGB888: non-premultiplied color = (color*alpha + (255-alpha)*
     var dest = PixelBuf(Pixel_8, 1, 1, 3, 0){};
     var bd = dest.buffer();
     const bg: Pixel_8888 = .{ 255, 10, 20, 30 };
-    _ = try flatten8888ToRGB888(&bs, &bd, bg, .argb, false, Flags.kvImageNoFlags);
+    _ = try flatten8888ToRGB888(&bs, &bd, bg, .argb, false, .{});
     const alpha: u32 = 128;
     const inv: u32 = 255 - alpha;
     try std.testing.expectEqual(@as(Pixel_8, @intCast((alpha * 200 + inv * 10 + 127) / 255)), dest.get(0, 0, 0));
@@ -1190,7 +1191,7 @@ test "flattenFFFFToRGBFFF: non-premultiplied color = color*alpha + (1-alpha)*bg"
     var dest = PixelBuf(Pixel_F, 1, 1, 3, 0){};
     var bd = dest.buffer();
     const bg: Pixel_FFFF = .{ 1.0, 0.0, 0.8, 0.6 };
-    _ = try flattenFFFFToRGBFFF(&bs, &bd, bg, .argb, false, Flags.kvImageNoFlags);
+    _ = try flattenFFFFToRGBFFF(&bs, &bd, bg, .argb, false, .{});
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.5 * 1.0 + 0.5 * 0.0), dest.get(0, 0, 0), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.5 * 0.4 + 0.5 * 0.8), dest.get(0, 0, 1), 1e-4);
     try std.testing.expectApproxEqAbs(@as(Pixel_F, 0.5 * 0.2 + 0.5 * 0.6), dest.get(0, 0, 2), 1e-4);
@@ -1207,7 +1208,7 @@ test "permuteChannelsARGB8888: dest[i] = src[permuteMap[i]]" {
     var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
     var bd = dest.buffer();
     // {3,2,1,0}: ARGB -> BGRA per header's own example.
-    _ = try permuteChannelsARGB8888(&bs, &bd, .{ 3, 2, 1, 0 }, Flags.kvImageNoFlags);
+    _ = try permuteChannelsARGB8888(&bs, &bd, .{ 3, 2, 1, 0 }, .{});
     try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 2));
@@ -1224,7 +1225,7 @@ test "permuteChannelsARGB16U: dest[i] = src[permuteMap[i]]" {
 
     var dest = PixelBuf(u16, 1, 1, 4, 0){};
     var bd = dest.buffer();
-    _ = try permuteChannelsARGB16U(&bs, &bd, .{ 1, 0, 3, 2 }, Flags.kvImageNoFlags);
+    _ = try permuteChannelsARGB16U(&bs, &bd, .{ 1, 0, 3, 2 }, .{});
     try std.testing.expectEqual(@as(u16, 200), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(u16, 100), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(u16, 400), dest.get(0, 0, 2));
@@ -1241,7 +1242,7 @@ test "permuteChannelsARGBFFFF: dest[i] = src[permuteMap[i]]" {
 
     var dest = PixelBuf(Pixel_F, 1, 1, 4, 0){};
     var bd = dest.buffer();
-    _ = try permuteChannelsARGBFFFF(&bs, &bd, .{ 3, 2, 1, 0 }, Flags.kvImageNoFlags);
+    _ = try permuteChannelsARGBFFFF(&bs, &bd, .{ 3, 2, 1, 0 }, .{});
     try std.testing.expectEqual(@as(Pixel_F, 4.0), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 2));
@@ -1258,7 +1259,7 @@ test "permuteChannelsRGB888: dest[i] = src[permuteMap[i]]" {
     var dest = PixelBuf(Pixel_8, 1, 1, 3, 0){};
     var bd = dest.buffer();
     // {2,1,0}: RGB -> BGR per header's own example.
-    _ = try permuteChannelsRGB888(&bs, &bd, .{ 2, 1, 0 }, Flags.kvImageNoFlags);
+    _ = try permuteChannelsRGB888(&bs, &bd, .{ 2, 1, 0 }, .{});
     try std.testing.expectEqual(@as(Pixel_8, 40), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 2));
@@ -1273,9 +1274,9 @@ test "extractChannelARGB8888/ARGB16U/ARGBFFFF: 0-based index, 0 = first (A) chan
     var bs8 = src8.buffer();
     var d8 = PixelBuf(Pixel_8, 1, 1, 1, 0){};
     var bd8 = d8.buffer();
-    _ = try extractChannelARGB8888(&bs8, &bd8, 0, Flags.kvImageNoFlags);
+    _ = try extractChannelARGB8888(&bs8, &bd8, 0, .{});
     try std.testing.expectEqual(@as(Pixel_8, 10), d8.get(0, 0, 0));
-    _ = try extractChannelARGB8888(&bs8, &bd8, 3, Flags.kvImageNoFlags);
+    _ = try extractChannelARGB8888(&bs8, &bd8, 3, .{});
     try std.testing.expectEqual(@as(Pixel_8, 40), d8.get(0, 0, 0));
 
     var src16 = PixelBuf(u16, 1, 1, 4, 0){};
@@ -1284,7 +1285,7 @@ test "extractChannelARGB8888/ARGB16U/ARGBFFFF: 0-based index, 0 = first (A) chan
     var bs16 = src16.buffer();
     var d16 = PixelBuf(u16, 1, 1, 1, 0){};
     var bd16 = d16.buffer();
-    _ = try extractChannelARGB16U(&bs16, &bd16, 2, Flags.kvImageNoFlags);
+    _ = try extractChannelARGB16U(&bs16, &bd16, 2, .{});
     try std.testing.expectEqual(@as(u16, 300), d16.get(0, 0, 0));
 
     var srcF = PixelBuf(Pixel_F, 1, 1, 4, 0){};
@@ -1292,7 +1293,7 @@ test "extractChannelARGB8888/ARGB16U/ARGBFFFF: 0-based index, 0 = first (A) chan
     var bsF = srcF.buffer();
     var dF = PixelBuf(Pixel_F, 1, 1, 1, 0){};
     var bdF = dF.buffer();
-    _ = try extractChannelARGBFFFF(&bsF, &bdF, 1, Flags.kvImageNoFlags);
+    _ = try extractChannelARGBFFFF(&bsF, &bdF, 1, .{});
     try std.testing.expectEqual(@as(Pixel_F, 2.5), dF.get(0, 0, 0));
 }
 
@@ -1315,7 +1316,7 @@ test "overwriteChannelsARGB8888 vs overwriteScalarARGB8888 vs overwritePixelARGB
         var bo = orig.buffer();
         var bn = newSrc.buffer();
         var bd = dest.buffer();
-        _ = try overwriteChannelsARGB8888(&bn, &bo, &bd, mask, Flags.kvImageNoFlags);
+        _ = try overwriteChannelsARGB8888(&bn, &bo, &bd, mask, .{});
         try std.testing.expectEqual(@as(Pixel_8, 77), dest.get(0, 0, 0)); // alpha <- newSrc (broadcast)
         try std.testing.expectEqual(@as(Pixel_8, 77), dest.get(0, 0, 1)); // red <- newSrc (broadcast, same value)
         try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2)); // green unchanged
@@ -1333,7 +1334,7 @@ test "overwriteChannelsARGB8888 vs overwriteScalarARGB8888 vs overwritePixelARGB
         var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
         var bs = src.buffer();
         var bd = dest.buffer();
-        _ = try overwriteScalarARGB8888(99, &bs, &bd, mask, Flags.kvImageNoFlags);
+        _ = try overwriteScalarARGB8888(99, &bs, &bd, mask, .{});
         try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 0));
         try std.testing.expectEqual(@as(Pixel_8, 99), dest.get(0, 0, 1));
         try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2));
@@ -1352,7 +1353,7 @@ test "overwriteChannelsARGB8888 vs overwriteScalarARGB8888 vs overwritePixelARGB
         var bs = src.buffer();
         var bd = dest.buffer();
         const pixel: Pixel_8888 = .{ 9, 8, 7, 6 };
-        _ = try overwritePixelARGB8888(pixel, &bs, &bd, mask, Flags.kvImageNoFlags);
+        _ = try overwritePixelARGB8888(pixel, &bs, &bd, mask, .{});
         try std.testing.expectEqual(@as(Pixel_8, 9), dest.get(0, 0, 0)); // alpha <- pixel[0]
         try std.testing.expectEqual(@as(Pixel_8, 8), dest.get(0, 0, 1)); // red <- pixel[1] (distinct from alpha!)
         try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2)); // green unchanged
@@ -1373,7 +1374,7 @@ test "overwriteChannelsARGBFFFF and overwritePixelARGBFFFF" {
     var bo = orig.buffer();
     var bn = newSrc.buffer();
     var bd = dest.buffer();
-    _ = try overwriteChannelsARGBFFFF(&bn, &bo, &bd, mask, Flags.kvImageNoFlags);
+    _ = try overwriteChannelsARGBFFFF(&bn, &bo, &bd, mask, .{});
     try std.testing.expectEqual(@as(Pixel_F, 1.0), dest.get(0, 0, 0)); // alpha unchanged
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 1)); // red unchanged
     try std.testing.expectEqual(@as(Pixel_F, 77.0), dest.get(0, 0, 2)); // green <- broadcast
@@ -1382,7 +1383,7 @@ test "overwriteChannelsARGBFFFF and overwritePixelARGBFFFF" {
     var dest2 = PixelBuf(Pixel_F, 1, 1, 4, 0){};
     var bd2 = dest2.buffer();
     const pixel: Pixel_FFFF = .{ 9.0, 8.0, 7.0, 6.0 };
-    _ = try overwritePixelARGBFFFF(pixel, &bo, &bd2, mask, Flags.kvImageNoFlags);
+    _ = try overwritePixelARGBFFFF(pixel, &bo, &bd2, mask, .{});
     try std.testing.expectEqual(@as(Pixel_F, 1.0), dest2.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dest2.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_F, 7.0), dest2.get(0, 0, 2)); // green <- pixel[2]
@@ -1392,14 +1393,14 @@ test "overwriteChannelsARGBFFFF and overwritePixelARGBFFFF" {
 test "overwriteScalarPlanar8 and overwriteScalarPlanarF: fill entire buffer" {
     var dst8 = PixelBuf(Pixel_8, 2, 3, 1, 1){};
     var bd8 = dst8.buffer();
-    _ = try overwriteScalarPlanar8(42, &bd8, Flags.kvImageNoFlags);
+    _ = try overwriteScalarPlanar8(42, &bd8, .{});
     for (0..2) |r| for (0..3) |cidx| {
         try std.testing.expectEqual(@as(Pixel_8, 42), dst8.get(r, cidx, 0));
     };
 
     var dstF = PixelBuf(Pixel_F, 2, 3, 1, 1){};
     var bdF = dstF.buffer();
-    _ = try overwriteScalarPlanarF(3.5, &bdF, Flags.kvImageNoFlags);
+    _ = try overwriteScalarPlanarF(3.5, &bdF, .{});
     for (0..2) |r| for (0..3) |cidx| {
         try std.testing.expectEqual(@as(Pixel_F, 3.5), dstF.get(r, cidx, 0));
     };
@@ -1421,7 +1422,7 @@ test "selectChannelsARGB8888: masked channels come from newSrc's OWN channel pos
     var bo = orig.buffer();
     var bd = dest.buffer();
     const mask: u8 = ChannelMask.alpha | ChannelMask.blue;
-    _ = try selectChannelsARGB8888(&bn, &bo, &bd, mask, Flags.kvImageNoFlags);
+    _ = try selectChannelsARGB8888(&bn, &bo, &bd, mask, .{});
     try std.testing.expectEqual(@as(Pixel_8, 50), dest.get(0, 0, 0)); // alpha <- newSrc[0]
     try std.testing.expectEqual(@as(Pixel_8, 2), dest.get(0, 0, 1)); // red <- orig[1]
     try std.testing.expectEqual(@as(Pixel_8, 3), dest.get(0, 0, 2)); // green <- orig[2]
@@ -1442,7 +1443,7 @@ test "selectChannelsARGBFFFF: masked channels come from newSrc's OWN channel pos
     var bo = orig.buffer();
     var bd = dest.buffer();
     const mask: u8 = ChannelMask.alpha | ChannelMask.blue;
-    _ = try selectChannelsARGBFFFF(&bn, &bo, &bd, mask, Flags.kvImageNoFlags);
+    _ = try selectChannelsARGBFFFF(&bn, &bo, &bd, mask, .{});
     try std.testing.expectEqual(@as(Pixel_F, 50.0), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_F, 2.0), dest.get(0, 0, 1));
     try std.testing.expectEqual(@as(Pixel_F, 3.0), dest.get(0, 0, 2));
@@ -1453,7 +1454,7 @@ test "fillARGB8888 and fillARGBFFFF: every pixel gets the constant color" {
     var dst8 = PixelBuf(Pixel_8, 2, 3, 4, 1){};
     var bd8 = dst8.buffer();
     const color8: Pixel_8888 = .{ 10, 20, 30, 40 };
-    _ = try fillARGB8888(&bd8, color8, Flags.kvImageNoFlags);
+    _ = try fillARGB8888(&bd8, color8, .{});
     for (0..2) |r| for (0..3) |cidx| {
         try std.testing.expectEqual(@as(Pixel_8, 10), dst8.get(r, cidx, 0));
         try std.testing.expectEqual(@as(Pixel_8, 20), dst8.get(r, cidx, 1));
@@ -1464,7 +1465,7 @@ test "fillARGB8888 and fillARGBFFFF: every pixel gets the constant color" {
     var dstF = PixelBuf(Pixel_F, 2, 3, 4, 1){};
     var bdF = dstF.buffer();
     const colorF: Pixel_FFFF = .{ 1.0, 2.0, 3.0, 4.0 };
-    _ = try fillARGBFFFF(&bdF, colorF, Flags.kvImageNoFlags);
+    _ = try fillARGBFFFF(&bdF, colorF, .{});
     try std.testing.expectEqual(@as(Pixel_F, 1.0), dstF.get(1, 2, 0));
     try std.testing.expectEqual(@as(Pixel_F, 4.0), dstF.get(1, 2, 3));
 }
@@ -1485,7 +1486,7 @@ test "tableLookUpARGB8888: table[pixel] is used per channel; null leaves channel
     var bs = src.buffer();
     var dest = PixelBuf(Pixel_8, 1, 1, 4, 0){};
     var bd = dest.buffer();
-    _ = try tableLookUpARGB8888(&bs, &bd, &alpha_table, null, null, &blue_table, Flags.kvImageNoFlags);
+    _ = try tableLookUpARGB8888(&bs, &bd, &alpha_table, null, null, &blue_table, .{});
     try std.testing.expectEqual(@as(Pixel_8, 255 - 10), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 20), dest.get(0, 0, 1)); // unchanged (null table)
     try std.testing.expectEqual(@as(Pixel_8, 30), dest.get(0, 0, 2)); // unchanged (null table)
@@ -1502,7 +1503,7 @@ test "tableLookUpPlanar8: dest[x] = table[src[x]]" {
     var bs = src.buffer();
     var dest = PixelBuf(Pixel_8, 2, 3, 1, 1){};
     var bd = dest.buffer();
-    _ = try tableLookUpPlanar8(&bs, &bd, &table, Flags.kvImageNoFlags);
+    _ = try tableLookUpPlanar8(&bs, &bd, &table, .{});
     try std.testing.expectEqual(@as(Pixel_8, 255), dest.get(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 55), dest.get(1, 2, 0));
 }
@@ -1515,7 +1516,7 @@ test "copyBuffer: byte-exact copy respecting pixel_size and rowBytes padding" {
     var dest = PixelBuf(Pixel_8, 2, 3, 4, 1){};
     var bs = src.buffer();
     var bd = dest.buffer();
-    _ = try copyBuffer(&bs, &bd, 4, Flags.kvImageNoFlags);
+    _ = try copyBuffer(&bs, &bd, 4, .{});
     for (0..2) |r| for (0..3) |cidx| for (0..4) |ch| {
         try std.testing.expectEqual(src.get(r, cidx, ch), dest.get(r, cidx, ch));
     };

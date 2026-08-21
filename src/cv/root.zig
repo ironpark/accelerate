@@ -19,7 +19,7 @@ const CFTypeRef = cg.CFTypeRef;
 pub const CVReturn = i32;
 pub const CVOptionFlags = u64;
 
-pub const CVError = error{
+pub const Error = error{
     /// `CVPixelBufferCreate` (or another CoreVideo call) returned non-zero.
     CoreVideoFailed,
 };
@@ -27,8 +27,8 @@ pub const CVError = error{
 /// Maps a `CVReturn` onto a Zig error. The specific code is not preserved —
 /// CoreVideo's codes are not documented as a stable set — so use
 /// `lastReturnCode`-style raw calls if you need the number.
-pub inline fn check(r: CVReturn) CVError!void {
-    if (r != 0) return CVError.CoreVideoFailed;
+pub inline fn check(r: CVReturn) Error!void {
+    if (r != 0) return Error.CoreVideoFailed;
 }
 
 /// Packs a four-character code the way CoreVideo's `OSType` constants are
@@ -152,7 +152,7 @@ pub const PixelBuffer = struct {
     /// A buffer created this way is plain malloc-backed memory. Pass
     /// attributes through `initWithAttributes` if it has to be IOSurface- or
     /// Metal-compatible.
-    pub fn init(image_width: usize, image_height: usize, format: PixelFormat) CVError!PixelBuffer {
+    pub fn init(image_width: usize, image_height: usize, format: PixelFormat) Error!PixelBuffer {
         return initWithAttributes(image_width, image_height, format, null);
     }
 
@@ -164,10 +164,10 @@ pub const PixelBuffer = struct {
         image_height: usize,
         format: PixelFormat,
         attributes: ?*const anyopaque,
-    ) CVError!PixelBuffer {
+    ) Error!PixelBuffer {
         var out: CVPixelBufferRef = null;
         try check(CVPixelBufferCreate(null, image_width, image_height, format.code(), attributes, &out));
-        return .{ .ref = out orelse return CVError.CoreVideoFailed };
+        return .{ .ref = out orelse return Error.CoreVideoFailed };
     }
 
     /// Take ownership of an existing +1 reference without retaining.
@@ -186,18 +186,18 @@ pub const PixelBuffer = struct {
     }
 
     /// `CVPixelBufferRelease`.
-    pub fn deinit(self: PixelBuffer) void {
+    pub fn deinit(self: *PixelBuffer) void {
         CVPixelBufferRelease(self.ref);
     }
 
     /// `CVPixelBufferLockBaseAddress`. Pass `lock_read_only` when the buffer
     /// will only be read.
-    pub fn lock(self: PixelBuffer, flags: CVOptionFlags) CVError!void {
+    pub fn lock(self: PixelBuffer, flags: CVOptionFlags) Error!void {
         return check(CVPixelBufferLockBaseAddress(self.ref, flags));
     }
 
     /// `CVPixelBufferUnlockBaseAddress`. `flags` must match the `lock` call.
-    pub fn unlock(self: PixelBuffer, flags: CVOptionFlags) CVError!void {
+    pub fn unlock(self: PixelBuffer, flags: CVOptionFlags) Error!void {
         return check(CVPixelBufferUnlockBaseAddress(self.ref, flags));
     }
 
@@ -264,7 +264,7 @@ test "fourCC packs most significant byte first" {
 
 test "a 32BGRA pixel buffer reports its own geometry back" {
     const testing = std.testing;
-    const pb = try PixelBuffer.init(16, 8, .bgra32);
+    var pb = try PixelBuffer.init(16, 8, .bgra32);
     defer pb.deinit();
 
     try testing.expectEqual(@as(usize, 16), pb.width());
@@ -278,7 +278,7 @@ test "a 32BGRA pixel buffer reports its own geometry back" {
 
 test "pixels are addressable between lock and unlock" {
     const testing = std.testing;
-    const pb = try PixelBuffer.init(4, 4, .bgra32);
+    var pb = try PixelBuffer.init(4, 4, .bgra32);
     defer pb.deinit();
 
     try pb.lock(0);
@@ -294,7 +294,7 @@ test "pixels are addressable between lock and unlock" {
 
 test "a 420v buffer is planar with a full-size luma plane and half-size chroma" {
     const testing = std.testing;
-    const pb = try PixelBuffer.init(16, 8, .ycbcr420_biplanar_video);
+    var pb = try PixelBuffer.init(16, 8, .ycbcr420_biplanar_video);
     defer pb.deinit();
 
     try testing.expect(pb.isPlanar());
@@ -313,10 +313,10 @@ test "a 420v buffer is planar with a full-size luma plane and half-size chroma" 
 
 test "retain and release balance out" {
     const testing = std.testing;
-    const pb = try PixelBuffer.init(4, 4, .bgra32);
+    var pb = try PixelBuffer.init(4, 4, .bgra32);
     defer pb.deinit();
     const before = cg.CFGetRetainCount(pb.ref);
-    const second = pb.retain();
+    var second = pb.retain();
     try testing.expectEqual(before + 1, cg.CFGetRetainCount(pb.ref));
     second.deinit();
     try testing.expectEqual(before, cg.CFGetRetainCount(pb.ref));

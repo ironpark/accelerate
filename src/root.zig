@@ -28,7 +28,34 @@ const disabled_module = struct {
     pub const enabled = false;
 };
 
+/// Force semantic analysis of every declaration reachable from `T`, including
+/// methods on nested types.
+///
+/// `std.testing.refAllDecls` only goes one level deep, so a `pub fn` that
+/// nothing calls -- a method on a struct inside a module, say -- is never
+/// analysed, and can sit in the tree not compiling. That is not hypothetical:
+/// `vimage.utilities.Converter.tempBufferSize` was in exactly that state,
+/// passing a `u32` where an `Options` was wanted, through a full green test
+/// run.
+///
+/// `depth` bounds the walk so that a type that refers back to its own
+/// namespace cannot loop forever.
+fn refAllDeclsDeep(comptime T: type, comptime depth: usize) void {
+    if (depth == 0) return;
+    inline for (comptime @import("std").meta.declarations(T)) |decl| {
+        const field = @field(T, decl.name);
+        if (@TypeOf(field) == type) {
+            switch (@typeInfo(field)) {
+                .@"struct", .@"union", .@"enum", .@"opaque" => refAllDeclsDeep(field, depth - 1),
+                else => {},
+            }
+        } else {
+            _ = &@field(T, decl.name);
+        }
+    }
+}
+
 test {
-    const std = @import("std");
-    std.testing.refAllDecls(@This());
+    @setEvalBranchQuota(200_000);
+    refAllDeclsDeep(@This(), 6);
 }
