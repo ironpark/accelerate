@@ -1,6 +1,36 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+Accelerate, bound in full.
+
+0.1.0 covered `vdsp`, `vforce` and `vimage`. This release adds `sparse`,
+`quadrature`, `blas`, `lapack` and `bnns`, and closes the gaps in what was
+already there. Every public entry point in `vecLib` and `vImage` is now bound
+except `vImage_Utilities.h` and `vImage_CVUtilities.h` (47), which are held
+back on a scope decision about depending on CoreGraphics and CoreVideo —
+`docs/COVERAGE.md` states the question and the numbers behind all of this.
+
+The test suite went from 476 checked items to 1246 tests, passing in all four
+optimize modes.
+
+### Breaking
+
+- **`vImage_YpCbCrPixelRange`'s fields are `i32`, not `i16`.** The C struct is
+  eight `int32_t` — 32 bytes, not 16. Code that builds one has to change; code
+  that passed one to Accelerate was already handing it a half-size object with
+  every field after the first at the wrong offset.
+
+- **`vImage_YpCbCrToARGB` and `vImage_ARGBToYpCbCr` are 128 bytes, not 64.**
+  They are opaque, so this only affects storage. Anyone who allocated one and
+  called `vImageConvert_YpCbCrToARGB_GenerateConversion` was getting 64 bytes
+  written past the end of it.
+
+- **`bnns.tensor.topK` takes a non-optional `best_indices`.** The header marks
+  it `_Nullable` on macOS 13+, but passing NULL never returns. Requiring the
+  descriptor makes the hang unreachable; discard the indices if you do not
+  want them.
+
 
 ### Added
 
