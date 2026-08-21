@@ -37,6 +37,13 @@ pub const Pixel_32U = types.Pixel_32U;
 pub const vImage_PerspectiveTransform = types.vImage_PerspectiveTransform;
 pub const WarpInterpolation = types.WarpInterpolation;
 pub const KernelFunc = types.KernelFunc;
+pub const vImageARGBType = types.vImageARGBType;
+pub const vImageYpCbCrType = types.vImageYpCbCrType;
+pub const vImage_YpCbCrToARGBMatrix = types.vImage_YpCbCrToARGBMatrix;
+pub const vImage_YpCbCrToARGB = types.vImage_YpCbCrToARGB;
+pub const vImage_ARGBToYpCbCrMatrix = types.vImage_ARGBToYpCbCrMatrix;
+pub const vImage_ARGBToYpCbCr = types.vImage_ARGBToYpCbCr;
+pub const vImage_YpCbCrPixelRange = types.vImage_YpCbCrPixelRange;
 
 // ============================================================================
 // Alpha
@@ -312,6 +319,279 @@ pub extern fn vImageTableLookUp_Planar8(src: *const vImage_Buffer, dest: *const 
 // -- Copy buffer --
 
 pub extern fn vImageCopyBuffer(src: *const vImage_Buffer, dest: *const vImage_Buffer, pixelSize: usize, flags: vImage_Flags) vImage_Error;
+
+// -- ARGB1555 <-> ARGB8888 / Planar8 --
+
+pub extern fn vImageConvert_ARGB1555toARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB1555toPlanar8(src: *const vImage_Buffer, destA: *const vImage_Buffer, destR: *const vImage_Buffer, destG: *const vImage_Buffer, destB: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toARGB1555(srcA: *const vImage_Buffer, srcR: *const vImage_Buffer, srcG: *const vImage_Buffer, srcB: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888toARGB1555(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888toARGB1555_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+
+// -- RGBA5551 <-> RGBA8888 --
+
+pub extern fn vImageConvert_RGBA5551toRGBA8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA8888toRGBA5551(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA8888toRGBA5551_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+
+// -- RGB565 <-> 8888 --
+
+pub extern fn vImageConvert_RGB565toARGB8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB565toRGBA8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB565toBGRA8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB565toRGB888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888toRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA8888toRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_BGRA8888toRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- RGB565 dithered encoders --
+
+pub extern fn vImageConvert_RGB888toRGB565_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888toRGB565_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA8888toRGB565_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_BGRA8888toRGB565_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+
+// -- RGB565 <-> Planar8 --
+
+pub extern fn vImageConvert_RGB565toPlanar8(src: *const vImage_Buffer, destR: *const vImage_Buffer, destG: *const vImage_Buffer, destB: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toRGB565(srcR: *const vImage_Buffer, srcG: *const vImage_Buffer, srcB: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- Packed 16-bit <-> packed 16-bit --
+
+pub extern fn vImageConvert_ARGB1555toRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA5551toRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB565toARGB1555(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB565toRGBA5551(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: vImage_Flags) vImage_Error;
+
+// -- RGBA1010102 <-> ARGB8888 / ARGB16U / ARGB16Q12 --
+
+pub extern fn vImageConvert_RGBA1010102ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888ToRGBA1010102(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA1010102ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16Q12ToRGBA1010102(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, RGB101010Min: i32, RGB101010Max: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA1010102ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16UToRGBA1010102(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- (X|A)RGB2101010 <-> ARGB8888 --
+
+pub extern fn vImageConvert_XRGB2101010ToARGB8888(src: *const vImage_Buffer, alpha: Pixel_8, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB2101010ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888ToXRGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888ToARGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- (X|A)RGB2101010 <-> ARGB16Q12 --
+
+pub extern fn vImageConvert_XRGB2101010ToARGB16Q12(src: *const vImage_Buffer, alpha: Pixel_16Q12, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB2101010ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16Q12ToXRGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, RGB101010Min: i32, RGB101010Max: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16Q12ToARGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, RGB101010Min: i32, RGB101010Max: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- (X|A)RGB2101010 <-> ARGB16U --
+
+pub extern fn vImageConvert_XRGB2101010ToARGB16U(src: *const vImage_Buffer, alpha: Pixel_16U, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB2101010ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16UToXRGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16UToARGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- (X|A)RGB2101010 <-> ARGBFFFF --
+
+pub extern fn vImageConvert_XRGB2101010ToARGBFFFF(src: *const vImage_Buffer, alpha: Pixel_F, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB2101010ToARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGBFFFFToXRGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGBFFFFToARGB2101010(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- (X|A)RGB2101010 -> ARGB16F --
+
+// Note: alpha here is Pixel_F (a real 32-bit float), not a half; no bitcast needed.
+pub extern fn vImageConvert_XRGB2101010ToARGB16F(src: *const vImage_Buffer, alpha: Pixel_F, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB2101010ToARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, RGB101010RangeMin: i32, RGB101010RangeMax: i32, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- YpCbCr conversion info generation --
+
+pub extern fn vImageConvert_YpCbCrToARGB_GenerateConversion(matrix: *const vImage_YpCbCrToARGBMatrix, pixelRange: *const vImage_YpCbCrPixelRange, outInfo: *vImage_YpCbCrToARGB, inYpCbCrType: vImageYpCbCrType, outARGBType: vImageARGBType, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGBToYpCbCr_GenerateConversion(matrix: *const vImage_ARGBToYpCbCrMatrix, pixelRange: *const vImage_YpCbCrPixelRange, outInfo: *vImage_ARGBToYpCbCr, inARGBType: vImageARGBType, outYpCbCrType: vImageYpCbCrType, flags: vImage_Flags) vImage_Error;
+
+// -- 4:2:2 8-bit YpCbCr <-> ARGB8888 --
+
+pub extern fn vImageConvert_422YpCbYpCr8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To422YpCbYpCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_422CbYpCrYp8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To422CbYpCrYp8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_422CbYpCrYp8_AA8ToARGB8888(src: *const vImage_Buffer, srcA: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To422CbYpCrYp8_AA8(src: *const vImage_Buffer, dest: *const vImage_Buffer, destA: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- 4:2:0 8-bit YpCbCr <-> ARGB8888 --
+
+pub extern fn vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(srcYp: *const vImage_Buffer, srcCb: *const vImage_Buffer, srcCr: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To420Yp8_Cb8_Cr8(src: *const vImage_Buffer, destYp: *const vImage_Buffer, destCb: *const vImage_Buffer, destCr: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_420Yp8_CbCr8ToARGB8888(srcYp: *const vImage_Buffer, srcCbCr: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To420Yp8_CbCr8(src: *const vImage_Buffer, destYp: *const vImage_Buffer, destCbCr: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- 4:4:4 8-bit YpCbCr <-> ARGB8888 --
+
+pub extern fn vImageConvert_444AYpCbCr8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To444AYpCbCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_444CbYpCrA8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To444CbYpCrA8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_444CrYpCb8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To444CrYpCb8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- 4:4:4 16-bit YpCbCr <-> ARGB8888 / ARGB16U --
+
+pub extern fn vImageConvert_444AYpCbCr16ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To444AYpCbCr16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_444AYpCbCr16ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16UTo444AYpCbCr16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- 4:4:4 10-bit YpCbCr <-> ARGB8888 / ARGB16Q12 --
+
+pub extern fn vImageConvert_444CrYpCb10ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To444CrYpCb10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_444CrYpCb10ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16Q12, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16Q12To444CrYpCb10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- 4:2:2 10-bit YpCbCr <-> ARGB8888 / ARGB16Q12 --
+
+pub extern fn vImageConvert_422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To422CrYpCbYpCbYpCbYpCrYpCrYp10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16Q12, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- 4:2:2 16-bit YpCbCr <-> ARGB8888 / ARGB16U --
+
+pub extern fn vImageConvert_422CbYpCrYp16ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888To422CbYpCrYp16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_422CbYpCrYp16ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16UTo422CbYpCrYp16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const vImage_ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+
+// -- 16Q12 scalar format conversions --
+
+pub extern fn vImageConvert_8to16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Q12to8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Q12to16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Fto16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Q12toF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Fto16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Q12to16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Uto16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- 16Q12 planar <-> interleaved --
+
+pub extern fn vImageConvert_RGB888toPlanar16Q12(src: *const vImage_Buffer, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888toPlanar16Q12(src: *const vImage_Buffer, alpha: *const vImage_Buffer, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar16Q12toRGB888(red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar16Q12toARGB8888(alpha: *const vImage_Buffer, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar16Q12toRGB16F(red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar16Q12toARGB16F(alpha: *const vImage_Buffer, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- Half-float / 12-bit / 16-bit depth conversions --
+
+pub extern fn vImageConvert_12UTo16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16UTo12U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Fto16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_16Uto16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- 16U interleaved <-> 8888 / 16U interleaved --
+
+pub extern fn vImageConvert_ARGB16UToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB8888ToRGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [3]u8, copyMask: u8, backgroundColor: *const [3]Pixel_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB16UToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+
+// -- 16U interleaved <-> 16U planar / 3-channel 16U --
+
+pub extern fn vImageConvert_ARGB16UtoPlanar16U(argbSrc: *const vImage_Buffer, aDest: *const vImage_Buffer, rDest: *const vImage_Buffer, gDest: *const vImage_Buffer, bDest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar16UtoARGB16U(aSrc: *const vImage_Buffer, rSrc: *const vImage_Buffer, gSrc: *const vImage_Buffer, bSrc: *const vImage_Buffer, argbDest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB16UtoPlanar16U(rgbSrc: *const vImage_Buffer, rDest: *const vImage_Buffer, gDest: *const vImage_Buffer, bDest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar16UtoRGB16U(rSrc: *const vImage_Buffer, gSrc: *const vImage_Buffer, bSrc: *const vImage_Buffer, rgbDest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGB16UtoRGB16U(argbSrc: *const vImage_Buffer, rgbDest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBA16UtoRGB16U(rgbaSrc: *const vImage_Buffer, rgbDest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_BGRA16UtoRGB16U(bgraSrc: *const vImage_Buffer, rgbDest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB16UtoARGB16U(rgbSrc: *const vImage_Buffer, aSrc: ?*const vImage_Buffer, alpha: Pixel_16U, argbDest: *const vImage_Buffer, premultiply: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB16UtoRGBA16U(rgbSrc: *const vImage_Buffer, aSrc: ?*const vImage_Buffer, alpha: Pixel_16U, rgbaDest: *const vImage_Buffer, premultiply: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB16UtoBGRA16U(rgbSrc: *const vImage_Buffer, aSrc: ?*const vImage_Buffer, alpha: Pixel_16U, bgraDest: *const vImage_Buffer, premultiply: bool, flags: vImage_Flags) vImage_Error;
+
+// -- Dithered down-conversions --
+
+pub extern fn vImageConvert_ARGB16UtoARGB8888_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ARGBFFFFtoARGB8888_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, maxFloat: *const Pixel_FFFF, minFloat: *const Pixel_FFFF, dither: c_int, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar16UtoPlanar8_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_PlanarFtoPlanar8_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, maxFloat: Pixel_F, minFloat: Pixel_F, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGB16UtoRGB888_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_RGBFFFtoRGB888_dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, maxFloat: *const [3]Pixel_F, minFloat: *const [3]Pixel_F, dither: c_int, flags: vImage_Flags) vImage_Error;
+
+// -- Planar <-> XRGB / BGRX interleaved (opaque-alpha variants) --
+
+pub extern fn vImageConvert_XRGB8888ToPlanar8(src: *const vImage_Buffer, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_BGRX8888ToPlanar8(src: *const vImage_Buffer, blue: *const vImage_Buffer, green: *const vImage_Buffer, red: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_XRGBFFFFToPlanarF(src: *const vImage_Buffer, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_BGRXFFFFToPlanarF(src: *const vImage_Buffer, blue: *const vImage_Buffer, green: *const vImage_Buffer, red: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8ToXRGB8888(alpha: Pixel_8, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8ToBGRX8888(blue: *const vImage_Buffer, green: *const vImage_Buffer, red: *const vImage_Buffer, alpha: Pixel_8, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8ToXRGBFFFF(alpha: Pixel_F, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, maxFloat: *const Pixel_FFFF, minFloat: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8ToBGRXFFFF(blue: *const vImage_Buffer, green: *const vImage_Buffer, red: *const vImage_Buffer, alpha: Pixel_F, dest: *const vImage_Buffer, maxFloat: *const Pixel_FFFF, minFloat: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_PlanarFToXRGB8888(alpha: Pixel_8, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, maxFloat: *const Pixel_FFFF, minFloat: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_PlanarFToBGRX8888(blue: *const vImage_Buffer, green: *const vImage_Buffer, red: *const vImage_Buffer, alpha: Pixel_8, dest: *const vImage_Buffer, maxFloat: *const Pixel_FFFF, minFloat: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_PlanarFToXRGBFFFF(alpha: Pixel_F, red: *const vImage_Buffer, green: *const vImage_Buffer, blue: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_PlanarFToBGRXFFFF(blue: *const vImage_Buffer, green: *const vImage_Buffer, red: *const vImage_Buffer, alpha: Pixel_F, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+
+// -- Indexed and sub-byte planar formats --
+
+pub extern fn vImageConvert_Indexed1toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, colors: *const [2]Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Indexed2toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, colors: *const [4]Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Indexed4toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, colors: *const [16]Pixel_8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toIndexed1(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, colors: *[2]Pixel_8, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toIndexed2(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, colors: *[4]Pixel_8, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toIndexed4(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, colors: *[16]Pixel_8, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar1toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar2toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar4toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toPlanar1(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toPlanar2(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_Planar8toPlanar4(src: *const vImage_Buffer, dest: *const vImage_Buffer, tempBuffer: ?*anyopaque, dither: c_int, flags: vImage_Flags) vImage_Error;
+
+// -- Chunky <-> Planar (generic N-channel) --
+
+pub extern fn vImageConvert_ChunkyToPlanar8(srcChannels: [*]const ?*const anyopaque, destPlanarBuffers: [*]const *const vImage_Buffer, channelCount: c_uint, srcStrideBytes: usize, srcWidth: vImagePixelCount, srcHeight: vImagePixelCount, srcRowBytes: usize, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_ChunkyToPlanarF(srcChannels: [*]const ?*const anyopaque, destPlanarBuffers: [*]const *const vImage_Buffer, channelCount: c_uint, srcStrideBytes: usize, srcWidth: vImagePixelCount, srcHeight: vImagePixelCount, srcRowBytes: usize, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_PlanarToChunky8(srcPlanarBuffers: [*]const *const vImage_Buffer, destChannels: [*]const ?*anyopaque, channelCount: c_uint, destStrideBytes: usize, destWidth: vImagePixelCount, destHeight: vImagePixelCount, destRowBytes: usize, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageConvert_PlanarToChunkyF(srcPlanarBuffers: [*]const *const vImage_Buffer, destChannels: [*]const ?*anyopaque, channelCount: c_uint, destStrideBytes: usize, destWidth: vImagePixelCount, destHeight: vImagePixelCount, destRowBytes: usize, flags: vImage_Flags) vImage_Error;
+
+// -- Flatten (composite against a background color) --
+
+pub extern fn vImageFlatten_ARGB8888(argbSrc: *const vImage_Buffer, argbDst: *const vImage_Buffer, argbBackgroundColorPtr: *const Pixel_8888, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFlatten_ARGBFFFF(argbSrc: *const vImage_Buffer, argbDst: *const vImage_Buffer, argbBackgroundColorPtr: *const Pixel_FFFF, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFlatten_ARGB16U(argbSrc: *const vImage_Buffer, argbDst: *const vImage_Buffer, argbBackgroundColorPtr: *const Pixel_ARGB_16U, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFlatten_ARGB16Q12(argbSrc: *const vImage_Buffer, argbDst: *const vImage_Buffer, argbBackgroundColorPtr: *const Pixel_ARGB_16S, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFlatten_RGBA8888(rgbaSrc: *const vImage_Buffer, rgbaDst: *const vImage_Buffer, rgbaBackgroundColorPtr: *const Pixel_8888, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFlatten_RGBAFFFF(rgbaSrc: *const vImage_Buffer, rgbaDst: *const vImage_Buffer, rgbaBackgroundColorPtr: *const Pixel_FFFF, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageFlatten_RGBA16U(rgbaSrc: *const vImage_Buffer, rgbaDst: *const vImage_Buffer, rgbaBackgroundColorPtr: *const Pixel_ARGB_16U, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+// Note: vImageFlatten_RGBA16Q12 uses the ARGB parameter names in the header verbatim.
+pub extern fn vImageFlatten_RGBA16Q12(argbSrc: *const vImage_Buffer, argbDst: *const vImage_Buffer, argbBackgroundColorPtr: *const Pixel_ARGB_16S, isImagePremultiplied: bool, flags: vImage_Flags) vImage_Error;
+
+// -- Buffer fill --
+
+pub extern fn vImageBufferFill_ARGB16U(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageBufferFill_ARGB16S(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16S, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageBufferFill_ARGB16F(dest: *const vImage_Buffer, color: *const Pixel_ARGB_16F, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageBufferFill_CbCr8(dest: *const vImage_Buffer, color: *const Pixel_88, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageBufferFill_CbCr16U(dest: *const vImage_Buffer, color: *const Pixel_16U16U, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageBufferFill_CbCr16S(dest: *const vImage_Buffer, color: *const Pixel_16S16S, flags: vImage_Flags) vImage_Error;
+
+// -- Channel overwrite / permute --
+
+pub extern fn vImageOverwriteChannelsWithPixel_ARGB16U(the_pixel: *const Pixel_ARGB_16U, src: *const vImage_Buffer, dest: *const vImage_Buffer, copyMask: u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageOverwriteChannelsWithScalar_Planar16U(scalar: Pixel_16U, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageOverwriteChannelsWithScalar_Planar16S(scalar: Pixel_16S, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImageOverwriteChannelsWithScalar_Planar16F(scalar: Pixel_16F, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePermuteChannels_ARGB16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePermuteChannelsWithMaskedInsert_ARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_8888, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePermuteChannelsWithMaskedInsert_ARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_FFFF, flags: vImage_Flags) vImage_Error;
+pub extern fn vImagePermuteChannelsWithMaskedInsert_ARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, permuteMap: *const [4]u8, copyMask: u8, backgroundColor: *const Pixel_ARGB_16U, flags: vImage_Flags) vImage_Error;
+
+// -- Byte swap --
+
+pub extern fn vImageByteSwap_Planar16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) vImage_Error;
 
 // ============================================================================
 // Geometry
@@ -670,11 +950,28 @@ pub extern fn vImageFloodFill_Planar16U(srcDest: *const vImage_Buffer, tempBuffe
 pub extern fn vImageFloodFill_ARGB8888(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: *const Pixel_8888, connectivity: c_int, flags: vImage_Flags) vImage_Error;
 pub extern fn vImageFloodFill_ARGB16U(srcDest: *const vImage_Buffer, tempBuffer: ?*anyopaque, seedX: vImagePixelCount, seedY: vImagePixelCount, newValue: *const Pixel_ARGB_16U, connectivity: c_int, flags: vImage_Flags) vImage_Error;
 
+// ============================================================================
+// Basic Image Types
+// ============================================================================
+
+// -- PNG predictor --
+
+pub extern fn vImagePNGDecompressionFilter(buffer: *const vImage_Buffer, startScanline: vImagePixelCount, scanlineCount: vImagePixelCount, bitsPerPixel: u32, filterMethodNumber: u32, filterType: u32, flags: vImage_Flags) vImage_Error;
+
 // An `extern fn` nobody calls is never resolved, so a misspelled symbol - or
 // one a future SDK stops exporting - would link cleanly right up until the
 // first caller. Taking the address of every declaration here forces all of
 // them to resolve at link time, which matters most for the format variants
 // that no test instantiates directly.
+// -- Standard Y'CbCr conversion matrices --
+//
+// The framework exports these as *pointers to* matrices, so each Zig symbol is
+// a variable holding a `*const` matrix rather than the matrix itself.
+pub extern var kvImage_YpCbCrToARGBMatrix_ITU_R_601_4: *const vImage_YpCbCrToARGBMatrix;
+pub extern var kvImage_YpCbCrToARGBMatrix_ITU_R_709_2: *const vImage_YpCbCrToARGBMatrix;
+pub extern var kvImage_ARGBToYpCbCrMatrix_ITU_R_601_4: *const vImage_ARGBToYpCbCrMatrix;
+pub extern var kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2: *const vImage_ARGBToYpCbCrMatrix;
+
 test "every declared vImage symbol resolves and links" {
     const std = @import("std");
     var sink: usize = 0;

@@ -14,6 +14,31 @@ const Pixel_FFFF = types.Pixel_FFFF;
 const Flags = types.Flags;
 
 // ============================================================================
+// Sub-modules
+//
+// The Conversion.h surface is large enough that it is split by format family
+// rather than kept in one file. Each sub-module below covers one family and
+// carries its own tests.
+// ============================================================================
+
+/// 16-bit packed pixels: ARGB1555, RGBA5551, RGB565.
+pub const packed16 = @import("conversion_packed16.zig");
+/// 32-bit 10-bit-per-channel packed pixels: ARGB2101010, XRGB2101010, RGBA1010102.
+pub const packed10 = @import("conversion_packed10.zig");
+/// Chroma-subsampled video formats: 420, 422 and 444 YpCbCr.
+pub const ycbcr = @import("conversion_ycbcr.zig");
+/// The signed 4.12 fixed-point format, Pixel_16Q12.
+pub const q12 = @import("conversion_q12.zig");
+/// Remaining N-to-M format pairs across the 8/12/16U/16F/F types.
+pub const formats = @import("conversion_formats.zig");
+/// Sub-byte planar (1/2/4 bits per pixel) and indexed colour.
+pub const indexed = @import("conversion_indexed.zig");
+/// Flatten against an opaque background, and chunky/planar de-interleaving.
+pub const flatten = @import("conversion_flatten_chunky.zig");
+/// Buffer fill, channel overwrite, channel permute, and byte-swap variants.
+pub const fill = @import("conversion_fill_misc.zig");
+
+// ============================================================================
 // Clip
 // ============================================================================
 
@@ -1494,4 +1519,12 @@ test "copyBuffer: byte-exact copy respecting pixel_size and rowBytes padding" {
     for (0..2) |r| for (0..3) |cidx| for (0..4) |ch| {
         try std.testing.expectEqual(src.get(r, cidx, ch), dest.get(r, cidx, ch));
     };
+}
+
+test {
+    // The sub-modules above are `@import`ed decls of this file, and
+    // `refAllDecls` in vimage/root.zig only forces decls one level deep — it
+    // reaches `conversion` but not `conversion.packed16`. Without this the
+    // sub-modules compile but none of their tests run.
+    std.testing.refAllDecls(@This());
 }

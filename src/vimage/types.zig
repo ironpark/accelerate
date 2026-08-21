@@ -174,8 +174,16 @@ pub const vImage_YpCbCrToARGBMatrix = extern struct {
     Cb_B: f32,
 };
 
+/// `vImage_YpCbCrToARGB` — the conversion info built by
+/// `vImageConvert_YpCbCrToARGB_GenerateConversion` and consumed by every
+/// YpCbCr-to-ARGB entry point. Opaque; only BNNS-side code reads the fields.
+///
+/// The size and alignment here were MEASURED against Accelerate.h on
+/// macOS 15.7.7 / arm64: 128 bytes, 16-byte aligned. An earlier version of this
+/// declaration was `[16]i32` — 64 bytes, 4-byte aligned — which meant
+/// `GenerateConversion` wrote 64 bytes past the end of a caller's object.
 pub const vImage_YpCbCrToARGB = extern struct {
-    _opaque: [16]i32,
+    _opaque: [128]u8 align(16) = @splat(0),
 };
 
 pub const vImage_ARGBToYpCbCrMatrix = extern struct {
@@ -189,20 +197,51 @@ pub const vImage_ARGBToYpCbCrMatrix = extern struct {
     B_Cr: f32,
 };
 
+/// `vImage_ARGBToYpCbCr` — the conversion info built by
+/// `vImageConvert_ARGBToYpCbCr_GenerateConversion`. Opaque.
+///
+/// 128 bytes, 16-byte aligned, measured against Accelerate.h. See the note on
+/// `vImage_YpCbCrToARGB` for the bug this replaced.
 pub const vImage_ARGBToYpCbCr = extern struct {
-    _opaque: [16]i32,
+    _opaque: [128]u8 align(16) = @splat(0),
 };
 
+/// `vImage_YpCbCrPixelRange` — the black point, white point and clamping limits
+/// that pin down a YpCbCr encoding.
+///
+/// Every field is `int32_t` in the header, not `int16_t`: the struct is 32
+/// bytes, measured against Accelerate.h. It was declared with `i16` fields
+/// here until this was checked, which made it half the size the framework
+/// writes and put every field after the first at the wrong offset.
 pub const vImage_YpCbCrPixelRange = extern struct {
-    Yp_bias: i16,
-    CbCr_bias: i16,
-    YpRangeMax: i16,
-    CbCrRangeMax: i16,
-    YpMax: i16,
-    YpMin: i16,
-    CbCrMax: i16,
-    CbCrMin: i16,
+    Yp_bias: i32,
+    CbCr_bias: i32,
+    YpRangeMax: i32,
+    CbCrRangeMax: i32,
+    YpMax: i32,
+    YpMin: i32,
+    CbCrMax: i32,
+    CbCrMin: i32,
 };
+
+test "YCbCr conversion-info layouts match Accelerate.h" {
+    // Measured with a clang program that printf's sizeof/_Alignof against
+    // <Accelerate/Accelerate.h> on macOS 15.7.7 / arm64. These are not derived
+    // from the field list; they are what the framework actually writes.
+    const std = @import("std");
+    try std.testing.expectEqual(@as(usize, 32), @sizeOf(vImage_YpCbCrPixelRange));
+    try std.testing.expectEqual(@as(usize, 4), @alignOf(vImage_YpCbCrPixelRange));
+    try std.testing.expectEqual(@as(usize, 28), @offsetOf(vImage_YpCbCrPixelRange, "CbCrMin"));
+
+    try std.testing.expectEqual(@as(usize, 128), @sizeOf(vImage_YpCbCrToARGB));
+    try std.testing.expectEqual(@as(usize, 16), @alignOf(vImage_YpCbCrToARGB));
+    try std.testing.expectEqual(@as(usize, 128), @sizeOf(vImage_ARGBToYpCbCr));
+    try std.testing.expectEqual(@as(usize, 16), @alignOf(vImage_ARGBToYpCbCr));
+
+    // The matrix structs were already right; pin them so they stay that way.
+    try std.testing.expectEqual(@as(usize, 20), @sizeOf(vImage_YpCbCrToARGBMatrix));
+    try std.testing.expectEqual(@as(usize, 32), @sizeOf(vImage_ARGBToYpCbCrMatrix));
+}
 
 // ============================================================================
 // MultidimensionalTable hints
