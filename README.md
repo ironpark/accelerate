@@ -7,11 +7,12 @@ Zig bindings for Apple's [Accelerate framework](https://developer.apple.com/docu
 | Module | Description |
 |--------|-------------|
 | `vdsp` | Digital signal processing — vector arithmetic, FFT/DFT/DCT, convolution, biquad filters, reductions, complex operations, type conversions |
-| `vimage` | Image processing — alpha compositing, format conversion, convolution (including separable), geometric transforms up to perspective warp, histograms, morphology |
+| `vimage` | Image processing — alpha compositing, the complete format-conversion surface (packed pixels, YCbCr video, 16Q12 fixed point, indexed and sub-byte planar), convolution (including separable), geometric transforms up to perspective warp, histograms, morphology |
 | `vforce` | Vectorized math functions — exp, log, trig, hyperbolic, power, rounding, and more on large arrays |
 | `sparse` | Sparse solvers — direct (Cholesky, LDL^T, QR, LU) and iterative (CG, GMRES, LSMR), subfactors, preconditioners, real and complex |
 | `quadrature` | Numerical integration — QNG, QAG and QAGS, including infinite intervals |
 | `blas` | Dense linear algebra — the full CBLAS Levels 1, 2 and 3, real and complex, plus threading control |
+| `bnns` | Neural network inference — the Graph API (compile a Core ML `.mlmodelc`, execute it), tensor ops, reductions, top-k, a seedable RNG, k-nearest-neighbours, and the deprecated layer-filter API for pre-macOS-15 deployment targets |
 | `lapack` | Linear systems, factorizations, least squares, eigenvalues, SVD and the CS decomposition, in full, band, tridiagonal, packed and RFP storage — all 2032 symbols bound, typed wrappers for the whole user-facing surface |
 
 See [`docs/COVERAGE.md`](docs/COVERAGE.md) for exactly which Accelerate entry

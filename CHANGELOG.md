@@ -4,6 +4,38 @@
 
 ### Added
 
+- **vImage Conversion, in full.** The remaining 173 entry points of
+  `Conversion.h`, split by format family into eight sub-modules under
+  `vimage.conversion`: `packed16` (ARGB1555 / RGBA5551 / RGB565), `packed10`
+  (ARGB2101010 / XRGB2101010 / RGBA1010102), `ycbcr` (420, 422 and 444
+  chroma-subsampled video, plus the two `GenerateConversion` matrix builders),
+  `q12` (the signed 4.12 fixed-point format), `formats` (the remaining N-to-M
+  pairs and the dithered narrowing variants), `indexed` (1/2/4-bit planar and
+  indexed colour), `flatten` (compositing onto an opaque background, and
+  chunky/planar de-interleaving) and `fill` (buffer fill, channel overwrite,
+  channel permute, byte swap). `vImagePNGDecompressionFilter` from
+  `BasicImageTypes.h` came along with it. `Conversion.h` is now bound in full.
+
+- **BNNS.** Both generations of the API, 140 entry points.
+
+  The current one is the Graph API: compile a Core ML `.mlmodelc` into a
+  `bnns.Graph`, wrap it in a `bnns.Context`, execute. Alongside it are the
+  standalone utilities from `bnns.h` that Apple did not deprecate — tensor
+  copy and transpose, reductions, top-k, a seedable AES-CTR random generator
+  and a k-nearest-neighbours store.
+
+  The older layer-filter API (`BNNSFilterCreateLayer*`, `BNNSFilterApply*`)
+  is bound too, in `bnns.filter`, `bnns.layers`, `bnns.ops`,
+  `bnns.specialized` and `bnns.train`. Apple deprecated it in macOS 15.0 in
+  favour of the Graph API, but 15.0 is a recent floor to require and an older
+  deployment target has no Graph API to fall back on. Every declaration
+  carries the version it was deprecated in and, where the header names one,
+  its replacement.
+
+  Eleven graph entry points are `__asm__`-renamed in the header —
+  `BNNSGraphContextExecute` resolves to `_BNNSGraphContextExecute_v2` — and
+  are bound under the real symbol with `@extern`.
+
 - **Accelerate coverage sweep.** A symbol-level diff of every public header in
   `Accelerate.framework` against this package's `extern` declarations, and the
   work to close what it found. `docs/COVERAGE.md` records the result, the
@@ -24,11 +56,9 @@
   Sparse gained `Complex(f32)`/`Complex(f64)` element types, Hermitian
   factorization, and LU in all four pivoting modes with `updateLu`.
 
-  Not closed, and now documented rather than silently absent: vImage
-  Conversion (172), vImage Utilities/CVUtilities (47, blocked on a
-  CoreGraphics/CoreVideo scope decision) and BNNS (~148). Also documented:
-  vImage Alpha's twelve "missing" entry points are `#define` aliases onto the
-  opposite channel order, not symbols, so there is nothing there to bind.
+  Also documented: vImage Alpha's twelve "missing" entry points are `#define`
+  aliases onto the opposite channel order, not symbols, so there is nothing to
+  bind.
 
 - **`lapack` module.** The complete 2032-symbol extern surface in
   `src/lapack/c.zig`, generated from `lapack.h` by `tools/gen_lapack.py`, plus
@@ -551,6 +581,29 @@
   or returned from Accelerate by value, so layout drift on a future SDK would
   corrupt memory rather than fail to compile. The block literal's offsets are
   asserted for the same reason - a wrong one is a wild jump, not a type error.
+
+### Fixed
+
+- **`vImage_YpCbCrPixelRange` was declared at half its size.** Every field is
+  `int32_t` in `vImage_Types.h`, not `int16_t`: 32 bytes, not 16. Every field
+  after the first sat at the wrong offset.
+
+- **`vImage_YpCbCrToARGB` and `vImage_ARGBToYpCbCr` were declared at half
+  their size.** Each is 128 bytes aligned to 16, not 64 aligned to 4, so
+  `vImageConvert_YpCbCrToARGB_GenerateConversion` wrote 64 bytes past the end
+  of the caller's object. Both structs and the pixel range are now pinned by a
+  layout test whose numbers were measured against `<Accelerate/Accelerate.h>`.
+
+- **`aSrc` was not optional in three 16U conversions.**
+  `vImageConvert_RGB16Uto{ARGB,RGBA,BGRA}16U` mark it optional via
+  `VIMAGE_NON_NULL(1,4)`; it was declared `*const vImage_Buffer`, which made
+  the scalar-alpha mode unreachable.
+
+- **The new Conversion sub-modules' tests were not running.**
+  `std.testing.refAllDecls` only forces declarations one level deep, so
+  `vimage.conversion` was reached but `vimage.conversion.packed16` was not.
+  The eight modules compiled and their 131 tests never executed.
+
 
 ### Documented
 
