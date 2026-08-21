@@ -15,6 +15,17 @@ Zig bindings for Apple's [Accelerate framework](https://developer.apple.com/docu
 | `bnns` | Neural network inference — the Graph API (compile a Core ML `.mlmodelc`, execute it), tensor ops, reductions, top-k, a seedable RNG, k-nearest-neighbours, and the deprecated layer-filter API for pre-macOS-15 deployment targets |
 | `lapack` | Linear systems, factorizations, least squares, eigenvalues, SVD and the CS decomposition, in full, band, tridiagonal, packed and RFP storage — all 2032 symbols bound, typed wrappers for the whole user-facing surface |
 
+Two more become available when the package is built with `-Dcoregraphics=true`
+— see [CoreGraphics and CoreVideo](#coregraphics-and-corevideo):
+
+| Module | Description |
+|--------|-------------|
+| `cg` | The slice of CoreFoundation and CoreGraphics vImage needs — `CGColorSpace`, `CGImage`, `CGBitmapInfo`, `CGColorConversionInfo` |
+| `cv` | The slice of CoreVideo vImage needs — `CVPixelBuffer` creation, locking and plane access, and the pixel-format codes |
+
+along with `vimage.utilities` (CGImage interop and `vImageConvert_AnyToAny`)
+and `vimage.cv` (CVPixelBuffer interop).
+
 See [`docs/COVERAGE.md`](docs/COVERAGE.md) for exactly which Accelerate entry
 points are bound, which are not, and why.
 
@@ -35,6 +46,39 @@ const accelerate = b.dependency("accelerate", .{
 });
 exe.root_module.addImport("accelerate", accelerate.module("accelerate"));
 ```
+
+### CoreGraphics and CoreVideo
+
+The vImage entry points that interoperate with `CGImage` and `CVPixelBuffer`
+are off by default, because binding them means linking CoreGraphics, CoreVideo
+and CoreFoundation into your program whether you touch them or not. Turn them
+on through the dependency call:
+
+```zig
+const accelerate = b.dependency("accelerate", .{
+    .target = target,
+    .optimize = optimize,
+    .coregraphics = true,
+});
+```
+
+With the option off, `accelerate.cg`, `accelerate.cv`, `vimage.utilities` and
+`vimage.cv` each resolve to a placeholder namespace whose only declaration is
+`enabled = false`, so you can branch on it:
+
+```zig
+if (accelerate.vimage.utilities.enabled) {
+    // ...
+}
+```
+
+Ownership follows CoreFoundation's Create Rule, encoded in the types rather
+than left to a naming convention. `*CGImage`, `*CGColorSpace` and
+`*CVPixelBuffer` are **borrowed** pointers with no `deinit`; `cg.Image`,
+`cg.ColorSpace`, `cv.PixelBuffer`, `vimage.utilities.Converter` and
+`vimage.cv.CVImageFormat` are **owned** +1 references that must be released.
+Constructors return the owned form, getters return the borrowed one, and
+`.borrow(ptr)` / `.adopt(ptr)` convert between them.
 
 ## Usage
 
@@ -103,6 +147,56 @@ vforce.tanh(f32, &x, &out);
 var src = vimage.types.vImage_Buffer{ ... };
 var dst = vimage.types.vImage_Buffer{ ... };
 try vimage.alpha.premultipliedAlphaBlend_ARGB8888(&src, &dst, &dst, .{});
+```
+
+### vImage <-> CoreGraphics (`-Dcoregraphics=true`)
+
+```zig
+const cg = accelerate.cg;
+const utilities = vimage.utilities;
+
+const space = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+defer space.deinit();
+
+// Wrap a buffer in a CGImage (the pixel data is copied).
+const fmt = utilities.CGImageFormat.argb8888(space.ref);
+const image = try utilities.createCGImageFromBuffer(&buf, &fmt, null, null, 0);
+defer image.deinit();
+
+// ...and decode one back out, in whatever format you ask for.
+var dst_fmt = utilities.CGImageFormat.bgra8888(space.ref);
+var dst: vimage.vImage_Buffer = undefined;
+try utilities.bufferInitWithCGImage(&dst, &dst_fmt, null, image.ref, 0);
+defer utilities.bufferFree(&dst);
+
+// vImageConvert_AnyToAny: one object converts between any two describable
+// formats, colour-space changes included.
+const conv = try utilities.Converter.createWithCGImageFormat(&fmt, &dst_fmt, null, 0);
+defer conv.deinit();
+_ = try conv.convert(&.{src}, &.{dst}, null, 0);
+```
+
+```zig
+// CVPixelBuffer, including planar YCbCr.
+const pb = try accelerate.cv.PixelBuffer.init(1920, 1080, .ycbcr420_biplanar_video);
+defer pb.deinit();
+
+const cv_fmt = try vimage.cv.CVImageFormat.createWithCVPixelBuffer(pb.ref);
+defer cv_fmt.deinit();
+try cv_fmt.setColorSpace(space.ref);
+try cv_fmt.setConversionMatrix(.{ .argb_to_ypcbcr = vimage.conversion.ycbcr.argbToYpCbCrMatrix601() });
+try cv_fmt.setChromaSiting(accelerate.cv.ChromaLocation.center());
+
+const encoder = try vimage.cv.converterForCGToCVImageFormat(&fmt, cv_fmt, &.{ 0, 0, 0 }, 0);
+defer encoder.deinit();
+
+// kvImageNoAllocate points the vImage buffers straight at the pixel
+// buffer's own planes, so the conversion writes into it with no extra copy.
+var planes: [2]vimage.vImage_Buffer = undefined;
+try pb.lock(0);
+defer pb.unlock(0) catch {};
+try vimage.cv.bufferInitForCopyToCVPixelBuffer(&planes, encoder, pb.ref, vimage.Flags.kvImageNoAllocate);
+_ = try encoder.convert(&.{argb_source}, &planes, null, 0);
 ```
 
 ### Sparse
@@ -246,6 +340,14 @@ _ = try quadrature.integrate(void, {}, batched, 0, 1, .{}, allocator);
 
 **Transform:** gamma correction, lookup tables, multidimensional interpolation
 
+**Utilities** (`-Dcoregraphics=true`): `CGImageFormat`, `Converter`
+(`vImageConvert_AnyToAny`), `createCGImageFromBuffer`,
+`bufferInitWithCGImage`, `bufferInit`/`bufferLayout`
+
+**CV** (`-Dcoregraphics=true`): `CVImageFormat`, the `CVPixelBuffer` bridges,
+`converterForCGToCVImageFormat` / `converterForCVToCGImageFormat`,
+`createRGBColorSpace` / `createMonochromeColorSpace`
+
 ### sparse
 
 **Matrix types:** `Sparse(T)` (block CSC, borrowed or built from coordinate
@@ -302,10 +404,54 @@ Element types are `f32`, `f64`, `Complex(f32)` and `Complex(f64)`. Uses the
 current (`$NEWLAPACK`) interface with ILP64 indices where Accelerate provides
 them — `cblas.h`'s unsuffixed symbols have been deprecated since macOS 13.3.
 
+## What this package does not bind
+
+Five headers in `Accelerate.framework` are left out on purpose. Together they
+are 263 symbols, and none of them is a gap you would hit in new code.
+
+| Header | Symbols | Why |
+|---|---:|---|
+| `vBasicOps.h` | 71 | AltiVec-era 128-bit integer SIMD |
+| `vBigNum.h` | 69 | 256/512/1024-bit integer arithmetic |
+| `vfp.h` | 47 | superseded vector floating point |
+| `vectorOps.h` | 29 | superseded vector utilities |
+| `LinearAlgebra` (`la_*`) | 47 | `API_DEPRECATED` since macOS 11 |
+
+The first four predate Zig's own facilities for the same work. `@Vector`
+covers `vBasicOps`, `vfp` and `vectorOps` natively and portably, with no call
+across the C boundary; Zig's arbitrary-width integers (`u512`, `i1024`) cover
+`vBigNum` directly. Binding them would trade a language feature for a
+platform dependency.
+
+`LinearAlgebra` is a different case. Apple's own guidance for `la_*` is to use
+BLAS and LAPACK instead, and this package binds both in full — so binding it
+would add a second, deprecated way to do something already available.
+
+That reasoning is worth spelling out, because the deprecated **BNNS**
+layer-filter API is bound rather than excluded, and the two look like the same
+decision made twice in opposite directions. The difference is whether the
+replacement is reachable. `la_*`'s replacement is BLAS/LAPACK, available on
+every deployment target. The BNNS filter API's replacement is the Graph API,
+which requires macOS 15.0 — so excluding it would leave anyone targeting an
+older OS with nothing at all. Each of those 75 declarations carries a doc
+comment naming the version that deprecated it and, where the header gives one,
+its replacement.
+
+One further symbol is deliberately unbound: `BNNSGraphExecute` is exported by
+`vecLib.tbd` but declared in no header, appearing only inside doc comments.
+There is no prototype to bind it against, and a guessed signature would link
+cleanly and then misbehave at runtime.
+
+Everything else — every entry point in `vecLib` and `vImage` — is bound. See
+[`docs/COVERAGE.md`](docs/COVERAGE.md) for the per-header counts, the
+re-measurement recipe, and a table of the places where Accelerate's measured
+behaviour contradicts its own headers.
+
 ## Requirements
 
 - macOS or iOS (Accelerate framework)
 - Zig 0.16.0+
+- CoreGraphics, CoreVideo and CoreFoundation, only with `-Dcoregraphics=true`
 
 ## License
 

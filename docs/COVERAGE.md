@@ -22,7 +22,7 @@ Apple adds entry points.
 | **vForce** (`vForce.h`) | 84 | complete |
 | **Sparse** (`Sparse/Solve.h`) | — | direct (Cholesky, LDL^T, QR, LU), iterative (CG, GMRES, LSMR), subfactors, real and complex |
 | **Quadrature** | — | complete |
-| **vImage** — every header except Utilities and CVUtilities | 542 | Alpha, BasicImageTypes, Conversion, Convolution, Geometry, Histogram, Morphology, Transform |
+| **vImage** — every header | 587 | Alpha, BasicImageTypes, Conversion, Convolution, Geometry, Histogram, Morphology, Transform, Utilities, CVUtilities |
 | **BNNS** (`BNNS/*.h`) | 140 | the Graph API, the standalone utilities, and the deprecated layer-filter API |
 
 `vImage` Alpha and Geometry each still report a handful of unbound names
@@ -75,32 +75,60 @@ replacement that this package already binds, so binding it would add a second
 way to do the same thing. The BNNS filter API's replacement requires macOS
 15.0, so excluding it would leave older deployment targets with nothing.
 
-### Roadmap
+### Nothing on the roadmap
 
-One area remains.
+Every non-excluded entry point in both sub-frameworks is bound.
 
-#### vImage Utilities and CVUtilities — 47 entry points
+## vImage Utilities and CVUtilities — the CoreGraphics half
 
-`vImage_Utilities.h` (17) is the `vImageConverter` machinery:
-`vImageConvert_AnyToAny`, `vImageConverter_CreateWithCGImageFormat`,
-`vImageBuffer_InitWithCGImage`, `vImageCreateCGImageFromBuffer`.
-`vImage_CVUtilities.h` (30) is the CoreVideo half: `vImageCVImageFormat_*`
-and the `CVPixelBuffer` <-> `vImage_Buffer` bridges.
+`vImage_Utilities.h` (17 symbols) and `vImage_CVUtilities.h` (28) are the only
+part of the package that touches an object graph: `CGImageRef`,
+`CVPixelBufferRef` and `CGColorSpaceRef` are CoreFoundation objects with
+`CFRetain`/`CFRelease` lifetimes, where everything else here is pure C over
+buffers and integers. Three decisions shape how they are bound.
 
-These are not more of the same. `AnyToAny` is arguably the most useful
-single function in vImage — it converts between *any* two formats it can
-describe — but reaching it means depending on CoreGraphics and CoreVideo,
-which are Objective-C frameworks with `CFRetain`/`CFRelease` lifetimes and
-`CGColorSpace` objects. That is a different kind of binding from the rest
-of this package, which is pure C with no object graph, and it needs a
-decision about scope before any of it is written:
+**They are behind a build option, off by default.** `-Dcoregraphics=true`, or
+`.coregraphics = true` in the `b.dependency` call. Linking CoreGraphics,
+CoreVideo and CoreFoundation into every consumer that only wanted `vDSP` is
+not a cost to impose by default. With the option off, `vimage.utilities`,
+`vimage.cv`, `accelerate.cg` and `accelerate.cv` each resolve to a placeholder
+namespace whose only declaration is `enabled = false` — so a program can test
+for the feature, and a program that uses it anyway gets a compile error naming
+the declaration it wanted rather than a link failure.
 
-* Does the package link CoreGraphics and CoreVideo unconditionally, or
-  behind a build option?
-* Do the `Ref` types get Zig wrappers with `deinit`, or stay opaque?
-* Is `CGImage` interop in scope at all, or only the format descriptors?
+`zig build test` builds the package *twice*, once each way, so the gated code
+is covered regardless of how the option is set.
 
-Worth answering before starting, not during.
+**Ownership is encoded in the type, not in a naming convention.**
+CoreFoundation's Create Rule — a `Create` or `Copy` function returns a +1
+reference you must release, anything else returns a borrowed one you must not
+— is invisible in C, where both cases are the same `CGImageRef`. Here they are
+different Zig types:
+
+* `*CGImage`, `*CGColorSpace`, `*CVPixelBuffer` — **borrowed**. Every getter
+  returns this, every function that only reads takes this. No `deinit`.
+* `cg.Image`, `cg.ColorSpace`, `cv.PixelBuffer`, `utilities.Converter`,
+  `cv.CVImageFormat` — **owned**, +1, with `deinit()`. Every constructor
+  returns this.
+
+`Type.borrow(ptr)` retains and returns the owned form; `Type.adopt(ptr)` takes
+ownership of an existing +1 without retaining, which is what the wrappers use
+internally for the `Create` entry points. Reading `.ref` gives the borrowed
+pointer back.
+
+**CGImage interop is fully in scope.** `accelerate.cg` and `accelerate.cv`
+bind the slice of CoreFoundation, CoreGraphics and CoreVideo needed to
+actually build and inspect the objects vImage wants — colour spaces including
+the parametric constructors, `CGImage` accessors, `CGBitmapInfo` as a packed
+struct rather than a hand-ORed integer, `CGColorConversionInfo`, and
+`CVPixelBuffer` creation, locking and plane access. They are deliberately not
+a CoreGraphics binding; nothing beyond what these 45 entry points need is
+there.
+
+The payoff is `Converter.convert` (`vImageConvert_AnyToAny`), which converts
+between any two formats vImage can describe — including colour-space changes
+and CG-to-CV format pairs — and so subsumes a large part of the 173
+hand-written entry points in the `conversion` module with one object.
 
 ## Re-measuring
 
@@ -177,3 +205,13 @@ binds it.
 | `BNNSNDArrayGetDataSize` | returns the data size | returns 0 for every sub-byte type (`int1/2/4`, `uint1/2/3/4/6`, `indexed*`) |
 | `BNNSNearestNeighborsGetInfo` | returns the `n_neighbors` nearest | includes the query sample itself, first, at distance 0 |
 | `BNNSNearestNeighborsLoad` | — | returns 0 (success) when the load overflows `max_n_samples`, and writes anyway |
+| `vImageCreateCGImageFromBuffer` | produces an image in the format given | rewrites alpha-first to alpha-last and converts the pixels, so the image reports `.premultiplied_last` for a `.premultiplied_first` format. The pixels are correct; an equality check against the input format is not |
+| `vImageBuffer_InitWithCGImage` | takes `vImage_CGImageFormat *` non-const | never writes to it — a null `colorSpace` decodes fine and stays null on return |
+| `vImageCGImageFormat_IsEqual` | — | two NULLs compare **unequal** |
+| `vImageConverter_CreateWithCGImageFormat` | `bitsPerComponent` must be 5, 8, 16 or 32 | 7 is accepted and a converter is returned |
+| `vImageConverter_CreateWithColorSyncCodeFragment` | `VIMAGE_NON_NULL(1,2)`, leaving `destFormat` optional | the same function's own docs list `kvImageNullPointerArgument` for a null `destFormat`; treated as required |
+| `vImageBuffer_InitForCopyToCVPixelBuffer` | — | describes a subsampled chroma plane in the **luma** geometry (16x16 for a 16x16 `420v` buffer), where `CVPixelBufferGetWidthOfPlane` reports 8x8 |
+| `vImageCVImageFormat_GetAlphaHint` | non-zero means alpha is opaque | a format with no alpha channel returns 2, not 1 — so the test must be `!= 0` |
+| `vImageBuffer_CopyToCVPixelBuffer` | `cvImageFormat` may be NULL | fails with `kvImageInvalidCVImageFormat` on a `CVPixelBuffer` created without colour attachments |
+| `CGColorConversionInfoCreate` | — | returns NULL for a *device* colour space; both ends need defined colorimetry |
+| `CGColorSpaceCreateDeviceRGB` / `...WithName` | — | return cached immortal singletons whose retain count reads `0xFFFFFFFF` and never moves |
