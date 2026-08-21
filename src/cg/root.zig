@@ -85,7 +85,7 @@ pub inline fn equal(a: *const anyopaque, b: *const anyopaque) bool {
 
 /// The only failure a CoreGraphics constructor reports is a null return; there
 /// is no error code to unpack.
-pub const CGError = error{
+pub const Error = error{
     /// A CoreGraphics `Create` call returned NULL.
     CoreGraphicsCreateFailed,
 };
@@ -198,7 +198,7 @@ pub extern fn CGColorSpaceGetNumberOfComponents(space: *const CGColorSpace) usiz
 pub extern fn CGColorSpaceGetModel(space: *const CGColorSpace) ColorSpaceModel;
 pub extern fn CGColorSpaceGetName(space: *const CGColorSpace) CFStringRef;
 
-/// The colour-space name constants, for `ColorSpace.named`.
+/// The colour-space name constants, for `ColorSpace.initNamed`.
 ///
 /// These are `CFStringRef` globals, so each is a pointer-sized variable
 /// holding the string — hence `extern var` of pointer type rather than
@@ -248,23 +248,23 @@ pub const ColorSpace = struct {
     }
 
     /// `CGColorSpaceCreateDeviceRGB`.
-    pub fn deviceRGB() CGError!ColorSpace {
-        return adopt(CGColorSpaceCreateDeviceRGB() orelse return CGError.CoreGraphicsCreateFailed);
+    pub fn initDeviceRGB() Error!ColorSpace {
+        return adopt(CGColorSpaceCreateDeviceRGB() orelse return Error.CoreGraphicsCreateFailed);
     }
 
     /// `CGColorSpaceCreateDeviceGray`.
-    pub fn deviceGray() CGError!ColorSpace {
-        return adopt(CGColorSpaceCreateDeviceGray() orelse return CGError.CoreGraphicsCreateFailed);
+    pub fn initDeviceGray() Error!ColorSpace {
+        return adopt(CGColorSpaceCreateDeviceGray() orelse return Error.CoreGraphicsCreateFailed);
     }
 
     /// `CGColorSpaceCreateDeviceCMYK`.
-    pub fn deviceCMYK() CGError!ColorSpace {
-        return adopt(CGColorSpaceCreateDeviceCMYK() orelse return CGError.CoreGraphicsCreateFailed);
+    pub fn initDeviceCMYK() Error!ColorSpace {
+        return adopt(CGColorSpaceCreateDeviceCMYK() orelse return Error.CoreGraphicsCreateFailed);
     }
 
     /// `CGColorSpaceCreateWithName`, e.g. `ColorSpaceName.srgb()`.
-    pub fn named(space_name: CFStringRef) CGError!ColorSpace {
-        return adopt(CGColorSpaceCreateWithName(space_name) orelse return CGError.CoreGraphicsCreateFailed);
+    pub fn initNamed(space_name: CFStringRef) Error!ColorSpace {
+        return adopt(CGColorSpaceCreateWithName(space_name) orelse return Error.CoreGraphicsCreateFailed);
     }
 
     /// A second owned reference to the same colour space.
@@ -273,7 +273,7 @@ pub const ColorSpace = struct {
     }
 
     /// `CGColorSpaceRelease`.
-    pub fn deinit(self: ColorSpace) void {
+    pub fn deinit(self: *ColorSpace) void {
         CGColorSpaceRelease(self.ref);
     }
 
@@ -338,7 +338,7 @@ pub const Image = struct {
     }
 
     /// `CGImageRelease`.
-    pub fn deinit(self: Image) void {
+    pub fn deinit(self: *Image) void {
         CGImageRelease(self.ref);
     }
 
@@ -402,7 +402,7 @@ pub const CGColorConversionInfoRef = ?*CGColorConversionInfo;
 pub extern fn CGColorConversionInfoCreate(src: *const CGColorSpace, dst: *const CGColorSpace) CGColorConversionInfoRef;
 
 /// An owned `CGColorConversionInfoRef`, for
-/// `vimage.utilities.Converter.createWithCGColorConversionInfo`.
+/// `vimage.utilities.Converter.initWithCGColorConversionInfo`.
 ///
 /// `CGColorConversionInfo` is a CFType with no dedicated release function, so
 /// `deinit` calls `CFRelease` directly.
@@ -413,8 +413,8 @@ pub const ColorConversionInfo = struct {
     ref: *CGColorConversionInfo,
 
     /// `CGColorConversionInfoCreate`.
-    pub fn init(src: *const CGColorSpace, dst: *const CGColorSpace) CGError!ColorConversionInfo {
-        return .{ .ref = CGColorConversionInfoCreate(src, dst) orelse return CGError.CoreGraphicsCreateFailed };
+    pub fn init(src: *const CGColorSpace, dst: *const CGColorSpace) Error!ColorConversionInfo {
+        return .{ .ref = CGColorConversionInfoCreate(src, dst) orelse return Error.CoreGraphicsCreateFailed };
     }
 
     pub fn adopt(ref: *CGColorConversionInfo) ColorConversionInfo {
@@ -426,7 +426,7 @@ pub const ColorConversionInfo = struct {
         return .{ .ref = ref };
     }
 
-    pub fn deinit(self: ColorConversionInfo) void {
+    pub fn deinit(self: *ColorConversionInfo) void {
         CFRelease(self.ref);
     }
 };
@@ -470,7 +470,7 @@ test "BitmapInfo bit positions match the kCGBitmap* constants" {
 
 test "a device RGB colour space reports 3 components and the RGB model" {
     const testing = std.testing;
-    const cs = try ColorSpace.deviceRGB();
+    var cs = try ColorSpace.initDeviceRGB();
     defer cs.deinit();
     try testing.expectEqual(@as(usize, 3), cs.componentCount());
     try testing.expectEqual(ColorSpaceModel.rgb, cs.model());
@@ -478,12 +478,12 @@ test "a device RGB colour space reports 3 components and the RGB model" {
 
 test "device gray is 1 component, CMYK is 4" {
     const testing = std.testing;
-    const gray = try ColorSpace.deviceGray();
+    var gray = try ColorSpace.initDeviceGray();
     defer gray.deinit();
     try testing.expectEqual(@as(usize, 1), gray.componentCount());
     try testing.expectEqual(ColorSpaceModel.monochrome, gray.model());
 
-    const cmyk = try ColorSpace.deviceCMYK();
+    var cmyk = try ColorSpace.initDeviceCMYK();
     defer cmyk.deinit();
     try testing.expectEqual(@as(usize, 4), cmyk.componentCount());
     try testing.expectEqual(ColorSpaceModel.cmyk, cmyk.model());
@@ -491,7 +491,7 @@ test "device gray is 1 component, CMYK is 4" {
 
 test "a named colour space round-trips its name" {
     const testing = std.testing;
-    const cs = try ColorSpace.named(ColorSpaceName.srgb());
+    var cs = try ColorSpace.initNamed(ColorSpaceName.srgb());
     defer cs.deinit();
     try testing.expectEqual(@as(usize, 3), cs.componentCount());
     const n = cs.name() orelse return error.UnexpectedNull;
@@ -513,41 +513,41 @@ test "the stock colour spaces are immortal singletons" {
     // `cv.PixelBuffer` and `vimage.cv.CVImageFormat`.
     const immortal: isize = 0xFFFF_FFFF;
 
-    const dev = try ColorSpace.deviceRGB();
+    var dev = try ColorSpace.initDeviceRGB();
     defer dev.deinit();
     try testing.expectEqual(immortal, CFGetRetainCount(dev.ref));
 
-    const second = dev.retain();
+    var second = dev.retain();
     try testing.expectEqual(immortal, CFGetRetainCount(dev.ref));
     second.deinit();
     try testing.expectEqual(immortal, CFGetRetainCount(dev.ref));
 
-    const srgb = try ColorSpace.named(ColorSpaceName.srgb());
+    var srgb = try ColorSpace.initNamed(ColorSpaceName.srgb());
     defer srgb.deinit();
     try testing.expectEqual(immortal, CFGetRetainCount(srgb.ref));
 
     // Asking twice returns the same object, which is what makes the count
     // meaningless rather than merely large.
-    const srgb_again = try ColorSpace.named(ColorSpaceName.srgb());
+    var srgb_again = try ColorSpace.initNamed(ColorSpaceName.srgb());
     defer srgb_again.deinit();
     try testing.expectEqual(srgb.ref, srgb_again.ref);
 }
 
 test "a colour conversion info can be built between two named spaces" {
     const testing = std.testing;
-    const src = try ColorSpace.named(ColorSpaceName.srgb());
+    var src = try ColorSpace.initNamed(ColorSpaceName.srgb());
     defer src.deinit();
-    const dst = try ColorSpace.named(ColorSpaceName.displayP3());
+    var dst = try ColorSpace.initNamed(ColorSpaceName.displayP3());
     defer dst.deinit();
 
-    const info = try ColorConversionInfo.init(src.ref, dst.ref);
+    var info = try ColorConversionInfo.init(src.ref, dst.ref);
     defer info.deinit();
 
     // A device colour space has no defined colorimetry, so CoreGraphics has
     // nothing to build a transform from and returns NULL rather than an
     // error code. Measured, and the reason `init` reports a plain
     // `CoreGraphicsCreateFailed`.
-    const device = try ColorSpace.deviceRGB();
+    var device = try ColorSpace.initDeviceRGB();
     defer device.deinit();
-    try testing.expectError(CGError.CoreGraphicsCreateFailed, ColorConversionInfo.init(device.ref, dst.ref));
+    try testing.expectError(Error.CoreGraphicsCreateFailed, ColorConversionInfo.init(device.ref, dst.ref));
 }

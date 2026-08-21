@@ -1,5 +1,96 @@
 # Changelog
 
+## 0.4.0
+
+An API consistency pass. Nothing new is bound; a lot is renamed or retyped, so
+this release is breaking across every module.
+
+The through-line is that the package had grown two ways to say most things —
+a designed one and an accidental one — and the accidental one had won by
+default. Flags are the clearest case: `vimage.Options` existed, with a test
+pinning every bit position, and 380 wrappers took a raw `u32` anyway. The only
+vImage example in the README was written against `Options` and had not
+compiled for some time.
+
+2540 tests pass with the CoreGraphics option off and 1292 with it on, in all
+four optimize modes.
+
+### Breaking
+
+- **vImage wrappers take `Options`, not `vImage_Flags`.** All 380 of them.
+
+  ```zig
+  // before
+  _ = try vimage.geometry.scale(u8, &src, &dst, null, 32 | 8);
+  // after
+  _ = try vimage.geometry.scale(u8, &src, &dst, null, .{
+      .high_quality_resampling = true,
+      .edge_extend = true,
+  });
+  ```
+
+  `Options` is a `packed struct(u32)` whose bit positions are pinned against
+  the `kvImage*` constants by a test. It cannot express a bit vImage does not
+  define, which matters because `kvImageUnknownFlagsBit` is a failure vImage
+  really does return. `vimage.Flags` still holds the raw integers for code
+  crossing an FFI boundary; `Options.from(raw)` and `.bits()` convert.
+
+- **Every module's error set is named `Error`.** `VImageError`, `SparseError`,
+  `QuadratureError`, `CGError` and `CVError` are gone; `bnns.Error` and
+  `lapack.Error` already had the name. A one-line `sed` per module migrates
+  code.
+
+- **`vimage.Error` no longer means what it used to.** It was the namespace of
+  raw `kvImage*` integers, while `vimage.VImageError` was the error set — so
+  the name meant the opposite of `bnns.Error` and `lapack.Error`. The integers
+  are now `vimage.ErrorCode`. Code that said `vimage.Error.kvImageNoError`
+  fails to compile rather than changing meaning silently.
+
+- **`deinit` always takes `*Self`.** Roughly half the package took `self` by
+  value and half by pointer. Call sites become
+  `var x = try T.init(...); defer x.deinit();`. Where the handle is optional
+  it is nulled, so a double free is a no-op rather than a double release.
+
+- **Owned-handle constructors are `init` / `init<Qualifier>`.**
+  `Converter.createWithCGImageFormat` -> `initWithCGImageFormat`,
+  `CVImageFormat.create` -> `init`,
+  `CVImageFormat.createWithCVPixelBuffer` -> `initWithCVPixelBuffer`,
+  `ColorSpace.deviceRGB` -> `initDeviceRGB`, `ColorSpace.named` ->
+  `initNamed`, and so on. Free functions that build an object keep a verb
+  name (`createCGImageFromBuffer`, `converterForCGToCVImageFormat`), which is
+  now the rule rather than an accident.
+
+### Fixed
+
+Two declarations in the tree did not compile. Neither was reachable from any
+test, and `std.testing.refAllDecls` only forces declarations one level deep,
+so nothing ever analysed them:
+
+- **`vimage.utilities.Converter.tempBufferSize`** passed a raw `u32` where an
+  `Options` was wanted. It now builds the query by setting the field, which is
+  what the type is for.
+- **`vimage.conversion_indexed.Dither.ordered_noise_shape_mask`** was written
+  `0xf << 28` as a `c_int`, which is not representable. The C constant is
+  `(0xfU<<28)` — the `U` suffix widens the whole anonymous enum to
+  `unsigned int` — while the `dither` parameter is a plain `int`, so the mask
+  is now a `c_int` carrying the same bit pattern via `@bitCast`. A new test
+  pins all seven dither constants.
+
+The root test block now walks declarations recursively, bounded by depth, so
+this class of dead-but-broken code fails the build.
+
+### Added
+
+- **`examples/readme.zig`** — every code sample in `README.md`, compiled by
+  `zig build test` against both build configurations. Four samples were wrong
+  when the file was added: a `vimage.alpha` function name that never existed,
+  a missing `comptime T`, a `morphology.dilate` call with the wrong arity, and
+  a `vdsp.FFT` method (`forward`) that does not exist at all. The README's
+  blocks are now copied from that file.
+
+- **A "Conventions" section in `README.md`** stating the five rules above in
+  one table, so the next addition has something to be consistent with.
+
 ## 0.3.0
 
 Accelerate, bound in full — the CoreGraphics half included.

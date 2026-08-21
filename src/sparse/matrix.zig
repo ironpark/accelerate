@@ -11,7 +11,7 @@ const c = @import("c.zig");
 const types = @import("types.zig");
 
 const Attributes = types.Attributes;
-const SparseError = types.SparseError;
+const Error = types.Error;
 
 /// A dense column-major matrix backed by a caller-owned slice.
 ///
@@ -194,7 +194,7 @@ pub fn Sparse(comptime T: type) type {
             columns: []const c_int,
             values: []const T,
             options: Options,
-        ) (SparseError || std.mem.Allocator.Error)!Self {
+        ) (Error || std.mem.Allocator.Error)!Self {
             std.debug.assert(options.block_size > 0);
             std.debug.assert(rows.len == columns.len);
 
@@ -205,7 +205,7 @@ pub fn Sparse(comptime T: type) type {
             // Sparse rejects a non-square matrix with a non-ordinary kind, and
             // would trap on it. Reject it here so the caller gets an error.
             if (options.attributes.kind != .ordinary and row_count != column_count) {
-                return SparseError.ParameterError;
+                return Error.ParameterError;
             }
 
             // Storage size straight from the allocating overload of
@@ -329,7 +329,7 @@ pub fn Sparse(comptime T: type) type {
         /// `y = alpha * A * x`, or `y += alpha * A * x` when `accumulate`.
         ///
         /// `x` and `y` are dense and may hold several right-hand sides.
-        pub fn multiply(self: Self, alpha: T, x: Dense(T), y: Dense(T), accumulate: bool) SparseError!void {
+        pub fn multiply(self: Self, alpha: T, x: Dense(T), y: Dense(T), accumulate: bool) Error!void {
             std.debug.assert(x.rhsCount() == y.rhsCount());
             types.clearReportedError();
             c.fns(T).spmv(alpha, self.raw(), x.raw(), accumulate, y.raw());
@@ -518,7 +518,7 @@ test "fromCoordinate rejects a non-square matrix with a symmetric kind" {
     const vals = [_]f64{1};
 
     // Sparse would trap on this; we must return an error instead.
-    try testing.expectError(SparseError.ParameterError, Sparse(f64).fromCoordinate(
+    try testing.expectError(Error.ParameterError, Sparse(f64).fromCoordinate(
         alloc,
         3,
         4,

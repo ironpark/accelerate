@@ -4,12 +4,13 @@ const vImage_Buffer = types.vImage_Buffer;
 const vImagePixelCount = types.vImagePixelCount;
 const vImage_Flags = types.vImage_Flags;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const Pixel_8 = types.Pixel_8;
 const Pixel_F = types.Pixel_F;
 const Pixel_8888 = types.Pixel_8888;
 const Pixel_FFFF = types.Pixel_FFFF;
+const Options = types.Options;
 const c = @import("c.zig");
 
 /// Kernel element type: u8 for integer pixel formats, f32 for float pixel formats.
@@ -41,13 +42,13 @@ pub fn dilate(
     kernel: []const KernelElement(T),
     kernel_height: vImagePixelCount,
     kernel_width: vImagePixelCount,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageDilate_Planar8(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
-        Pixel_F => c.vImageDilate_PlanarF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
-        Pixel_8888 => c.vImageDilate_ARGB8888(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
-        Pixel_FFFF => c.vImageDilate_ARGBFFFF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
+        Pixel_8 => c.vImageDilate_Planar8(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
+        Pixel_F => c.vImageDilate_PlanarF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
+        Pixel_8888 => c.vImageDilate_ARGB8888(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
+        Pixel_FFFF => c.vImageDilate_ARGBFFFF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
         else => @compileError("dilate requires Pixel_8, Pixel_F, Pixel_8888, or Pixel_FFFF"),
     });
 }
@@ -72,13 +73,13 @@ pub fn erode(
     kernel: []const KernelElement(T),
     kernel_height: vImagePixelCount,
     kernel_width: vImagePixelCount,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageErode_Planar8(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
-        Pixel_F => c.vImageErode_PlanarF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
-        Pixel_8888 => c.vImageErode_ARGB8888(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
-        Pixel_FFFF => c.vImageErode_ARGBFFFF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags),
+        Pixel_8 => c.vImageErode_Planar8(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
+        Pixel_F => c.vImageErode_PlanarF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
+        Pixel_8888 => c.vImageErode_ARGB8888(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
+        Pixel_FFFF => c.vImageErode_ARGBFFFF(src, dest, roi_x, roi_y, kernel.ptr, kernel_height, kernel_width, flags.bits()),
         else => @compileError("erode requires Pixel_8, Pixel_F, Pixel_8888, or Pixel_FFFF"),
     });
 }
@@ -91,7 +92,8 @@ pub fn erode(
 ///
 /// This is a special-case dilate that uses a much faster algorithm.
 /// Pass `null` for `temp_buffer` to let vImage allocate internally,
-/// or use `kvImageGetTempBufferSize` in flags to query the required size.
+/// or set `.get_temp_buffer_size` in `flags` (`kvImageGetTempBufferSize`) to
+/// query the required size.
 ///
 /// Supported pixel types: `Pixel_8` (Planar8), `Pixel_F` (PlanarF),
 /// `Pixel_8888` (ARGB8888), `Pixel_FFFF` (ARGBFFFF).
@@ -104,13 +106,13 @@ pub fn max(
     roi_y: vImagePixelCount,
     kernel_height: vImagePixelCount,
     kernel_width: vImagePixelCount,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageMax_Planar8(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
-        Pixel_F => c.vImageMax_PlanarF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
-        Pixel_8888 => c.vImageMax_ARGB8888(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
-        Pixel_FFFF => c.vImageMax_ARGBFFFF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
+        Pixel_8 => c.vImageMax_Planar8(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
+        Pixel_F => c.vImageMax_PlanarF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
+        Pixel_8888 => c.vImageMax_ARGB8888(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
+        Pixel_FFFF => c.vImageMax_ARGBFFFF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
         else => @compileError("max requires Pixel_8, Pixel_F, Pixel_8888, or Pixel_FFFF"),
     });
 }
@@ -123,7 +125,8 @@ pub fn max(
 ///
 /// This is a special-case erode that uses a much faster algorithm.
 /// Pass `null` for `temp_buffer` to let vImage allocate internally,
-/// or use `kvImageGetTempBufferSize` in flags to query the required size.
+/// or set `.get_temp_buffer_size` in `flags` (`kvImageGetTempBufferSize`) to
+/// query the required size.
 ///
 /// Supported pixel types: `Pixel_8` (Planar8), `Pixel_F` (PlanarF),
 /// `Pixel_8888` (ARGB8888), `Pixel_FFFF` (ARGBFFFF).
@@ -136,13 +139,13 @@ pub fn min(
     roi_y: vImagePixelCount,
     kernel_height: vImagePixelCount,
     kernel_width: vImagePixelCount,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        Pixel_8 => c.vImageMin_Planar8(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
-        Pixel_F => c.vImageMin_PlanarF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
-        Pixel_8888 => c.vImageMin_ARGB8888(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
-        Pixel_FFFF => c.vImageMin_ARGBFFFF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags),
+        Pixel_8 => c.vImageMin_Planar8(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
+        Pixel_F => c.vImageMin_PlanarF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
+        Pixel_8888 => c.vImageMin_ARGB8888(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
+        Pixel_FFFF => c.vImageMin_ARGBFFFF(src, dest, temp_buffer, roi_x, roi_y, kernel_height, kernel_width, flags.bits()),
         else => @compileError("min requires Pixel_8, Pixel_F, Pixel_8888, or Pixel_FFFF"),
     });
 }
@@ -179,7 +182,7 @@ test "dilate Planar8 spreads the MAX value into the kernel neighborhood" {
     const b_src = bufFromBytes(&src, 5, 5, 5);
     const b_dest = bufFromBytes(&dest, 3, 3, 3);
 
-    const err = dilate(Pixel_8, &b_src, &b_dest, 1, 1, &kernel, 3, 3, 0);
+    const err = dilate(Pixel_8, &b_src, &b_dest, 1, 1, &kernel, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
 
     // dest is row-major 3x3: dest[dy*3+dx].
@@ -197,7 +200,7 @@ test "erode Planar8 spreads the MIN value into the kernel neighborhood" {
     const b_src = bufFromBytes(&src, 5, 5, 5);
     const b_dest = bufFromBytes(&dest, 3, 3, 3);
 
-    const err = erode(Pixel_8, &b_src, &b_dest, 1, 1, &kernel, 3, 3, 0);
+    const err = erode(Pixel_8, &b_src, &b_dest, 1, 1, &kernel, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
 
     try std.testing.expectEqual(@as(u8, 50), dest[0 * 3 + 0]); // no spike in view
@@ -218,14 +221,14 @@ test "dilate PlanarF spreads MAX, erode PlanarF spreads MIN (not swapped)" {
 
     const b_src_hi = bufFromBytes(std.mem.sliceAsBytes(&src_hi), 5, 5, rb_src);
     const b_dest_hi = bufFromBytes(std.mem.sliceAsBytes(&dest_hi), 3, 3, rb_dest);
-    const err1 = dilate(Pixel_F, &b_src_hi, &b_dest_hi, 1, 1, &kernel, 3, 3, 0);
+    const err1 = dilate(Pixel_F, &b_src_hi, &b_dest_hi, 1, 1, &kernel, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err1);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), dest_hi[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, 9.0), dest_hi[1], 0.001);
 
     const b_src_lo = bufFromBytes(std.mem.sliceAsBytes(&src_lo), 5, 5, rb_src);
     const b_dest_lo = bufFromBytes(std.mem.sliceAsBytes(&dest_lo), 3, 3, rb_dest);
-    const err2 = erode(Pixel_F, &b_src_lo, &b_dest_lo, 1, 1, &kernel, 3, 3, 0);
+    const err2 = erode(Pixel_F, &b_src_lo, &b_dest_lo, 1, 1, &kernel, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err2);
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), dest_lo[0], 0.001);
     try std.testing.expectApproxEqAbs(@as(f32, -9.0), dest_lo[1], 0.001);
@@ -255,7 +258,7 @@ test "dilate/erode ARGB8888 apply per-channel MAX/MIN independently, alpha-first
     const b_src = bufFromBytes(&src, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, 3, 3, 12);
 
-    const err = dilate(Pixel_8888, &b_src, &b_dest, 1, 1, &kernel, 3, 3, 0);
+    const err = dilate(Pixel_8888, &b_src, &b_dest, 1, 1, &kernel, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
 
     // dest[0][1] (dx=1,dy=0) sees the spike; dest[0][0] does not.
@@ -286,12 +289,12 @@ test "max (rectangular fast path) matches dilate with an equivalent all-zero ker
 
     const b_src1 = bufFromBytes(&src, 5, 5, 5);
     const b_dest_max = bufFromBytes(&dest_max, 3, 3, 3);
-    const err1 = max(Pixel_8, &b_src1, &b_dest_max, null, 1, 1, 3, 3, 0);
+    const err1 = max(Pixel_8, &b_src1, &b_dest_max, null, 1, 1, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err1);
 
     const b_src2 = bufFromBytes(&src, 5, 5, 5);
     const b_dest_dilate = bufFromBytes(&dest_dilate, 3, 3, 3);
-    const err2 = dilate(Pixel_8, &b_src2, &b_dest_dilate, 1, 1, &kernel, 3, 3, 0);
+    const err2 = dilate(Pixel_8, &b_src2, &b_dest_dilate, 1, 1, &kernel, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err2);
 
     try std.testing.expectEqualSlices(u8, &dest_dilate, &dest_max);
@@ -306,12 +309,12 @@ test "min (rectangular fast path) matches erode with an equivalent all-zero kern
 
     const b_src1 = bufFromBytes(&src, 5, 5, 5);
     const b_dest_min = bufFromBytes(&dest_min, 3, 3, 3);
-    const err1 = min(Pixel_8, &b_src1, &b_dest_min, null, 1, 1, 3, 3, 0);
+    const err1 = min(Pixel_8, &b_src1, &b_dest_min, null, 1, 1, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err1);
 
     const b_src2 = bufFromBytes(&src, 5, 5, 5);
     const b_dest_erode = bufFromBytes(&dest_erode, 3, 3, 3);
-    const err2 = erode(Pixel_8, &b_src2, &b_dest_erode, 1, 1, &kernel, 3, 3, 0);
+    const err2 = erode(Pixel_8, &b_src2, &b_dest_erode, 1, 1, &kernel, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err2);
 
     try std.testing.expectEqualSlices(u8, &dest_erode, &dest_min);
@@ -329,13 +332,13 @@ test "max/min PlanarF rectangular fast path" {
 
     const b_src_hi = bufFromBytes(std.mem.sliceAsBytes(&src_hi), 5, 5, rb_src);
     const b_dest_max = bufFromBytes(std.mem.sliceAsBytes(&dest_max), 3, 3, rb_dest);
-    const err1 = max(Pixel_F, &b_src_hi, &b_dest_max, null, 1, 1, 3, 3, 0);
+    const err1 = max(Pixel_F, &b_src_hi, &b_dest_max, null, 1, 1, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err1);
     try std.testing.expectApproxEqAbs(@as(f32, 9.0), dest_max[1], 0.001);
 
     const b_src_lo = bufFromBytes(std.mem.sliceAsBytes(&src_lo), 5, 5, rb_src);
     const b_dest_min = bufFromBytes(std.mem.sliceAsBytes(&dest_min), 3, 3, rb_dest);
-    const err2 = min(Pixel_F, &b_src_lo, &b_dest_min, null, 1, 1, 3, 3, 0);
+    const err2 = min(Pixel_F, &b_src_lo, &b_dest_min, null, 1, 1, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err2);
     try std.testing.expectApproxEqAbs(@as(f32, -9.0), dest_min[1], 0.001);
 }
@@ -359,7 +362,7 @@ test "max/min ARGBFFFF rectangular fast path, per-channel" {
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, row_bytes);
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), 3, 3, 3 * 4 * @sizeOf(f32));
 
-    const err = max(Pixel_FFFF, &b_src, &b_dest, null, 1, 1, 3, 3, 0);
+    const err = max(Pixel_FFFF, &b_src, &b_dest, null, 1, 1, 3, 3, .{});
     try std.testing.expectEqual(@as(usize, 0), try err);
     // dest[0][1] (index (0*3+1)*4) sees the spike.
     const hit = (0 * 3 + 1) * 4;

@@ -47,10 +47,11 @@ const c = @import("c.zig");
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
 const vImage_Flags = types.vImage_Flags;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const Pixel_8 = types.Pixel_8;
 const Flags = types.Flags;
+const Options = types.Options;
 
 // ============================================================================
 // Dither methods
@@ -100,8 +101,8 @@ pub const Dither = enum(c_int) {
 ///
 /// `alpha = A * 255`, and each 5-bit channel widens as `(v * 255 + 15) / 31`.
 /// Does not work in place; `dest` is 4 bytes per pixel.
-pub fn argb1555ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB1555toARGB8888(src, dest, flags));
+pub fn argb1555ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB1555toARGB8888(src, dest, flags.bits()));
 }
 
 /// ARGB1555 -> four Planar8 buffers, one per channel.
@@ -114,9 +115,9 @@ pub fn argb1555ToPlanar8(
     destR: *const vImage_Buffer,
     destG: *const vImage_Buffer,
     destB: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB1555toPlanar8(src, destA, destR, destG, destB, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB1555toPlanar8(src, destA, destR, destG, destB, flags.bits()));
 }
 
 /// Four Planar8 channel buffers -> ARGB1555.
@@ -130,9 +131,9 @@ pub fn planar8ToARGB1555(
     srcG: *const vImage_Buffer,
     srcB: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toARGB1555(srcA, srcR, srcG, srcB, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toARGB1555(srcA, srcR, srcG, srcB, dest, flags.bits()));
 }
 
 /// ARGB8888 -> ARGB1555, rounding to nearest.
@@ -140,8 +141,8 @@ pub fn planar8ToARGB1555(
 /// `dest = (a << 15) | (r << 10) | (g << 5) | b` with the narrowing rule
 /// described in the module comment. Works in place when `src.data == dest.data`
 /// and `src.rowBytes >= dest.rowBytes`.
-pub fn argb8888ToARGB1555(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888toARGB1555(src, dest, flags));
+pub fn argb8888ToARGB1555(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888toARGB1555(src, dest, flags.bits()));
 }
 
 /// ARGB8888 -> ARGB1555 with dithering instead of round-to-nearest.
@@ -153,9 +154,9 @@ pub fn argb8888ToARGB1555Dithered(
     dest: *const vImage_Buffer,
     temp_buffer: ?*anyopaque,
     dither: Dither,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888toARGB1555_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB8888toARGB1555_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags.bits()));
 }
 
 // ============================================================================
@@ -166,16 +167,16 @@ pub fn argb8888ToARGB1555Dithered(
 ///
 /// Each 5-bit channel widens as `(v * 255 + 15) / 31`; the alpha bit becomes
 /// 0 or 255. Does not work in place.
-pub fn rgba5551ToRGBA8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGBA5551toRGBA8888(src, dest, flags));
+pub fn rgba5551ToRGBA8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGBA5551toRGBA8888(src, dest, flags.bits()));
 }
 
 /// RGBA8888 -> RGBA5551, rounding to nearest.
 ///
 /// `dest = (r << 11) | (g << 6) | (b << 1) | a`. Works in place under the same
 /// conditions as `argb8888ToARGB1555`.
-pub fn rgba8888ToRGBA5551(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGBA8888toRGBA5551(src, dest, flags));
+pub fn rgba8888ToRGBA5551(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGBA8888toRGBA5551(src, dest, flags.bits()));
 }
 
 /// RGBA8888 -> RGBA5551 with dithering. `temp_buffer` may be null.
@@ -184,9 +185,9 @@ pub fn rgba8888ToRGBA5551Dithered(
     dest: *const vImage_Buffer,
     temp_buffer: ?*anyopaque,
     dither: Dither,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGBA8888toRGBA5551_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGBA8888toRGBA5551_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags.bits()));
 }
 
 // ============================================================================
@@ -197,25 +198,25 @@ pub fn rgba8888ToRGBA5551Dithered(
 ///
 /// Red and blue widen as `(v * 255 + 15) / 31`, green as `(v * 255 + 31) / 63`.
 /// Does not work in place.
-pub fn rgb565ToARGB8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGB565toARGB8888(alpha, src, dest, flags));
+pub fn rgb565ToARGB8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGB565toARGB8888(alpha, src, dest, flags.bits()));
 }
 
 /// RGB565 -> RGBA8888, with a constant alpha for every pixel.
-pub fn rgb565ToRGBA8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGB565toRGBA8888(alpha, src, dest, flags));
+pub fn rgb565ToRGBA8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGB565toRGBA8888(alpha, src, dest, flags.bits()));
 }
 
 /// RGB565 -> BGRA8888, with a constant alpha for every pixel. The destination
 /// bytes are ordered B, G, R, A.
-pub fn rgb565ToBGRA8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGB565toBGRA8888(alpha, src, dest, flags));
+pub fn rgb565ToBGRA8888(alpha: Pixel_8, src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGB565toBGRA8888(alpha, src, dest, flags.bits()));
 }
 
 /// RGB565 -> RGB888. The destination is *three* bytes per pixel, so
 /// `dest.rowBytes` must be at least `3 * width`. Does not work in place.
-pub fn rgb565ToRGB888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGB565toRGB888(src, dest, flags));
+pub fn rgb565ToRGB888(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGB565toRGB888(src, dest, flags.bits()));
 }
 
 /// RGB565 -> three Planar8 buffers (R, G, B). There is no alpha to recover.
@@ -224,9 +225,9 @@ pub fn rgb565ToPlanar8(
     destR: *const vImage_Buffer,
     destG: *const vImage_Buffer,
     destB: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB565toPlanar8(src, destR, destG, destB, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB565toPlanar8(src, destR, destG, destB, flags.bits()));
 }
 
 // ============================================================================
@@ -238,19 +239,19 @@ pub fn rgb565ToPlanar8(
 /// `dest = (r << 11) | (g << 5) | b`, with red/blue narrowed by
 /// `(v * 31 + 127) / 255` and green by `(v * 63 + 127) / 255`. Works in place
 /// when `src.data == dest.data` and `src.rowBytes >= dest.rowBytes`.
-pub fn argb8888ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888toRGB565(src, dest, flags));
+pub fn argb8888ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888toRGB565(src, dest, flags.bits()));
 }
 
 /// RGBA8888 -> RGB565. Alpha is discarded, not flattened.
-pub fn rgba8888ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGBA8888toRGB565(src, dest, flags));
+pub fn rgba8888ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGBA8888toRGB565(src, dest, flags.bits()));
 }
 
 /// BGRA8888 -> RGB565. The source bytes are ordered B, G, R, A; the packed
 /// result still has red in bits 15..11.
-pub fn bgra8888ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_BGRA8888toRGB565(src, dest, flags));
+pub fn bgra8888ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_BGRA8888toRGB565(src, dest, flags.bits()));
 }
 
 /// Three Planar8 channel buffers (R, G, B) -> RGB565.
@@ -261,9 +262,9 @@ pub fn planar8ToRGB565(
     srcG: *const vImage_Buffer,
     srcB: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toRGB565(srcR, srcG, srcB, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toRGB565(srcR, srcG, srcB, dest, flags.bits()));
 }
 
 /// RGB888 -> RGB565 with dithering. The source is three bytes per pixel.
@@ -273,9 +274,9 @@ pub fn rgb888ToRGB565Dithered(
     dest: *const vImage_Buffer,
     temp_buffer: ?*anyopaque,
     dither: Dither,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags.bits()));
 }
 
 /// ARGB8888 -> RGB565 with dithering. Alpha is discarded. `temp_buffer` may be
@@ -285,9 +286,9 @@ pub fn argb8888ToRGB565Dithered(
     dest: *const vImage_Buffer,
     temp_buffer: ?*anyopaque,
     dither: Dither,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB8888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags.bits()));
 }
 
 /// RGBA8888 -> RGB565 with dithering. Alpha is discarded. `temp_buffer` may be
@@ -297,9 +298,9 @@ pub fn rgba8888ToRGB565Dithered(
     dest: *const vImage_Buffer,
     temp_buffer: ?*anyopaque,
     dither: Dither,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGBA8888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGBA8888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags.bits()));
 }
 
 /// BGRA8888 -> RGB565 with dithering. Alpha is discarded. `temp_buffer` may be
@@ -309,9 +310,9 @@ pub fn bgra8888ToRGB565Dithered(
     dest: *const vImage_Buffer,
     temp_buffer: ?*anyopaque,
     dither: Dither,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_BGRA8888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_BGRA8888toRGB565_dithered(src, dest, temp_buffer, @intFromEnum(dither), flags.bits()));
 }
 
 // ============================================================================
@@ -320,29 +321,29 @@ pub fn bgra8888ToRGB565Dithered(
 
 /// ARGB1555 -> RGB565. Alpha is dropped and the 5-bit green is widened to six
 /// bits; no channel loses precision, so no dither method is needed.
-pub fn argb1555ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB1555toRGB565(src, dest, flags));
+pub fn argb1555ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB1555toRGB565(src, dest, flags.bits()));
 }
 
 /// RGBA5551 -> RGB565. Alpha is dropped and green is widened to six bits.
-pub fn rgba5551ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGBA5551toRGB565(src, dest, flags));
+pub fn rgba5551ToRGB565(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGBA5551toRGB565(src, dest, flags.bits()));
 }
 
 /// RGB565 -> ARGB1555. The new alpha bit is set to 1 (opaque).
 ///
 /// Green loses a bit, so `dither` selects how that bit is dropped; `.none`
 /// rounds to nearest and is deterministic.
-pub fn rgb565ToARGB1555(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: Dither, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGB565toARGB1555(src, dest, @intFromEnum(dither), flags));
+pub fn rgb565ToARGB1555(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: Dither, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGB565toARGB1555(src, dest, @intFromEnum(dither), flags.bits()));
 }
 
 /// RGB565 -> RGBA5551. The new alpha bit is set to 1 (opaque).
 ///
 /// Green loses a bit, so `dither` selects how that bit is dropped; `.none`
 /// rounds to nearest and is deterministic.
-pub fn rgb565ToRGBA5551(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: Dither, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGB565toRGBA5551(src, dest, @intFromEnum(dither), flags));
+pub fn rgb565ToRGBA5551(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: Dither, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGB565toRGBA5551(src, dest, @intFromEnum(dither), flags.bits()));
 }
 
 // ============================================================================
@@ -447,7 +448,7 @@ test "argb8888ToARGB1555 produces the exact documented bit pattern" {
     const dest = try makeDest(u16, allocator, 1, 2);
     defer dest.free(allocator);
 
-    _ = try argb8888ToARGB1555(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try argb8888ToARGB1555(&src.buf, &dest.buf, .{});
     try testing.expectEqual(@as(u16, 0xFC10), pixel(u16, dest, 0, 0));
     try testing.expectEqual(argb1555(1, 31, 0, 16), pixel(u16, dest, 0, 0));
     try testing.expectEqual(@as(u16, 0), pixel(u16, dest, 0, 1));
@@ -465,7 +466,7 @@ test "argb1555ToARGB8888 round trips the values that survive narrowing" {
     const dest = try makeDest([4]u8, allocator, 1, 1);
     defer dest.free(allocator);
 
-    _ = try argb1555ToARGB8888(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try argb1555ToARGB8888(&src.buf, &dest.buf, .{});
     try testing.expectEqual([4]u8{ 255, 255, 0, 132 }, pixel([4]u8, dest, 0, 0));
 }
 
@@ -482,7 +483,7 @@ test "argb1555ToPlanar8 and planar8ToARGB1555 round trip through four planes" {
     const b = try makeDest(u8, allocator, 1, 2);
     defer b.free(allocator);
 
-    _ = try argb1555ToPlanar8(&src.buf, &a.buf, &r.buf, &g.buf, &b.buf, Flags.kvImageNoFlags);
+    _ = try argb1555ToPlanar8(&src.buf, &a.buf, &r.buf, &g.buf, &b.buf, .{});
     // pixel 0: a=1 -> 255, r=31 -> 255, g=0 -> 0, b=16 -> (16*255+15)/31 = 132
     try testing.expectEqual(@as(u8, 255), pixel(u8, a, 0, 0));
     try testing.expectEqual(@as(u8, 255), pixel(u8, r, 0, 0));
@@ -498,7 +499,7 @@ test "argb1555ToPlanar8 and planar8ToARGB1555 round trip through four planes" {
     // Back again: widen-then-narrow is exact, so the packed pixels return.
     const back = try makeDest(u16, allocator, 1, 2);
     defer back.free(allocator);
-    _ = try planar8ToARGB1555(&a.buf, &r.buf, &g.buf, &b.buf, &back.buf, Flags.kvImageNoFlags);
+    _ = try planar8ToARGB1555(&a.buf, &r.buf, &g.buf, &b.buf, &back.buf, .{});
     try testing.expectEqual(pixel(u16, src, 0, 0), pixel(u16, back, 0, 0));
     try testing.expectEqual(pixel(u16, src, 0, 1), pixel(u16, back, 0, 1));
 }
@@ -514,8 +515,8 @@ test "argb8888ToARGB1555Dithered rejects DitherNone with kvImageInvalidParameter
     defer dest.free(allocator);
 
     try testing.expectError(
-        VImageError.InvalidParameter,
-        argb8888ToARGB1555Dithered(&src.buf, &dest.buf, null, .none, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        argb8888ToARGB1555Dithered(&src.buf, &dest.buf, null, .none, .{}),
     );
 }
 
@@ -531,9 +532,9 @@ test "argb8888ToARGB1555Dithered stays within one 5-bit step of the undithered e
     const again = try makeDest(u16, allocator, 2, 8);
     defer again.free(allocator);
 
-    _ = try argb8888ToARGB1555(&src.buf, &plain.buf, Flags.kvImageNoFlags);
-    _ = try argb8888ToARGB1555Dithered(&src.buf, &dithered.buf, null, .ordered_reproducible, Flags.kvImageNoFlags);
-    _ = try argb8888ToARGB1555Dithered(&src.buf, &again.buf, null, .ordered_reproducible, Flags.kvImageNoFlags);
+    _ = try argb8888ToARGB1555(&src.buf, &plain.buf, .{});
+    _ = try argb8888ToARGB1555Dithered(&src.buf, &dithered.buf, null, .ordered_reproducible, .{});
+    _ = try argb8888ToARGB1555Dithered(&src.buf, &again.buf, null, .ordered_reproducible, .{});
 
     for (0..2) |y| for (0..8) |x| {
         const want = pixel(u16, plain, y, x);
@@ -562,7 +563,7 @@ test "rgba8888ToRGBA5551 produces the exact documented bit pattern" {
     const dest = try makeDest(u16, allocator, 1, 1);
     defer dest.free(allocator);
 
-    _ = try rgba8888ToRGBA5551(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try rgba8888ToRGBA5551(&src.buf, &dest.buf, .{});
     try testing.expectEqual(@as(u16, 0x0E3F), pixel(u16, dest, 0, 0));
     try testing.expectEqual(rgba5551(1, 24, 31, 1), pixel(u16, dest, 0, 0));
 }
@@ -574,7 +575,7 @@ test "rgba5551ToRGBA8888 widening is lossy within one 5-bit step" {
     const dest = try makeDest([4]u8, allocator, 1, 1);
     defer dest.free(allocator);
 
-    _ = try rgba5551ToRGBA8888(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try rgba5551ToRGBA8888(&src.buf, &dest.buf, .{});
     //   r = (1*255  + 15)/31 = 8
     //   g = (24*255 + 15)/31 = 197   (the original 200 is not recoverable)
     //   b = (31*255 + 15)/31 = 255
@@ -594,8 +595,8 @@ test "rgba8888ToRGBA5551Dithered rejects DitherNone with kvImageInvalidParameter
 
     // Same constraint as the ARGB1555 encoder: kvImageInvalidParameter (-21773).
     try testing.expectError(
-        VImageError.InvalidParameter,
-        rgba8888ToRGBA5551Dithered(&src.buf, &dest.buf, null, .none, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        rgba8888ToRGBA5551Dithered(&src.buf, &dest.buf, null, .none, .{}),
     );
 }
 
@@ -609,8 +610,8 @@ test "rgba8888ToRGBA5551Dithered stays within one 5-bit step of the undithered e
     const dithered = try makeDest(u16, allocator, 2, 8);
     defer dithered.free(allocator);
 
-    _ = try rgba8888ToRGBA5551(&src.buf, &plain.buf, Flags.kvImageNoFlags);
-    _ = try rgba8888ToRGBA5551Dithered(&src.buf, &dithered.buf, null, .ordered_reproducible, Flags.kvImageNoFlags);
+    _ = try rgba8888ToRGBA5551(&src.buf, &plain.buf, .{});
+    _ = try rgba8888ToRGBA5551Dithered(&src.buf, &dithered.buf, null, .ordered_reproducible, .{});
 
     for (0..2) |y| for (0..8) |x| {
         const want = pixel(u16, plain, y, x);
@@ -648,7 +649,7 @@ test "argb8888/rgba8888/bgra8888 to RGB565 agree on the same colour" {
     }) |pair| {
         const dest = try makeDest(u16, allocator, 1, 1);
         defer dest.free(allocator);
-        _ = try pair[1](&pair[0].buf, &dest.buf, Flags.kvImageNoFlags);
+        _ = try pair[1](&pair[0].buf, &dest.buf, .{});
         try testing.expectEqual(expected, pixel(u16, dest, 0, 0));
     }
 }
@@ -665,19 +666,19 @@ test "rgb565 to ARGB8888/RGBA8888/BGRA8888 widens green from six bits and inject
     {
         const dest = try makeDest([4]u8, allocator, 1, 1);
         defer dest.free(allocator);
-        _ = try rgb565ToARGB8888(alpha, &src.buf, &dest.buf, Flags.kvImageNoFlags);
+        _ = try rgb565ToARGB8888(alpha, &src.buf, &dest.buf, .{});
         try testing.expectEqual([4]u8{ 0x77, 255, 198, 8 }, pixel([4]u8, dest, 0, 0));
     }
     {
         const dest = try makeDest([4]u8, allocator, 1, 1);
         defer dest.free(allocator);
-        _ = try rgb565ToRGBA8888(alpha, &src.buf, &dest.buf, Flags.kvImageNoFlags);
+        _ = try rgb565ToRGBA8888(alpha, &src.buf, &dest.buf, .{});
         try testing.expectEqual([4]u8{ 255, 198, 8, 0x77 }, pixel([4]u8, dest, 0, 0));
     }
     {
         const dest = try makeDest([4]u8, allocator, 1, 1);
         defer dest.free(allocator);
-        _ = try rgb565ToBGRA8888(alpha, &src.buf, &dest.buf, Flags.kvImageNoFlags);
+        _ = try rgb565ToBGRA8888(alpha, &src.buf, &dest.buf, .{});
         try testing.expectEqual([4]u8{ 8, 198, 255, 0x77 }, pixel([4]u8, dest, 0, 0));
     }
 }
@@ -689,7 +690,7 @@ test "rgb565ToRGB888 writes three bytes per pixel" {
     const dest = try makeDest([3]u8, allocator, 1, 2);
     defer dest.free(allocator);
 
-    _ = try rgb565ToRGB888(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try rgb565ToRGB888(&src.buf, &dest.buf, .{});
     try testing.expectEqual([3]u8{ 255, 198, 8 }, pixel([3]u8, dest, 0, 0));
     try testing.expectEqual([3]u8{ 0, 255, 255 }, pixel([3]u8, dest, 0, 1));
 }
@@ -705,7 +706,7 @@ test "rgb565ToPlanar8 and planar8ToRGB565 round trip" {
     const b = try makeDest(u8, allocator, 1, 2);
     defer b.free(allocator);
 
-    _ = try rgb565ToPlanar8(&src.buf, &r.buf, &g.buf, &b.buf, Flags.kvImageNoFlags);
+    _ = try rgb565ToPlanar8(&src.buf, &r.buf, &g.buf, &b.buf, .{});
     try testing.expectEqual(@as(u8, 255), pixel(u8, r, 0, 0));
     try testing.expectEqual(@as(u8, 198), pixel(u8, g, 0, 0));
     try testing.expectEqual(@as(u8, 8), pixel(u8, b, 0, 0));
@@ -718,7 +719,7 @@ test "rgb565ToPlanar8 and planar8ToRGB565 round trip" {
 
     const back = try makeDest(u16, allocator, 1, 2);
     defer back.free(allocator);
-    _ = try planar8ToRGB565(&r.buf, &g.buf, &b.buf, &back.buf, Flags.kvImageNoFlags);
+    _ = try planar8ToRGB565(&r.buf, &g.buf, &b.buf, &back.buf, .{});
     try testing.expectEqual(pixel(u16, src, 0, 0), pixel(u16, back, 0, 0));
     try testing.expectEqual(pixel(u16, src, 0, 1), pixel(u16, back, 0, 1));
 }
@@ -735,20 +736,20 @@ test "RGB565 dithered encoders reject DitherNone with kvImageInvalidParameter" {
     // All four RGB565 dithered encoders require an ordered method; `.none`
     // fails with kvImageInvalidParameter (-21773).
     try testing.expectError(
-        VImageError.InvalidParameter,
-        rgb888ToRGB565Dithered(&rgb.buf, &dest.buf, null, .none, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        rgb888ToRGB565Dithered(&rgb.buf, &dest.buf, null, .none, .{}),
     );
     try testing.expectError(
-        VImageError.InvalidParameter,
-        argb8888ToRGB565Dithered(&rgba.buf, &dest.buf, null, .none, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        argb8888ToRGB565Dithered(&rgba.buf, &dest.buf, null, .none, .{}),
     );
     try testing.expectError(
-        VImageError.InvalidParameter,
-        rgba8888ToRGB565Dithered(&rgba.buf, &dest.buf, null, .none, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        rgba8888ToRGB565Dithered(&rgba.buf, &dest.buf, null, .none, .{}),
     );
     try testing.expectError(
-        VImageError.InvalidParameter,
-        bgra8888ToRGB565Dithered(&rgba.buf, &dest.buf, null, .none, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        bgra8888ToRGB565Dithered(&rgba.buf, &dest.buf, null, .none, .{}),
     );
 }
 
@@ -774,7 +775,7 @@ test "RGB565 dithered encoders read their channels in the right order (within on
     const reference = rgb565(31, 49, 1);
     const plain = try makeDest(u16, allocator, height, width);
     defer plain.free(allocator);
-    _ = try argb8888ToRGB565(&argb.buf, &plain.buf, Flags.kvImageNoFlags);
+    _ = try argb8888ToRGB565(&argb.buf, &plain.buf, .{});
     try testing.expectEqual(reference, pixel(u16, plain, 1, 5));
 
     inline for (.{
@@ -785,7 +786,7 @@ test "RGB565 dithered encoders read their channels in the right order (within on
     }) |pair| {
         const dest = try makeDest(u16, allocator, height, width);
         defer dest.free(allocator);
-        _ = try pair[1](&pair[0].buf, &dest.buf, null, .ordered_reproducible, Flags.kvImageNoFlags);
+        _ = try pair[1](&pair[0].buf, &dest.buf, null, .ordered_reproducible, .{});
         for (0..height) |y| for (0..width) |x| {
             try expectFieldsClose(reference, pixel(u16, dest, y, x), &.{ .{ 11, 0x1F }, .{ 5, 0x3F }, .{ 0, 0x1F } }, 1);
         };
@@ -805,12 +806,12 @@ test "argb1555ToRGB565 and rgb565ToARGB1555 round trip when green is saturated" 
     const mid = try makeDest(u16, allocator, 1, 1);
     defer mid.free(allocator);
 
-    _ = try argb1555ToRGB565(&src.buf, &mid.buf, Flags.kvImageNoFlags);
+    _ = try argb1555ToRGB565(&src.buf, &mid.buf, .{});
     try testing.expectEqual(rgb565(6, 63, 25), pixel(u16, mid, 0, 0));
 
     const back = try makeDest(u16, allocator, 1, 1);
     defer back.free(allocator);
-    _ = try rgb565ToARGB1555(&mid.buf, &back.buf, .none, Flags.kvImageNoFlags);
+    _ = try rgb565ToARGB1555(&mid.buf, &back.buf, .none, .{});
     // The alpha bit comes back as 1 (opaque) regardless of the input.
     try testing.expectEqual(argb1555(1, 6, 31, 25), pixel(u16, back, 0, 0));
 }
@@ -822,12 +823,12 @@ test "rgba5551ToRGB565 and rgb565ToRGBA5551 round trip when green is saturated" 
     const mid = try makeDest(u16, allocator, 1, 1);
     defer mid.free(allocator);
 
-    _ = try rgba5551ToRGB565(&src.buf, &mid.buf, Flags.kvImageNoFlags);
+    _ = try rgba5551ToRGB565(&src.buf, &mid.buf, .{});
     try testing.expectEqual(rgb565(6, 63, 25), pixel(u16, mid, 0, 0));
 
     const back = try makeDest(u16, allocator, 1, 1);
     defer back.free(allocator);
-    _ = try rgb565ToRGBA5551(&mid.buf, &back.buf, .none, Flags.kvImageNoFlags);
+    _ = try rgb565ToRGBA5551(&mid.buf, &back.buf, .none, .{});
     // Alpha was dropped by the first conversion and comes back as 1 (opaque),
     // so the source's alpha=0 is *not* recovered.
     try testing.expectEqual(rgba5551(6, 31, 25, 1), pixel(u16, back, 0, 0));
@@ -844,7 +845,7 @@ test "rgb565ToARGB1555 with DitherNone drops the low green bit within one step" 
     const dest = try makeDest(u16, allocator, 1, greens.len);
     defer dest.free(allocator);
 
-    _ = try rgb565ToARGB1555(&src.buf, &dest.buf, .none, Flags.kvImageNoFlags);
+    _ = try rgb565ToARGB1555(&src.buf, &dest.buf, .none, .{});
     for (0..64) |i| {
         const got = pixel(u16, dest, 0, i);
         try testing.expectEqual(@as(u16, 1), got >> 15); // alpha forced opaque

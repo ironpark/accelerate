@@ -96,7 +96,7 @@ pub fn DFT(comptime T: type) type {
         /// Releases the setup. Safe to call even if this setup shares data
         /// with other live setups (vDSP.h ~L7187-7189): only memory not
         /// needed by other undestroyed setups is freed.
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             switch (T) {
                 f32 => c.vDSP_DFT_DestroySetup(self.setup),
                 f64 => c.vDSP_DFT_DestroySetupD(self.setup),
@@ -168,7 +168,7 @@ pub fn RealDFT(comptime T: type) type {
             return .{ .setup = setup orelse return error.SetupFailed, .length = length };
         }
 
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             switch (T) {
                 f32 => c.vDSP_DFT_DestroySetup(self.setup),
                 f64 => c.vDSP_DFT_DestroySetupD(self.setup),
@@ -242,7 +242,7 @@ pub const DCT = struct {
         return .{ .setup = setup, .length = length };
     }
 
-    pub fn deinit(self: DCT) void {
+    pub fn deinit(self: *DCT) void {
         c.vDSP_DFT_DestroySetup(self.setup);
     }
 
@@ -304,7 +304,7 @@ pub fn InterleavedDFT(comptime T: type) type {
             return .{ .setup = setup orelse return error.SetupFailed, .length = length };
         }
 
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             switch (T) {
                 f32 => c.vDSP_DFT_Interleaved_DestroySetup(self.setup),
                 f64 => c.vDSP_DFT_Interleaved_DestroySetupD(self.setup),
@@ -349,7 +349,7 @@ test "DFT(f32) init/deinit/exec: impulse forward spectrum then unnormalized inve
     // a symmetric all-equal vector) so an argument-order bug (e.g. real vs
     // imaginary swapped) would show up as a non-constant / non-real result.
     const n: Length = 8;
-    const fwd = try DFT(f32).init(n, .forward);
+    var fwd = try DFT(f32).init(n, .forward);
     defer fwd.deinit();
 
     var ir = [_]f32{0} ** n;
@@ -369,7 +369,7 @@ test "DFT(f32) init/deinit/exec: impulse forward spectrum then unnormalized inve
     // and 0 elsewhere - i.e. the impulse scaled by exactly N, not
     // normalized back to the original impulse. This matches fft.zig's
     // already-verified finding for the older vDSP_fft_zip/zop API.
-    const inv = try DFT(f32).init(n, .inverse);
+    var inv = try DFT(f32).init(n, .inverse);
     defer inv.deinit();
 
     var or2: [n]f32 = undefined;
@@ -383,9 +383,9 @@ test "DFT(f32) init/deinit/exec: impulse forward spectrum then unnormalized inve
 
 test "DFT(f32) initShared produces identical results to an independent setup, and deinit order doesn't matter" {
     const n: Length = 8;
-    const original = try DFT(f32).init(n, .forward);
-    const shared = try DFT(f32).initShared(original.setup, n, .forward);
-    const independent = try DFT(f32).init(n, .forward);
+    var original = try DFT(f32).init(n, .forward);
+    var shared = try DFT(f32).initShared(original.setup, n, .forward);
+    var independent = try DFT(f32).init(n, .forward);
 
     // Asymmetric input so a sharing bug that corrupts tables would be
     // visible (not just a symmetric/trivial case).
@@ -431,7 +431,7 @@ test "RealDFT(f32) init/deinit/exec: impulse spectrum matches C=2 forward / C=1 
     const n: Length = 8;
     const half = n / 2;
 
-    const fwd = try RealDFT(f32).init(n, .forward);
+    var fwd = try RealDFT(f32).init(n, .forward);
     defer fwd.deinit();
 
     var ir = [_]f32{0} ** half;
@@ -461,7 +461,7 @@ test "RealDFT(f32) init/deinit/exec: impulse spectrum matches C=2 forward / C=1 
     // asymmetric-scaling behavior flagged as a documentation/education risk:
     // callers porting code from the complex DFT or from fft.zig's FFT would
     // reasonably but wrongly assume a single factor of N.
-    const inv = try RealDFT(f32).init(n, .inverse);
+    var inv = try RealDFT(f32).init(n, .inverse);
     defer inv.deinit();
 
     var or2: [half]f32 = undefined;
@@ -502,7 +502,7 @@ test "RealDFT(f32) superposed DC+Nyquist+k=1 signal: pins down Or[0]=DC, Oi[0]=N
     // so the header's "1 <" is imprecise/off-by-one, not "0 <=").
     const n: Length = 8;
     const half = n / 2;
-    const fwd = try RealDFT(f32).init(n, .forward);
+    var fwd = try RealDFT(f32).init(n, .forward);
     defer fwd.deinit();
 
     var ir: [half]f32 = undefined;
@@ -540,7 +540,7 @@ test "DCT(.dct_II) matches hand-computed cosine sums for an impulse input" {
     // std.math.cos directly rather than any closed form, so this doesn't
     // just restate the header - it independently evaluates the formula.
     const n: Length = 16;
-    const dct = try DCT.init(n, .dct_II);
+    var dct = try DCT.init(n, .dct_II);
     defer dct.deinit();
 
     var input = [_]f32{0} ** n;
@@ -561,7 +561,7 @@ test "DCT(.dct_III) matches hand-computed cosine sums for an asymmetric input" {
     // no two elements are equal and none are zero except j=8) so an
     // argument-order or off-by-one bug in j indexing would be caught.
     const n: Length = 16;
-    const dct = try DCT.init(n, .dct_III);
+    var dct = try DCT.init(n, .dct_III);
     defer dct.deinit();
 
     var input: [n]f32 = undefined;
@@ -588,9 +588,9 @@ test "InterleavedDFT(f32) complex-to-complex matches split-complex DFT(f32) for 
     // same length, same
     // direction - outputs must agree element-wise.
     const n: Length = 8;
-    const split = try DFT(f32).init(n, .forward);
+    var split = try DFT(f32).init(n, .forward);
     defer split.deinit();
-    const interleaved = try InterleavedDFT(f32).init(n, .forward, .complex_to_complex);
+    var interleaved = try InterleavedDFT(f32).init(n, .forward, .complex_to_complex);
     defer interleaved.deinit();
 
     var ir = [_]f32{ 1, -2, 3, 0, 5, -1, 0, 2 };
@@ -623,7 +623,7 @@ test "InterleavedDFT(f32) real-to-complex uses the same DC/Nyquist-in-slot-0 pac
     // i.e. same C=2-forward scaling and same "DC in .real, Nyquist in
     // .imag" packing of slot 0 as RealDFT(T).exec's forward direction.
     const n: Length = 8; // complex slots; real signal length = 2*n = 16
-    const fwd = try InterleavedDFT(f32).init(n, .forward, .real_to_complex);
+    var fwd = try InterleavedDFT(f32).init(n, .forward, .real_to_complex);
     defer fwd.deinit();
 
     var in_c: [n]Complex(f32) = [_]Complex(f32){.{ .real = 0, .imag = 0 }} ** n;

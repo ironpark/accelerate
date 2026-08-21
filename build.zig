@@ -152,6 +152,19 @@ pub fn build(b: *std.Build) void {
     // times and since the two run steps do not depend on one another, this will
     // make the two of them run in parallel.
     const test_step = b.step("test", "Run tests");
+
+    // The README's code samples, compiled. They live in `examples/readme.zig`
+    // so that a stale snippet turns the build red instead of quietly
+    // misleading a reader -- four of them were already wrong when this was
+    // added, including one calling a `vdsp.FFT` method that does not exist.
+    test_step.dependOn(&b.addRunArtifact(b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/readme.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{.{ .name = "accelerate", .module = mod }},
+        }),
+    })).step);
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
 
@@ -171,6 +184,17 @@ pub fn build(b: *std.Build) void {
 
         const cg_tests = b.addTest(.{ .root_module = cg_mod });
         test_step.dependOn(&b.addRunArtifact(cg_tests).step);
+
+        // ...and the README's CoreGraphics samples, which the default build
+        // compiles out through a `comptime` branch and so never checks.
+        test_step.dependOn(&b.addRunArtifact(b.addTest(.{
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("examples/readme.zig"),
+                .target = target,
+                .optimize = optimize,
+                .imports = &.{.{ .name = "accelerate", .module = cg_mod }},
+            }),
+        })).step);
     }
 
     // Just like flags, top level steps are also listed in the `--help` menu.

@@ -69,7 +69,7 @@ const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImage_Flags = types.vImage_Flags;
 const vImagePixelCount = types.vImagePixelCount;
@@ -78,6 +78,7 @@ const Pixel_FFFF = types.Pixel_FFFF;
 const Pixel_ARGB_16U = types.Pixel_ARGB_16U;
 const Pixel_ARGB_16S = types.Pixel_ARGB_16S;
 const Flags = types.Flags;
+const Options = types.Options;
 
 // ============================================================================
 // Flatten
@@ -90,8 +91,8 @@ const Flags = types.Flags;
 /// are already scaled by alpha and are used as-is, when false they are
 /// multiplied by alpha first. Rounding is `+127` then integer divide by 255.
 /// Works in place.
-pub fn flattenARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_8888, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_ARGB8888(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_8888, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_ARGB8888(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 /// Composite an 8-bit RGBA image over the opaque colour `backgroundColor`
@@ -99,8 +100,8 @@ pub fn flattenARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, ba
 ///
 /// Same arithmetic as `flattenARGB8888`; only the channel position of alpha
 /// differs. Works in place.
-pub fn flattenRGBA8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_8888, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_RGBA8888(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenRGBA8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_8888, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_RGBA8888(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 /// Composite a 16-bit unsigned ARGB image over the opaque colour
@@ -108,16 +109,16 @@ pub fn flattenRGBA8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, ba
 ///
 /// Full scale is 65535; rounding is `+32767` then integer divide by 65535.
 /// Pixels are native-endian. Works in place.
-pub fn flattenARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16U, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_ARGB16U(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16U, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_ARGB16U(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 /// Composite a 16-bit unsigned RGBA image over the opaque colour
 /// `backgroundColor` (premultiplied `.{ R, G, B, A }`).
 ///
 /// As `flattenARGB16U`, with alpha in the last channel. Works in place.
-pub fn flattenRGBA16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16U, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_RGBA16U(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenRGBA16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16U, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_RGBA16U(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 /// Composite a signed 4.12 fixed-point ARGB image over the opaque colour
@@ -127,8 +128,8 @@ pub fn flattenRGBA16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, bac
 /// channels are not clamped, and whether a result of magnitude >= 8.0 is
 /// clamped is undefined. Rounding is `+2048` then arithmetic `>> 12`.
 /// Native-endian, works in place.
-pub fn flattenARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16S, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_ARGB16Q12(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16S, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_ARGB16Q12(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 /// Composite a signed 4.12 fixed-point RGBA image over the opaque colour
@@ -137,8 +138,8 @@ pub fn flattenARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, b
 /// As `flattenARGB16Q12`, with alpha in the last channel. The header declares
 /// this one with the ARGB parameter names verbatim; it is nonetheless a
 /// distinct symbol that reads alpha from channel 3.
-pub fn flattenRGBA16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16S, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_RGBA16Q12(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenRGBA16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_ARGB_16S, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_RGBA16Q12(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 /// Composite a float ARGB image over the opaque colour `backgroundColor`
@@ -147,16 +148,16 @@ pub fn flattenRGBA16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, b
 /// Exactly `result = color + (1 - a)*bgColor` when premultiplied, or
 /// `color*a + (1 - a)*bgColor` when not. No clamping, so values outside
 /// [0, 1] pass through the formula unchanged. Works in place.
-pub fn flattenARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_FFFF, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_ARGBFFFF(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenARGBFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_FFFF, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_ARGBFFFF(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 /// Composite a float RGBA image over the opaque colour `backgroundColor`
 /// (premultiplied `.{ R, G, B, A }`).
 ///
 /// As `flattenARGBFFFF`, with alpha in the last channel. Works in place.
-pub fn flattenRGBAFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_FFFF, is_premultiplied: bool, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageFlatten_RGBAFFFF(src, dest, backgroundColor, is_premultiplied, flags));
+pub fn flattenRGBAFFFF(src: *const vImage_Buffer, dest: *const vImage_Buffer, backgroundColor: *const Pixel_FFFF, is_premultiplied: bool, flags: Options) Error!usize {
+    return check(c.vImageFlatten_RGBAFFFF(src, dest, backgroundColor, is_premultiplied, flags.bits()));
 }
 
 // ============================================================================
@@ -180,8 +181,8 @@ pub fn chunkyToPlanar8(
     srcWidth: vImagePixelCount,
     srcHeight: vImagePixelCount,
     srcRowBytes: usize,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     std.debug.assert(srcChannels.len == destPlanarBuffers.len);
     return check(c.vImageConvert_ChunkyToPlanar8(
         @ptrCast(srcChannels.ptr),
@@ -191,7 +192,7 @@ pub fn chunkyToPlanar8(
         srcWidth,
         srcHeight,
         srcRowBytes,
-        flags,
+        flags.bits(),
     ));
 }
 
@@ -208,8 +209,8 @@ pub fn chunkyToPlanarF(
     srcWidth: vImagePixelCount,
     srcHeight: vImagePixelCount,
     srcRowBytes: usize,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     std.debug.assert(srcChannels.len == destPlanarBuffers.len);
     return check(c.vImageConvert_ChunkyToPlanarF(
         @ptrCast(srcChannels.ptr),
@@ -219,7 +220,7 @@ pub fn chunkyToPlanarF(
         srcWidth,
         srcHeight,
         srcRowBytes,
-        flags,
+        flags.bits(),
     ));
 }
 
@@ -237,8 +238,8 @@ pub fn planarToChunky8(
     destWidth: vImagePixelCount,
     destHeight: vImagePixelCount,
     destRowBytes: usize,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     std.debug.assert(srcPlanarBuffers.len == destChannels.len);
     return check(c.vImageConvert_PlanarToChunky8(
         srcPlanarBuffers.ptr,
@@ -248,7 +249,7 @@ pub fn planarToChunky8(
         destWidth,
         destHeight,
         destRowBytes,
-        flags,
+        flags.bits(),
     ));
 }
 
@@ -264,8 +265,8 @@ pub fn planarToChunkyF(
     destWidth: vImagePixelCount,
     destHeight: vImagePixelCount,
     destRowBytes: usize,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     std.debug.assert(srcPlanarBuffers.len == destChannels.len);
     return check(c.vImageConvert_PlanarToChunkyF(
         srcPlanarBuffers.ptr,
@@ -275,7 +276,7 @@ pub fn planarToChunkyF(
         destWidth,
         destHeight,
         destRowBytes,
-        flags,
+        flags.bits(),
     ));
 }
 
@@ -321,7 +322,7 @@ test "flattenARGB8888 premultiplied matches the Conversion.h formula byte for by
     const b_dst = bufFromBytes(dst, h, w, row_bytes);
     const bg: Pixel_8888 = .{ 255, 100, 200, 50 };
 
-    try std.testing.expectEqual(@as(usize, 0), try flattenARGB8888(&b_src, &b_dst, &bg, true, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try flattenARGB8888(&b_src, &b_dst, &bg, true, .{}));
 
     for (0..h) |y| {
         for (0..w) |x| {
@@ -348,7 +349,7 @@ test "flattenARGB8888 non-premultiplied multiplies colour by alpha first" {
     const bg: Pixel_8888 = .{ 255, 10, 20, 30 };
 
     // In place, which the header documents as supported.
-    try std.testing.expectEqual(@as(usize, 0), try flattenARGB8888(&b, &b, &bg, false, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try flattenARGB8888(&b, &b, &bg, false, .{}));
     try std.testing.expectEqual([_]u8{ 255, 105, 10, 143 }, px);
 }
 
@@ -363,7 +364,7 @@ test "flattenRGBA8888 reads alpha from the last channel, not the first" {
     const b_dst = bufFromBytes(&out, 1, 1, 4);
     const bg: Pixel_8888 = .{ 100, 200, 50, 255 };
 
-    try std.testing.expectEqual(@as(usize, 0), try flattenRGBA8888(&b_src, &b_dst, &bg, true, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try flattenRGBA8888(&b_src, &b_dst, &bg, true, .{}));
     try std.testing.expectEqual([_]u8{ 114, 132, 41, 255 }, out);
 }
 
@@ -380,8 +381,8 @@ test "flattenARGBFFFF and flattenRGBAFFFF are exact: color + (1-a)*bg" {
     const bg_argb: Pixel_FFFF = .{ 1.0, 0.5, 0.25, 0.125 };
     const bg_rgba: Pixel_FFFF = .{ 0.5, 0.25, 0.125, 1.0 };
 
-    try std.testing.expectEqual(@as(usize, 0), try flattenARGBFFFF(&b_argb, &b_argb, &bg_argb, true, Flags.kvImageNoFlags));
-    try std.testing.expectEqual(@as(usize, 0), try flattenRGBAFFFF(&b_rgba, &b_rgba, &bg_rgba, true, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try flattenARGBFFFF(&b_argb, &b_argb, &bg_argb, true, .{}));
+    try std.testing.expectEqual(@as(usize, 0), try flattenRGBAFFFF(&b_rgba, &b_rgba, &bg_rgba, true, .{}));
 
     try std.testing.expectApproxEqAbs(@as(f32, 1.0), argb[0], 1e-6);
     try std.testing.expectApproxEqAbs(@as(f32, 0.475), argb[1], 1e-6);
@@ -408,8 +409,8 @@ test "flattenARGB16U and flattenRGBA16U scale by 65535" {
     const b_argb = bufFromBytes(std.mem.sliceAsBytes(&argb), 1, 1, 8);
     const b_rgba = bufFromBytes(std.mem.sliceAsBytes(&rgba), 1, 1, 8);
 
-    try std.testing.expectEqual(@as(usize, 0), try flattenARGB16U(&b_argb, &b_argb, &bg_argb, true, Flags.kvImageNoFlags));
-    try std.testing.expectEqual(@as(usize, 0), try flattenRGBA16U(&b_rgba, &b_rgba, &bg_rgba, true, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try flattenARGB16U(&b_argb, &b_argb, &bg_argb, true, .{}));
+    try std.testing.expectEqual(@as(usize, 0), try flattenRGBA16U(&b_rgba, &b_rgba, &bg_rgba, true, .{}));
 
     var expected: [4]u16 = undefined;
     for (0..4) |i| {
@@ -445,8 +446,8 @@ test "flattenARGB16Q12 and flattenRGBA16Q12 use the 4096 = 1.0 fixed-point scale
     const b_argb = bufFromBytes(std.mem.sliceAsBytes(&argb), 1, 1, 8);
     const b_rgba = bufFromBytes(std.mem.sliceAsBytes(&rgba), 1, 1, 8);
 
-    try std.testing.expectEqual(@as(usize, 0), try flattenARGB16Q12(&b_argb, &b_argb, &bg_argb, true, Flags.kvImageNoFlags));
-    try std.testing.expectEqual(@as(usize, 0), try flattenRGBA16Q12(&b_rgba, &b_rgba, &bg_rgba, true, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try flattenARGB16Q12(&b_argb, &b_argb, &bg_argb, true, .{}));
+    try std.testing.expectEqual(@as(usize, 0), try flattenRGBA16Q12(&b_rgba, &b_rgba, &bg_rgba, true, .{}));
 
     try std.testing.expectEqual([_]i16{ 4096, 3584, 3072, 256 }, argb);
     try std.testing.expectEqual([_]i16{ 3584, 3072, 256, 4096 }, rgba);
@@ -487,7 +488,7 @@ test "chunkyToPlanar8 de-interleaves 3 channels at stride 4 with padded rows" {
     const base: [*]u8 = src.ptr;
     const chans = [channels]*const anyopaque{ base, base + 1, base + 2 };
 
-    try std.testing.expectEqual(@as(usize, 0), try chunkyToPlanar8(&chans, &buf_ptrs, stride, w, h, src_row_bytes, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try chunkyToPlanar8(&chans, &buf_ptrs, stride, w, h, src_row_bytes, .{}));
 
     for (0..h) |y| {
         for (0..w) |x| {
@@ -531,7 +532,7 @@ test "planarToChunky8 round-trips 3 channels through a different stride and chan
 
     const src_base: [*]u8 = src.ptr;
     const src_chans = [channels]*const anyopaque{ src_base, src_base + 1, src_base + 2 };
-    _ = try chunkyToPlanar8(&src_chans, &buf_ptrs, src_stride, w, h, src_row_bytes, Flags.kvImageNoFlags);
+    _ = try chunkyToPlanar8(&src_chans, &buf_ptrs, src_stride, w, h, src_row_bytes, .{});
 
     // Re-interleave tightly (stride 3), reversed channel order, padded rows.
     const dst_stride = 3;
@@ -544,7 +545,7 @@ test "planarToChunky8 round-trips 3 channels through a different stride and chan
     // channel 0 -> byte 2, channel 1 -> byte 1, channel 2 -> byte 0.
     const dst_chans = [channels]*anyopaque{ dst_base + 2, dst_base + 1, dst_base };
 
-    try std.testing.expectEqual(@as(usize, 0), try planarToChunky8(&buf_ptrs, &dst_chans, dst_stride, w, h, dst_row_bytes, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try planarToChunky8(&buf_ptrs, &dst_chans, dst_stride, w, h, dst_row_bytes, .{}));
 
     for (0..h) |y| {
         for (0..w) |x| {
@@ -602,7 +603,7 @@ test "chunkyToPlanarF / planarToChunkyF round-trip 3 float channels at a float4 
 
     const base: [*]u8 = src.ptr;
     const chans = [channels]*const anyopaque{ base, base + 4, base + 8 };
-    try std.testing.expectEqual(@as(usize, 0), try chunkyToPlanarF(&chans, &buf_ptrs, stride, w, h, src_row_bytes, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try chunkyToPlanarF(&chans, &buf_ptrs, stride, w, h, src_row_bytes, .{}));
 
     for (0..channels) |ch| {
         for (0..h) |y| {
@@ -623,7 +624,7 @@ test "chunkyToPlanarF / planarToChunkyF round-trip 3 float channels at a float4 
 
     const dst_base: [*]u8 = dst.ptr;
     const dst_chans = [channels]*anyopaque{ dst_base, dst_base + 4, dst_base + 8 };
-    try std.testing.expectEqual(@as(usize, 0), try planarToChunkyF(&buf_ptrs, &dst_chans, dst_stride, w, h, dst_row_bytes, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try planarToChunkyF(&buf_ptrs, &dst_chans, dst_stride, w, h, dst_row_bytes, .{}));
 
     for (0..h) |y| {
         for (0..w) |x| {
@@ -643,7 +644,7 @@ test "flatten rejects a destination larger than the source" {
     const b_dst = bufFromBytes(&dst, 2, 2, 8);
     const bg: Pixel_8888 = .{ 255, 0, 0, 0 };
     try std.testing.expectError(
-        VImageError.RoiLargerThanInputBuffer,
-        flattenARGB8888(&b_src, &b_dst, &bg, true, Flags.kvImageNoFlags),
+        Error.RoiLargerThanInputBuffer,
+        flattenARGB8888(&b_src, &b_dst, &bg, true, .{}),
     );
 }

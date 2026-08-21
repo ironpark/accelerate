@@ -10,8 +10,12 @@ pub const vImage_Error = types.vImage_Error;
 pub const Flags = types.Flags;
 pub const Options = types.Options;
 pub const Connectivity = types.Connectivity;
+/// The raw `kvImage*` integer codes, for callers holding a plain
+/// `vImage_Error`. The Zig error set is `Error`.
+pub const ErrorCode = types.ErrorCode;
+/// vImage's failure modes as a Zig error set. Every wrapper returns
+/// `Error!usize`.
 pub const Error = types.Error;
-pub const VImageError = types.VImageError;
 pub const check = types.check;
 
 // -- Pixel types --

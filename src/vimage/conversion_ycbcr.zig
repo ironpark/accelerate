@@ -60,7 +60,7 @@ const c = @import("c.zig");
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
 const vImage_Flags = types.vImage_Flags;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const Flags = types.Flags;
 const Pixel_8 = types.Pixel_8;
@@ -70,6 +70,7 @@ const vImageARGBType = types.vImageARGBType;
 const vImageYpCbCrType = types.vImageYpCbCrType;
 const vImage_YpCbCrToARGBMatrix = types.vImage_YpCbCrToARGBMatrix;
 const vImage_ARGBToYpCbCrMatrix = types.vImage_ARGBToYpCbCrMatrix;
+const Options = types.Options;
 
 // ============================================================================
 // Conversion-info types
@@ -165,9 +166,9 @@ pub fn ypCbCrToARGBGenerateConversion(
     outInfo: *YpCbCrToARGB,
     inYpCbCrType: vImageYpCbCrType,
     outARGBType: vImageARGBType,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_YpCbCrToARGB_GenerateConversion(matrix, cRange(pixelRange), cToARGBMut(outInfo), inYpCbCrType, outARGBType, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_YpCbCrToARGB_GenerateConversion(matrix, cRange(pixelRange), cToARGBMut(outInfo), inYpCbCrType, outARGBType, flags.bits()));
 }
 
 /// Precompute an ARGB -> Y'CbCr conversion.
@@ -183,9 +184,9 @@ pub fn argbToYpCbCrGenerateConversion(
     outInfo: *ARGBToYpCbCr,
     inARGBType: vImageARGBType,
     outYpCbCrType: vImageYpCbCrType,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGBToYpCbCr_GenerateConversion(matrix, cRange(pixelRange), cToYUVMut(outInfo), inARGBType, outYpCbCrType, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGBToYpCbCr_GenerateConversion(matrix, cRange(pixelRange), cToYUVMut(outInfo), inARGBType, outYpCbCrType, flags.bits()));
 }
 
 // ============================================================================
@@ -197,8 +198,8 @@ pub fn argbToYpCbCrGenerateConversion(
 /// `src` is 2 bytes per pixel; `src.width` counts luma pixels and must be even.
 /// One chroma pair serves both pixels of each horizontal couple. `alpha` is a
 /// constant written into every destination alpha, since the format carries none.
-pub fn convert422YpCbYpCr8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_422YpCbYpCr8ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert422YpCbYpCr8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_422YpCbYpCr8ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// Two ARGB8888 pixels -> `Yp0 Cb0 Yp1 Cr0` ('yuvs'/'yuvf').
@@ -206,22 +207,22 @@ pub fn convert422YpCbYpCr8ToARGB8888(src: *const vImage_Buffer, dest: *const vIm
 /// Chroma is subsampled by averaging the horizontal pair, so this is lossy;
 /// source alpha is discarded. `dest` is 2 bytes per pixel and `dest.width` must
 /// be even.
-pub fn convertARGB8888To422YpCbYpCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To422YpCbYpCr8(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To422YpCbYpCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To422YpCbYpCr8(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `Cb0 Yp0 Cr0 Yp1` -> two ARGB8888 pixels ('2vuy'/'2vuf').
 ///
 /// Same geometry as `convert422YpCbYpCr8ToARGB8888`; only the byte order within
 /// the 4-byte group differs (chroma first). `alpha` fills the destination alpha.
-pub fn convert422CbYpCrYp8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_422CbYpCrYp8ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert422CbYpCrYp8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_422CbYpCrYp8ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// Two ARGB8888 pixels -> `Cb0 Yp0 Cr0 Yp1` ('2vuy'/'2vuf'). Lossy in chroma;
 /// alpha is dropped. `dest.width` must be even.
-pub fn convertARGB8888To422CbYpCrYp8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To422CbYpCrYp8(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To422CbYpCrYp8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To422CbYpCrYp8(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `Cb0 Yp0 Cr0 Yp1` plus a separate 8-bit alpha plane -> ARGB8888 ('a2vy').
@@ -229,16 +230,16 @@ pub fn convertARGB8888To422CbYpCrYp8(src: *const vImage_Buffer, dest: *const vIm
 /// `srcA` is a full-resolution Planar8 buffer (one byte per output pixel, *not*
 /// subsampled) and supplies the destination alpha, so there is no `alpha`
 /// argument. Alpha is straight, not premultiplied.
-pub fn convert422CbYpCrYp8_AA8ToARGB8888(src: *const vImage_Buffer, srcA: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_422CbYpCrYp8_AA8ToARGB8888(src, srcA, dest, cToARGB(info), permuteMap, flags));
+pub fn convert422CbYpCrYp8_AA8ToARGB8888(src: *const vImage_Buffer, srcA: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_422CbYpCrYp8_AA8ToARGB8888(src, srcA, dest, cToARGB(info), permuteMap, flags.bits()));
 }
 
 /// ARGB8888 -> `Cb0 Yp0 Cr0 Yp1` plus a full-resolution 8-bit alpha plane ('a2vy').
 ///
 /// `dest` gets the 4:2:2 chroma/luma at 2 bytes per pixel; `destA` gets one
 /// alpha byte per pixel at full resolution. Alpha is copied through unchanged.
-pub fn convertARGB8888To422CbYpCrYp8_AA8(src: *const vImage_Buffer, dest: *const vImage_Buffer, destA: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To422CbYpCrYp8_AA8(src, dest, destA, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To422CbYpCrYp8_AA8(src: *const vImage_Buffer, dest: *const vImage_Buffer, destA: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To422CbYpCrYp8_AA8(src, dest, destA, cToYUV(info), permuteMap, flags.bits()));
 }
 
 // ============================================================================
@@ -251,8 +252,8 @@ pub fn convertARGB8888To422CbYpCrYp8_AA8(src: *const vImage_Buffer, dest: *const
 /// half height**, one byte per element. A single chroma sample serves a 2x2
 /// luma quad, so both `srcYp.width` and `srcYp.height` must be even. `alpha`
 /// fills the destination alpha.
-pub fn convert420Yp8_Cb8_Cr8ToARGB8888(srcYp: *const vImage_Buffer, srcCb: *const vImage_Buffer, srcCr: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(srcYp, srcCb, srcCr, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert420Yp8_Cb8_Cr8ToARGB8888(srcYp: *const vImage_Buffer, srcCb: *const vImage_Buffer, srcCr: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(srcYp, srcCb, srcCr, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB8888 -> tri-planar 4:2:0 ('y420'/'f420').
@@ -260,8 +261,8 @@ pub fn convert420Yp8_Cb8_Cr8ToARGB8888(srcYp: *const vImage_Buffer, srcCb: *cons
 /// `destYp` is full resolution; `destCb` and `destCr` are half width and half
 /// height. Chroma is averaged over each 2x2 quad, so this is lossy; alpha is
 /// discarded.
-pub fn convertARGB8888To420Yp8_Cb8_Cr8(src: *const vImage_Buffer, destYp: *const vImage_Buffer, destCb: *const vImage_Buffer, destCr: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To420Yp8_Cb8_Cr8(src, destYp, destCb, destCr, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To420Yp8_Cb8_Cr8(src: *const vImage_Buffer, destYp: *const vImage_Buffer, destCb: *const vImage_Buffer, destCr: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To420Yp8_Cb8_Cr8(src, destYp, destCb, destCr, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// Bi-planar 4:2:0 -> ARGB8888 ('420v'/'420f', the CoreVideo camera format).
@@ -270,16 +271,16 @@ pub fn convertARGB8888To420Yp8_Cb8_Cr8(src: *const vImage_Buffer, destYp: *const
 /// with two interleaved bytes (`Cb Cr`) per element - so its `rowBytes` is
 /// `srcYp.width` bytes, the same as the luma plane, but it has half the rows.
 /// `alpha` fills the destination alpha.
-pub fn convert420Yp8_CbCr8ToARGB8888(srcYp: *const vImage_Buffer, srcCbCr: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_420Yp8_CbCr8ToARGB8888(srcYp, srcCbCr, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert420Yp8_CbCr8ToARGB8888(srcYp: *const vImage_Buffer, srcCbCr: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_420Yp8_CbCr8ToARGB8888(srcYp, srcCbCr, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB8888 -> bi-planar 4:2:0 ('420v'/'420f').
 ///
 /// `destYp` is full resolution; `destCbCr` is half width, half height, two
 /// bytes per element. Lossy in chroma; alpha is discarded.
-pub fn convertARGB8888To420Yp8_CbCr8(src: *const vImage_Buffer, destYp: *const vImage_Buffer, destCbCr: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To420Yp8_CbCr8(src, destYp, destCbCr, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To420Yp8_CbCr8(src: *const vImage_Buffer, destYp: *const vImage_Buffer, destCbCr: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To420Yp8_CbCr8(src, destYp, destCbCr, cToYUV(info), permuteMap, flags.bits()));
 }
 
 // ============================================================================
@@ -290,39 +291,39 @@ pub fn convertARGB8888To420Yp8_CbCr8(src: *const vImage_Buffer, destYp: *const v
 ///
 /// 4 bytes per pixel, no subsampling. The format carries its own alpha, which
 /// is copied straight through (hence no `alpha` argument).
-pub fn convert444AYpCbCr8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_444AYpCbCr8ToARGB8888(src, dest, cToARGB(info), permuteMap, flags));
+pub fn convert444AYpCbCr8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_444AYpCbCr8ToARGB8888(src, dest, cToARGB(info), permuteMap, flags.bits()));
 }
 
 /// ARGB8888 -> `A0 Yp0 Cb0 Cr0` ('y408'/'r408'). Alpha is preserved; only the
 /// colour conversion and range compression are lossy.
-pub fn convertARGB8888To444AYpCbCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To444AYpCbCr8(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To444AYpCbCr8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To444AYpCbCr8(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `Cb0 Yp0 Cr0 A0` -> ARGB8888 ('v408'). 4 bytes per pixel, alpha last,
 /// copied through unchanged.
-pub fn convert444CbYpCrA8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_444CbYpCrA8ToARGB8888(src, dest, cToARGB(info), permuteMap, flags));
+pub fn convert444CbYpCrA8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_444CbYpCrA8ToARGB8888(src, dest, cToARGB(info), permuteMap, flags.bits()));
 }
 
 /// ARGB8888 -> `Cb0 Yp0 Cr0 A0` ('v408'). Alpha is preserved.
-pub fn convertARGB8888To444CbYpCrA8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To444CbYpCrA8(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To444CbYpCrA8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To444CbYpCrA8(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `Cr0 Yp0 Cb0` -> ARGB8888 ('v308').
 ///
 /// **Three** bytes per pixel, not four, so `rowBytes` is `3 * width` at
 /// minimum. The format has no alpha channel; `alpha` supplies a constant one.
-pub fn convert444CrYpCb8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_444CrYpCb8ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert444CrYpCb8ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_444CrYpCb8ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB8888 -> `Cr0 Yp0 Cb0` ('v308'). Three bytes per destination pixel;
 /// source alpha is discarded.
-pub fn convertARGB8888To444CrYpCb8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To444CrYpCb8(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To444CrYpCb8(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To444CrYpCb8(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 // ============================================================================
@@ -334,26 +335,26 @@ pub fn convertARGB8888To444CrYpCb8(src: *const vImage_Buffer, dest: *const vImag
 /// 8 bytes per source pixel, 4 per destination pixel; the 16-bit alpha is
 /// narrowed to 8 bits. Build `info` with a 16-bit `YpCbCrPixelRange`
 /// (video range is {4096, 32768, 60160, 61440, ...}).
-pub fn convert444AYpCbCr16ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_444AYpCbCr16ToARGB8888(src, dest, cToARGB(info), permuteMap, flags));
+pub fn convert444AYpCbCr16ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_444AYpCbCr16ToARGB8888(src, dest, cToARGB(info), permuteMap, flags.bits()));
 }
 
 /// ARGB8888 -> `A0 Yp0 Cb0 Cr0` as four LE `uint16_t` ('y416').
 /// 8 bytes per destination pixel; the 8-bit alpha is widened to 16 bits.
-pub fn convertARGB8888To444AYpCbCr16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To444AYpCbCr16(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To444AYpCbCr16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To444AYpCbCr16(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `A0 Yp0 Cb0 Cr0` as four LE `uint16_t` -> ARGB16U ('y416').
 /// 8 bytes per pixel on both sides; results are clamped to [0, 65535].
-pub fn convert444AYpCbCr16ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_444AYpCbCr16ToARGB16U(src, dest, cToARGB(info), permuteMap, flags));
+pub fn convert444AYpCbCr16ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_444AYpCbCr16ToARGB16U(src, dest, cToARGB(info), permuteMap, flags.bits()));
 }
 
 /// ARGB16U -> `A0 Yp0 Cb0 Cr0` as four LE `uint16_t` ('y416').
 /// 8 bytes per pixel on both sides; alpha is preserved at full precision.
-pub fn convertARGB16UTo444AYpCbCr16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB16UTo444AYpCbCr16(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB16UTo444AYpCbCr16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB16UTo444AYpCbCr16(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 // ============================================================================
@@ -366,13 +367,13 @@ pub fn convertARGB16UTo444AYpCbCr16(src: *const vImage_Buffer, dest: *const vIma
 /// two bits are unused. Build `info` with a 10-bit `YpCbCrPixelRange`
 /// (video range is {64, 512, 940, 960, ...}). `alpha` supplies the missing
 /// alpha channel.
-pub fn convert444CrYpCb10ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_444CrYpCb10ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert444CrYpCb10ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_444CrYpCb10ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB8888 -> `v410`. 4 bytes per destination pixel; alpha is discarded.
-pub fn convertARGB8888To444CrYpCb10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To444CrYpCb10(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To444CrYpCb10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To444CrYpCb10(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `v410` -> ARGB16Q12.
@@ -380,14 +381,14 @@ pub fn convertARGB8888To444CrYpCb10(src: *const vImage_Buffer, dest: *const vIma
 /// The destination is signed 16.12 fixed point, so 1.0 is 4096 and values
 /// outside [0,1] survive. `alpha` is likewise a 16Q12 value - pass 4096 for
 /// fully opaque, not 255.
-pub fn convert444CrYpCb10ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16Q12, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_444CrYpCb10ToARGB16Q12(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert444CrYpCb10ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16Q12, flags: Options) Error!usize {
+    return check(c.vImageConvert_444CrYpCb10ToARGB16Q12(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB16Q12 -> `v410`. Source is signed 16.12 fixed point (1.0 == 4096);
 /// alpha is discarded.
-pub fn convertARGB16Q12To444CrYpCb10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB16Q12To444CrYpCb10(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB16Q12To444CrYpCb10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB16Q12To444CrYpCb10(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 // ============================================================================
@@ -402,25 +403,25 @@ pub fn convertARGB16Q12To444CrYpCb10(src: *const vImage_Buffer, dest: *const vIm
 /// `Cr1 | Y3 | Cb2`, word 3 `Y4 | Cr2 | Y5`, each component in its own 10 bits
 /// starting at bit 0 with the top 2 bits of each word unused. `alpha` supplies
 /// the missing alpha channel.
-pub fn convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB8888 -> `v210`. Width must be a multiple of 6; chroma is horizontally
 /// averaged and alpha is discarded.
-pub fn convertARGB8888To422CrYpCbYpCbYpCbYpCrYpCrYp10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To422CrYpCbYpCbYpCbYpCrYpCrYp10(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To422CrYpCbYpCbYpCbYpCrYpCrYp10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To422CrYpCbYpCbYpCbYpCrYpCrYp10(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `v210` -> ARGB16Q12. Same 6-pixel-per-16-byte packing as the ARGB8888 form;
 /// `alpha` is a 16Q12 value (4096 == 1.0).
-pub fn convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16Q12, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB16Q12(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16Q12, flags: Options) Error!usize {
+    return check(c.vImageConvert_422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB16Q12(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB16Q12 -> `v210`. Width must be a multiple of 6; alpha is discarded.
-pub fn convertARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 // ============================================================================
@@ -432,26 +433,26 @@ pub fn convertARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(src: *const vImage_Buffer
 /// Four LE `uint16_t` - `Cb Y0 Cr Y1` - cover two pixels, so 4 bytes per pixel
 /// and `width` must be even. Components are left-justified 16-bit, so use a
 /// 16-bit `YpCbCrPixelRange`. `alpha` supplies the missing alpha channel.
-pub fn convert422CbYpCrYp16ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_422CbYpCrYp16ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert422CbYpCrYp16ToARGB8888(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_8, flags: Options) Error!usize {
+    return check(c.vImageConvert_422CbYpCrYp16ToARGB8888(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB8888 -> `v216`. 4 bytes per destination pixel, width even; chroma is
 /// horizontally averaged and alpha is discarded.
-pub fn convertARGB8888To422CbYpCrYp16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888To422CbYpCrYp16(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB8888To422CbYpCrYp16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB8888To422CbYpCrYp16(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 /// `v216` -> ARGB16U. Same packing as the ARGB8888 form; `alpha` is a 16-bit
 /// constant (65535 for opaque).
-pub fn convert422CbYpCrYp16ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16U, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_422CbYpCrYp16ToARGB16U(src, dest, cToARGB(info), permuteMap, alpha, flags));
+pub fn convert422CbYpCrYp16ToARGB16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const YpCbCrToARGB, permuteMap: *const [4]u8, alpha: Pixel_16U, flags: Options) Error!usize {
+    return check(c.vImageConvert_422CbYpCrYp16ToARGB16U(src, dest, cToARGB(info), permuteMap, alpha, flags.bits()));
 }
 
 /// ARGB16U -> `v216`. 8 bytes per source pixel, 4 per destination pixel;
 /// width must be even and alpha is discarded.
-pub fn convertARGB16UTo422CbYpCrYp16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB16UTo422CbYpCrYp16(src, dest, cToYUV(info), permuteMap, flags));
+pub fn convertARGB16UTo422CbYpCrYp16(src: *const vImage_Buffer, dest: *const vImage_Buffer, info: *const ARGBToYpCbCr, permuteMap: *const [4]u8, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB16UTo422CbYpCrYp16(src, dest, cToYUV(info), permuteMap, flags.bits()));
 }
 
 // ============================================================================
@@ -581,8 +582,8 @@ fn makeInfos(
     to_argb: *YpCbCrToARGB,
     to_yuv: *ARGBToYpCbCr,
 ) !void {
-    try std.testing.expectEqual(@as(usize, 0), try ypCbCrToARGBGenerateConversion(ypCbCrToARGBMatrix601(), range, to_argb, yuv_type, argb_type, Flags.kvImageNoFlags));
-    try std.testing.expectEqual(@as(usize, 0), try argbToYpCbCrGenerateConversion(argbToYpCbCrMatrix601(), range, to_yuv, argb_type, yuv_type, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try ypCbCrToARGBGenerateConversion(ypCbCrToARGBMatrix601(), range, to_argb, yuv_type, argb_type, .{}));
+    try std.testing.expectEqual(@as(usize, 0), try argbToYpCbCrGenerateConversion(argbToYpCbCrMatrix601(), range, to_yuv, argb_type, yuv_type, .{}));
 }
 
 test "GenerateConversion: ITU-R 601-4 matrices are the documented BT.601 coefficients and the generated info is non-empty" {
@@ -613,8 +614,8 @@ test "GenerateConversion: ITU-R 601-4 matrices are the documented BT.601 coeffic
 test "GenerateConversion: 8-bit Y'CbCr has no ARGB16U form, so the unsupported pair is rejected" {
     // Conversion.h's availability table: YUV8 -> RGB8 only.
     var to_argb: YpCbCrToARGB = .{};
-    const result = ypCbCrToARGBGenerateConversion(ypCbCrToARGBMatrix601(), &range8, &to_argb, .kvImage422CbYpCrYp8, .kvImageARGB16U, Flags.kvImageNoFlags);
-    try std.testing.expectError(VImageError.UnsupportedConversion, result);
+    const result = ypCbCrToARGBGenerateConversion(ypCbCrToARGBMatrix601(), &range8, &to_argb, .kvImage422CbYpCrYp8, .kvImageARGB16U, .{});
+    try std.testing.expectError(Error.UnsupportedConversion, result);
 }
 
 test "422CbYpCrYp8 ('2vuy'): grey 85 encodes to Cb=128 Yp=89 Cr=128 Yp=89 and round trips within 1" {
@@ -629,13 +630,13 @@ test "422CbYpCrYp8 ('2vuy'): grey 85 encodes to Cb=128 Yp=89 Cr=128 Yp=89 and ro
     const yuv = try Owned.init(allocator, 4, 2, 4 * 2);
     defer yuv.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 89, 128, 89, 128, 89, 128, 89 }, yuv.row(0));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 89, 128, 89, 128, 89, 128, 89 }, yuv.row(1));
 
     const back = try makeARGB8888(allocator, 4, 2, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 200, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 200, .{}));
     // alpha comes from the constant, not from the source image
     try expectARGB8888Near(back, 0, 0, .{ 200, 85, 85, 85 }, 1);
     try expectARGB8888Near(back, 3, 1, .{ 200, 85, 85, 85 }, 1);
@@ -652,13 +653,13 @@ test "422YpCbYpCr8 ('yuvs'): luma-first byte order distinguishes it from '2vuy'"
     const yuv = try Owned.init(allocator, 2, 1, 4);
     defer yuv.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422YpCbYpCr8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422YpCbYpCr8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     // Yp0 Cb0 Yp1 Cr0 - the mirror of '2vuy'
     try std.testing.expectEqualSlices(u8, &[_]u8{ 89, 128, 89, 128 }, yuv.row(0));
 
     const back = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert422YpCbYpCr8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 255, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert422YpCbYpCr8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 255, .{}));
     try expectARGB8888Near(back, 0, 0, .{ 255, 85, 85, 85 }, 1);
     try expectARGB8888Near(back, 1, 0, .{ 255, 85, 85, 85 }, 1);
 }
@@ -674,14 +675,14 @@ test "422CbYpCrYp8 permuteMap {3,2,1,0} produces BGRA, proving the map reorders 
     defer src.deinit(allocator);
     const yuv = try Owned.init(allocator, 2, 1, 4);
     defer yuv.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
 
     const argb = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
     defer argb.deinit(allocator);
     const bgra = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
     defer bgra.deinit(allocator);
-    _ = try convert422CbYpCrYp8ToARGB8888(&yuv.buf, &argb.buf, &to_argb, &identity_permute, 17, Flags.kvImageNoFlags);
-    _ = try convert422CbYpCrYp8ToARGB8888(&yuv.buf, &bgra.buf, &to_argb, &[4]u8{ 3, 2, 1, 0 }, 17, Flags.kvImageNoFlags);
+    _ = try convert422CbYpCrYp8ToARGB8888(&yuv.buf, &argb.buf, &to_argb, &identity_permute, 17, .{});
+    _ = try convert422CbYpCrYp8ToARGB8888(&yuv.buf, &bgra.buf, &to_argb, &[4]u8{ 3, 2, 1, 0 }, 17, .{});
 
     const a = argb.row(0)[0..4];
     const b = bgra.row(0)[0..4];
@@ -704,14 +705,14 @@ test "422CbYpCrYp8_AA8 ('a2vy'): the alpha plane is full resolution and passes t
     const alpha = try Owned.init(allocator, 4, 2, 4);
     defer alpha.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp8_AA8(&src.buf, &yuv.buf, &alpha.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp8_AA8(&src.buf, &yuv.buf, &alpha.buf, &to_yuv, &identity_permute, .{}));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 89, 128, 89, 128, 89, 128, 89 }, yuv.row(0));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 73, 73, 73, 73 }, alpha.row(0));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 73, 73, 73, 73 }, alpha.row(1));
 
     const back = try makeARGB8888(allocator, 4, 2, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp8_AA8ToARGB8888(&yuv.buf, &alpha.buf, &back.buf, &to_argb, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp8_AA8ToARGB8888(&yuv.buf, &alpha.buf, &back.buf, &to_argb, &identity_permute, .{}));
     try expectARGB8888Near(back, 2, 1, .{ 73, 85, 85, 85 }, 1);
 }
 
@@ -730,7 +731,7 @@ test "420Yp8_Cb8_Cr8 ('y420'): chroma planes are half width AND half height, and
     const cr = try Owned.init(allocator, 2, 2, 2);
     defer cr.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To420Yp8_Cb8_Cr8(&src.buf, &yp.buf, &cb.buf, &cr.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To420Yp8_Cb8_Cr8(&src.buf, &yp.buf, &cb.buf, &cr.buf, &to_yuv, &identity_permute, .{}));
     var y: usize = 0;
     while (y < 4) : (y += 1) try std.testing.expectEqualSlices(u8, &[_]u8{ 89, 89, 89, 89 }, yp.row(y));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 128 }, cb.row(0));
@@ -739,7 +740,7 @@ test "420Yp8_Cb8_Cr8 ('y420'): chroma planes are half width AND half height, and
 
     const back = try makeARGB8888(allocator, 4, 4, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert420Yp8_Cb8_Cr8ToARGB8888(&yp.buf, &cb.buf, &cr.buf, &back.buf, &to_argb, &identity_permute, 255, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert420Yp8_Cb8_Cr8ToARGB8888(&yp.buf, &cb.buf, &cr.buf, &back.buf, &to_argb, &identity_permute, 255, .{}));
     try expectARGB8888Near(back, 0, 0, .{ 255, 85, 85, 85 }, 1);
     try expectARGB8888Near(back, 3, 3, .{ 255, 85, 85, 85 }, 1);
 }
@@ -758,14 +759,14 @@ test "420Yp8_CbCr8 ('420v'): the CbCr plane is half width, half height and 2 int
     const cbcr = try Owned.init(allocator, 2, 2, 4);
     defer cbcr.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To420Yp8_CbCr8(&src.buf, &yp.buf, &cbcr.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To420Yp8_CbCr8(&src.buf, &yp.buf, &cbcr.buf, &to_yuv, &identity_permute, .{}));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 89, 89, 89, 89 }, yp.row(2));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 128, 128, 128 }, cbcr.row(0));
     try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 128, 128, 128 }, cbcr.row(1));
 
     const back = try makeARGB8888(allocator, 4, 4, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert420Yp8_CbCr8ToARGB8888(&yp.buf, &cbcr.buf, &back.buf, &to_argb, &identity_permute, 255, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert420Yp8_CbCr8ToARGB8888(&yp.buf, &cbcr.buf, &back.buf, &to_argb, &identity_permute, 255, .{}));
     try expectARGB8888Near(back, 1, 2, .{ 255, 85, 85, 85 }, 1);
 }
 
@@ -780,13 +781,13 @@ test "444 8-bit: AYpCbCr8, CbYpCrA8 and CrYpCb8 differ only in component order (
         try makeInfos(.kvImage444AYpCbCr8, .kvImageARGB8888, &range8, &to_argb, &to_yuv);
         const yuv = try Owned.init(allocator, 2, 1, 2 * 4);
         defer yuv.deinit(allocator);
-        try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444AYpCbCr8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444AYpCbCr8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
         // A Yp Cb Cr, alpha carried by the format itself
         try std.testing.expectEqualSlices(u8, &[_]u8{ 60, 89, 128, 128, 60, 89, 128, 128 }, yuv.row(0));
 
         const back = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
         defer back.deinit(allocator);
-        try std.testing.expectEqual(@as(usize, 0), try convert444AYpCbCr8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(usize, 0), try convert444AYpCbCr8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, .{}));
         try expectARGB8888Near(back, 1, 0, .{ 60, 85, 85, 85 }, 1);
     }
     {
@@ -795,13 +796,13 @@ test "444 8-bit: AYpCbCr8, CbYpCrA8 and CrYpCb8 differ only in component order (
         try makeInfos(.kvImage444CbYpCrA8, .kvImageARGB8888, &range8, &to_argb, &to_yuv);
         const yuv = try Owned.init(allocator, 2, 1, 2 * 4);
         defer yuv.deinit(allocator);
-        try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444CbYpCrA8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444CbYpCrA8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
         // Cb Yp Cr A
         try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 89, 128, 60, 128, 89, 128, 60 }, yuv.row(0));
 
         const back = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
         defer back.deinit(allocator);
-        try std.testing.expectEqual(@as(usize, 0), try convert444CbYpCrA8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(usize, 0), try convert444CbYpCrA8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, .{}));
         try expectARGB8888Near(back, 0, 0, .{ 60, 85, 85, 85 }, 1);
     }
     {
@@ -811,13 +812,13 @@ test "444 8-bit: AYpCbCr8, CbYpCrA8 and CrYpCb8 differ only in component order (
         // 'v308' is THREE bytes per pixel
         const yuv = try Owned.init(allocator, 2, 1, 2 * 3);
         defer yuv.deinit(allocator);
-        try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444CrYpCb8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444CrYpCb8(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
         // Cr Yp Cb, no alpha at all
         try std.testing.expectEqualSlices(u8, &[_]u8{ 128, 89, 128, 128, 89, 128 }, yuv.row(0));
 
         const back = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
         defer back.deinit(allocator);
-        try std.testing.expectEqual(@as(usize, 0), try convert444CrYpCb8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 210, Flags.kvImageNoFlags));
+        try std.testing.expectEqual(@as(usize, 0), try convert444CrYpCb8ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 210, .{}));
         try expectARGB8888Near(back, 1, 0, .{ 210, 85, 85, 85 }, 1);
     }
 }
@@ -833,7 +834,7 @@ test "444AYpCbCr16 ('y416'): 16-bit components use the left-justified video rang
     const yuv = try Owned.init(allocator, 2, 1, 2 * 8);
     defer yuv.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444AYpCbCr16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444AYpCbCr16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     try std.testing.expectEqual(@as(u16, 65535), yuv.u16At(0, 0)); // A, widened 8 -> 16
     try std.testing.expectApproxEqAbs(@as(f64, 22784), @as(f64, @floatFromInt(yuv.u16At(0, 1))), 8); // Yp
     try std.testing.expectApproxEqAbs(@as(f64, 32768), @as(f64, @floatFromInt(yuv.u16At(0, 2))), 8); // Cb
@@ -841,7 +842,7 @@ test "444AYpCbCr16 ('y416'): 16-bit components use the left-justified video rang
 
     const back = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert444AYpCbCr16ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert444AYpCbCr16ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, .{}));
     try expectARGB8888Near(back, 0, 0, .{ 255, 85, 85, 85 }, 1);
 }
 
@@ -862,13 +863,13 @@ test "444AYpCbCr16 <-> ARGB16U: full 16-bit round trip of grey 21845 stays withi
     }
     const yuv = try Owned.init(allocator, 2, 1, 2 * 8);
     defer yuv.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB16UTo444AYpCbCr16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB16UTo444AYpCbCr16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     try std.testing.expectEqual(@as(u16, 65535), yuv.u16At(0, 0));
     try std.testing.expectApproxEqAbs(@as(f64, 32768), @as(f64, @floatFromInt(yuv.u16At(0, 2))), 8);
 
     const back = try Owned.init(allocator, 2, 1, 2 * 8);
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert444AYpCbCr16ToARGB16U(&yuv.buf, &back.buf, &to_argb, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert444AYpCbCr16ToARGB16U(&yuv.buf, &back.buf, &to_argb, &identity_permute, .{}));
     try std.testing.expectEqual(@as(u16, 65535), back.u16At(0, 0));
     for (1..4) |ch| {
         try std.testing.expectApproxEqAbs(@as(f64, 21845), @as(f64, @floatFromInt(back.u16At(0, ch))), 64);
@@ -897,7 +898,7 @@ test "444CrYpCb10 ('v410'): components sit at Cr<<22 | Yp<<12 | Cb<<2, grey 85 -
     const yuv = try Owned.init(allocator, 2, 1, 2 * 4);
     defer yuv.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444CrYpCb10(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To444CrYpCb10(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     const word = yuv.u32At(0, 0);
     try std.testing.expectEqual(@as(u16, 356), v410Yp(word));
     try std.testing.expectEqual(@as(u16, 512), v410Cb(word));
@@ -913,7 +914,7 @@ test "444CrYpCb10 ('v410'): components sit at Cr<<22 | Yp<<12 | Cb<<2, grey 85 -
 
     const back = try makeARGB8888(allocator, 2, 1, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert444CrYpCb10ToARGB8888(&built.buf, &back.buf, &to_argb, &identity_permute, 99, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert444CrYpCb10ToARGB8888(&built.buf, &back.buf, &to_argb, &identity_permute, 99, .{}));
     try expectARGB8888Near(back, 0, 0, .{ 99, 85, 85, 85 }, 1);
     try expectARGB8888Near(back, 1, 0, .{ 99, 85, 85, 85 }, 1);
 }
@@ -932,7 +933,7 @@ test "444CrYpCb10 <-> ARGB16Q12: 1.0 is 4096, so grey 1/3 lands near 1365 and ro
 
     const argb = try Owned.init(allocator, 2, 1, 2 * 8);
     defer argb.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert444CrYpCb10ToARGB16Q12(&yuv.buf, &argb.buf, &to_argb, &identity_permute, 4096, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert444CrYpCb10ToARGB16Q12(&yuv.buf, &argb.buf, &to_argb, &identity_permute, 4096, .{}));
     try std.testing.expectEqual(@as(i16, 4096), argb.i16At(0, 0)); // alpha, 1.0 in 16Q12
     for (1..4) |ch| {
         try std.testing.expectApproxEqAbs(@as(f64, 1365), @as(f64, @floatFromInt(argb.i16At(0, ch))), 16);
@@ -940,7 +941,7 @@ test "444CrYpCb10 <-> ARGB16Q12: 1.0 is 4096, so grey 1/3 lands near 1365 and ro
 
     const back = try Owned.init(allocator, 2, 1, 2 * 4);
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB16Q12To444CrYpCb10(&argb.buf, &back.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB16Q12To444CrYpCb10(&argb.buf, &back.buf, &to_yuv, &identity_permute, .{}));
     const w = back.u32At(0, 1);
     try std.testing.expectApproxEqAbs(@as(f64, 356), @as(f64, @floatFromInt(v410Yp(w))), 2);
     try std.testing.expectApproxEqAbs(@as(f64, 512), @as(f64, @floatFromInt(v410Cb(w))), 2);
@@ -959,7 +960,7 @@ test "422CrYpCbYpCbYpCbYpCrYpCrYp10 ('v210'): six pixels per 16 bytes, all twelv
     const yuv = try Owned.init(allocator, 12, 2, 16 * (12 / 6));
     defer yuv.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CrYpCbYpCbYpCbYpCrYpCrYp10(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CrYpCbYpCbYpCbYpCrYpCrYp10(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     // Word layout, low 10 bits first: w0 = Cb0|Y0|Cr0, w1 = Y1|Cb1|Y2,
     // w2 = Cr1|Y3|Cb2, w3 = Y4|Cr2|Y5. For a grey image every luma slot is 356
     // and every chroma slot is 512, so a mis-decode of the packing shows up as
@@ -982,7 +983,7 @@ test "422CrYpCbYpCbYpCbYpCrYpCrYp10 ('v210'): six pixels per 16 bytes, all twelv
 
     const back = try makeARGB8888(allocator, 12, 2, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 255, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 255, .{}));
     try expectARGB8888Near(back, 0, 0, .{ 255, 85, 85, 85 }, 1);
     try expectARGB8888Near(back, 11, 1, .{ 255, 85, 85, 85 }, 1);
 }
@@ -1001,7 +1002,7 @@ test "422CrYpCbYpCbYpCbYpCrYpCrYp10 <-> ARGB16Q12: grey survives the 10-bit 4:2:
     }
     const yuv = try Owned.init(allocator, 6, 1, 16);
     defer yuv.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB16Q12To422CrYpCbYpCbYpCbYpCrYpCrYp10(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     // word0 = Cb0 | Y0 | Cr0, low 10 bits first
     const w0 = yuv.u32At(0, 0);
     try std.testing.expectApproxEqAbs(@as(f64, 512), @as(f64, @floatFromInt(w0 & 0x3ff)), 2);
@@ -1009,7 +1010,7 @@ test "422CrYpCbYpCbYpCbYpCrYpCrYp10 <-> ARGB16Q12: grey survives the 10-bit 4:2:
 
     const back = try Owned.init(allocator, 6, 1, 6 * 8);
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB16Q12(&yuv.buf, &back.buf, &to_argb, &identity_permute, 4096, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert422CrYpCbYpCbYpCbYpCrYpCrYp10ToARGB16Q12(&yuv.buf, &back.buf, &to_argb, &identity_permute, 4096, .{}));
     try std.testing.expectEqual(@as(i16, 4096), back.i16At(0, 0));
     for (1..4) |ch| {
         try std.testing.expectApproxEqAbs(@as(f64, 1365), @as(f64, @floatFromInt(back.i16At(0, ch))), 16);
@@ -1028,7 +1029,7 @@ test "422CbYpCrYp16 ('v216'): Cb Y0 Cr Y1 as four LE uint16 covering two pixels,
     const yuv = try Owned.init(allocator, 4, 2, 4 * 4);
     defer yuv.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB8888To422CbYpCrYp16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     try std.testing.expectApproxEqAbs(@as(f64, 32768), @as(f64, @floatFromInt(yuv.u16At(0, 0))), 8); // Cb
     try std.testing.expectApproxEqAbs(@as(f64, 22784), @as(f64, @floatFromInt(yuv.u16At(0, 1))), 8); // Y0
     try std.testing.expectApproxEqAbs(@as(f64, 32768), @as(f64, @floatFromInt(yuv.u16At(0, 2))), 8); // Cr
@@ -1036,7 +1037,7 @@ test "422CbYpCrYp16 ('v216'): Cb Y0 Cr Y1 as four LE uint16 covering two pixels,
 
     const back = try makeARGB8888(allocator, 4, 2, .{ 0, 0, 0, 0 });
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp16ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 128, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp16ToARGB8888(&yuv.buf, &back.buf, &to_argb, &identity_permute, 128, .{}));
     try expectARGB8888Near(back, 3, 1, .{ 128, 85, 85, 85 }, 1);
 }
 
@@ -1054,13 +1055,13 @@ test "422CbYpCrYp16 <-> ARGB16U: 16-bit grey 21845 round trips within 64 codes" 
     }
     const yuv = try Owned.init(allocator, 4, 1, 4 * 4);
     defer yuv.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convertARGB16UTo422CbYpCrYp16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertARGB16UTo422CbYpCrYp16(&src.buf, &yuv.buf, &to_yuv, &identity_permute, .{}));
     try std.testing.expectApproxEqAbs(@as(f64, 32768), @as(f64, @floatFromInt(yuv.u16At(0, 0))), 8);
     try std.testing.expectApproxEqAbs(@as(f64, 22784), @as(f64, @floatFromInt(yuv.u16At(0, 1))), 8);
 
     const back = try Owned.init(allocator, 4, 1, 4 * 8);
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp16ToARGB16U(&yuv.buf, &back.buf, &to_argb, &identity_permute, 65535, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert422CbYpCrYp16ToARGB16U(&yuv.buf, &back.buf, &to_argb, &identity_permute, 65535, .{}));
     try std.testing.expectEqual(@as(u16, 65535), back.u16At(0, 0));
     for (1..4) |ch| {
         try std.testing.expectApproxEqAbs(@as(f64, 21845), @as(f64, @floatFromInt(back.u16At(0, ch))), 64);

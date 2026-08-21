@@ -370,7 +370,7 @@ pub const Status = struct {
 /// This binding validates arguments in Zig before the call, and installs a
 /// `reportError` callback so anything Sparse rejects internally surfaces as
 /// `error.ParameterError` instead of a trap. See `takeReportedError`.
-pub const SparseError = error{
+pub const Error = error{
     /// The factorization could not be completed. For `.cholesky` this most
     /// often means the matrix was not positive-definite.
     FactorizationFailed,
@@ -386,16 +386,16 @@ pub const SparseError = error{
     Unknown,
 };
 
-/// Maps a raw `SparseStatus_t` onto `SparseError`.
-pub fn check(status: i32) SparseError!void {
+/// Maps a raw `SparseStatus_t` onto `Error`.
+pub fn check(status: i32) Error!void {
     return switch (status) {
         Status.ok => {},
-        Status.factorization_failed => SparseError.FactorizationFailed,
-        Status.matrix_is_singular => SparseError.MatrixIsSingular,
-        Status.internal_error => SparseError.InternalError,
-        Status.parameter_error => SparseError.ParameterError,
-        Status.released => SparseError.Released,
-        else => SparseError.Unknown,
+        Status.factorization_failed => Error.FactorizationFailed,
+        Status.matrix_is_singular => Error.MatrixIsSingular,
+        Status.internal_error => Error.InternalError,
+        Status.parameter_error => Error.ParameterError,
+        Status.released => Error.Released,
+        else => Error.Unknown,
     };
 }
 
@@ -443,8 +443,8 @@ pub fn clearReportedError() void {
 /// Returns `error.ParameterError` if Sparse reported a problem since the last
 /// `clearReportedError`, leaving the message retrievable via
 /// `lastErrorMessage()`.
-pub fn takeReportedError() SparseError!void {
-    if (reported_len != 0) return SparseError.ParameterError;
+pub fn takeReportedError() Error!void {
+    if (reported_len != 0) return Error.ParameterError;
 }
 
 // ============================================================================
@@ -592,12 +592,12 @@ test "Subfactor.isValidFor mirrors SparseCreateSubfactor's switch" {
 
 test "check maps every documented status" {
     try check(Status.ok);
-    try std.testing.expectError(SparseError.FactorizationFailed, check(Status.factorization_failed));
-    try std.testing.expectError(SparseError.MatrixIsSingular, check(Status.matrix_is_singular));
-    try std.testing.expectError(SparseError.InternalError, check(Status.internal_error));
-    try std.testing.expectError(SparseError.ParameterError, check(Status.parameter_error));
-    try std.testing.expectError(SparseError.Released, check(Status.released));
-    try std.testing.expectError(SparseError.Unknown, check(-12345));
+    try std.testing.expectError(Error.FactorizationFailed, check(Status.factorization_failed));
+    try std.testing.expectError(Error.MatrixIsSingular, check(Status.matrix_is_singular));
+    try std.testing.expectError(Error.InternalError, check(Status.internal_error));
+    try std.testing.expectError(Error.ParameterError, check(Status.parameter_error));
+    try std.testing.expectError(Error.Released, check(Status.released));
+    try std.testing.expectError(Error.Unknown, check(-12345));
 }
 
 test "reportError plumbing round-trips a message" {
@@ -606,7 +606,7 @@ test "reportError plumbing round-trips a message" {
     try takeReportedError();
 
     report_error_callback("rowCount must be > 0.\n");
-    try std.testing.expectError(SparseError.ParameterError, takeReportedError());
+    try std.testing.expectError(Error.ParameterError, takeReportedError());
     try std.testing.expectEqualStrings("rowCount must be > 0.\n", lastErrorMessage().?);
 
     clearReportedError();

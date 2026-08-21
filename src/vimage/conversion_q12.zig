@@ -52,7 +52,7 @@ const c = @import("c.zig");
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
 const vImage_Flags = types.vImage_Flags;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const Flags = types.Flags;
 const Pixel_8 = types.Pixel_8;
@@ -60,6 +60,7 @@ const Pixel_F = types.Pixel_F;
 const Pixel_16U = types.Pixel_16U;
 const Pixel_16F = types.Pixel_16F;
 const Pixel_16Q12 = types.Pixel_16Q12;
+const Options = types.Options;
 
 // ============================================================================
 // Scalar format conversions
@@ -78,8 +79,8 @@ const Pixel_16Q12 = types.Pixel_16Q12;
 /// produced, which leaves the whole [4096, 32767] range as headroom for
 /// subsequent filtering. Does not operate in place (the destination samples
 /// are twice as wide as the source's).
-pub fn convert8To16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_8to16Q12(src, dest, flags));
+pub fn convert8To16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_8to16Q12(src, dest, flags.bits()));
 }
 
 /// Convert 16Q12 to Planar8.
@@ -88,8 +89,8 @@ pub fn convert8To16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 ///
 /// Negative samples clamp to 0 and anything at or above 4088 saturates to
 /// 255, so the headroom above 1.0 is discarded. Does not operate in place.
-pub fn convert16Q12To8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Q12to8(src, dest, flags));
+pub fn convert16Q12To8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Q12to8(src, dest, flags.bits()));
 }
 
 /// Convert 16Q12 to half-precision float (Planar16F).
@@ -101,8 +102,8 @@ pub fn convert16Q12To8(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 /// above 2048/4096 lose the bottom fractional bit or two; below 1.0 the
 /// conversion is exact. Operates in place provided `src.data == dest.data`
 /// and `src.rowBytes == dest.rowBytes` (both formats are 2 bytes per sample).
-pub fn convert16Q12To16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Q12to16F(src, dest, flags));
+pub fn convert16Q12To16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Q12to16F(src, dest, flags.bits()));
 }
 
 /// Convert half-precision float (Planar16F) to 16Q12.
@@ -110,8 +111,8 @@ pub fn convert16Q12To16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, 
 /// 1.0 becomes exactly 4096. Values outside [-8, 8) cannot be represented and
 /// saturate at the i16 limits. Operates in place provided
 /// `src.data == dest.data` and `src.rowBytes == dest.rowBytes`.
-pub fn convert16FTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Fto16Q12(src, dest, flags));
+pub fn convert16FTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Fto16Q12(src, dest, flags.bits()));
 }
 
 /// Convert 16Q12 to single-precision float (PlanarF).
@@ -122,8 +123,8 @@ pub fn convert16FTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, 
 /// f32. 4096 becomes 1.0. Does not operate in place (4-byte destination
 /// samples), despite the header's shared "operates in place" note, which
 /// applies to the equal-width pairs.
-pub fn convert16Q12ToF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Q12toF(src, dest, flags));
+pub fn convert16Q12ToF(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Q12toF(src, dest, flags.bits()));
 }
 
 /// Convert single-precision float (PlanarF) to 16Q12.
@@ -133,8 +134,8 @@ pub fn convert16Q12ToF(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 /// 1.0 becomes exactly 4096. Rounding is `lrintf`, i.e. round-half-to-even
 /// under the default rounding mode, not round-half-away-from-zero. Anything
 /// at or beyond +8.0 saturates to 32767 rather than wrapping.
-pub fn convertFTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Fto16Q12(src, dest, flags));
+pub fn convertFTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Fto16Q12(src, dest, flags.bits()));
 }
 
 /// Convert 16Q12 to 16-bit unsigned (Planar16U).
@@ -145,8 +146,8 @@ pub fn convertFTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 /// clamp to 65535, so this discards the headroom the same way
 /// `convert16Q12To8` does. Operates in place provided `src.data == dest.data`
 /// and `src.rowBytes == dest.rowBytes`.
-pub fn convert16Q12To16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Q12to16U(src, dest, flags));
+pub fn convert16Q12To16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Q12to16U(src, dest, flags.bits()));
 }
 
 /// Convert 16-bit unsigned (Planar16U) to 16Q12.
@@ -158,8 +159,8 @@ pub fn convert16Q12To16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, 
 /// collapse onto 4097 output levels - and it is the inverse-lossy partner of
 /// `convert16Q12To16U`, which expands back. Operates in place provided
 /// `src.data == dest.data` and `src.rowBytes == dest.rowBytes`.
-pub fn convert16UTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Uto16Q12(src, dest, flags));
+pub fn convert16UTo16Q12(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Uto16Q12(src, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -183,9 +184,9 @@ pub fn rgb888ToPlanar16Q12(
     red: *const vImage_Buffer,
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB888toPlanar16Q12(src, red, green, blue, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB888toPlanar16Q12(src, red, green, blue, flags.bits()));
 }
 
 /// De-interleave ARGB8888 into four planar 16Q12 buffers, converting with the
@@ -201,9 +202,9 @@ pub fn argb8888ToPlanar16Q12(
     red: *const vImage_Buffer,
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888toPlanar16Q12(src, alpha, red, green, blue, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB8888toPlanar16Q12(src, alpha, red, green, blue, flags.bits()));
 }
 
 // ============================================================================
@@ -221,9 +222,9 @@ pub fn planar16Q12ToRGB888(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar16Q12toRGB888(red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar16Q12toRGB888(red, green, blue, dest, flags.bits()));
 }
 
 /// Interleave four planar 16Q12 buffers into ARGB8888, converting with the
@@ -238,9 +239,9 @@ pub fn planar16Q12ToARGB8888(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar16Q12toARGB8888(alpha, red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar16Q12toARGB8888(alpha, red, green, blue, dest, flags.bits()));
 }
 
 /// Interleave three planar 16Q12 buffers into RGB16F (three half floats per
@@ -254,9 +255,9 @@ pub fn planar16Q12ToRGB16F(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar16Q12toRGB16F(red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar16Q12toRGB16F(red, green, blue, dest, flags.bits()));
 }
 
 /// Interleave four planar 16Q12 buffers into ARGB16F (four half floats per
@@ -270,9 +271,9 @@ pub fn planar16Q12ToARGB16F(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar16Q12toARGB16F(alpha, red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar16Q12toARGB16F(alpha, red, green, blue, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -345,7 +346,7 @@ test "convert8To16Q12: 255 -> 4096 exactly, 128 -> 2056, per ((v<<12)+127)/255" 
     defer dest.deinit(allocator);
 
     src.fillRow0(&[_]Pixel_8{ 0, 1, 64, 128, 254, 255 });
-    try std.testing.expectEqual(@as(usize, 0), try convert8To16Q12(&src.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert8To16Q12(&src.buf, &dest.buf, .{}));
 
     // ((v << 12) + 127) / 255, computed by hand:
     //   0   -> 127/255                = 0
@@ -366,7 +367,7 @@ test "convert16Q12To8: clamps [0,4096] then rounds, per (clamp*255+2048)>>12" {
     defer dest.deinit(allocator);
 
     src.fillRow0(&[_]Pixel_16Q12{ -8192, -1, 0, 16, 2056, 4088, 32767 });
-    try std.testing.expectEqual(@as(usize, 0), try convert16Q12To8(&src.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert16Q12To8(&src.buf, &dest.buf, .{}));
 
     // Negatives clamp to 0; 4088 is already 255 (the header says "4088 or
     // greater"); the top of the 16Q12 range clamps to 4096 -> 255, so all the
@@ -386,8 +387,8 @@ test "8 -> 16Q12 -> 8 round trips losslessly for all 256 levels" {
 
     for (0..256) |v| src.set(v, 0, 0, @intCast(v));
 
-    _ = try convert8To16Q12(&src.buf, &mid.buf, Flags.kvImageNoFlags);
-    _ = try convert16Q12To8(&mid.buf, &back.buf, Flags.kvImageNoFlags);
+    _ = try convert8To16Q12(&src.buf, &mid.buf, .{});
+    _ = try convert16Q12To8(&mid.buf, &back.buf, .{});
 
     for (0..256) |v| try std.testing.expectEqual(@as(Pixel_8, @intCast(v)), back.at(v, 0, 0));
     // Sanity: the intermediate really is the fixed-point value, not a copy.
@@ -402,7 +403,7 @@ test "convert16Q12ToF: exact division by 4096, negatives and headroom preserved"
     defer dest.deinit(allocator);
 
     src.fillRow0(&[_]Pixel_16Q12{ -8192, -4096, 0, 2048, 4096, 16384 });
-    try std.testing.expectEqual(@as(usize, 0), try convert16Q12ToF(&src.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert16Q12ToF(&src.buf, &dest.buf, .{}));
 
     const want = [_]Pixel_F{ -2.0, -1.0, 0.0, 0.5, 1.0, 4.0 };
     for (want, 0..) |w, x| try std.testing.expectEqual(w, dest.at(x, 0, 0));
@@ -417,7 +418,7 @@ test "convertFTo16Q12: 1.0 -> 4096, rounds to nearest, saturates at 32767" {
 
     // 0.30000001192 * 4096 = 1228.80005 -> lrintf = 1229.
     src.fillRow0(&[_]Pixel_F{ -1.5, 0.0, 0.3, 0.5, 1.0, 8.5 });
-    try std.testing.expectEqual(@as(usize, 0), try convertFTo16Q12(&src.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convertFTo16Q12(&src.buf, &dest.buf, .{}));
 
     const want = [_]Pixel_16Q12{ -6144, 0, 1229, 2048, 4096, 32767 };
     for (want, 0..) |w, x| try std.testing.expectEqual(w, dest.at(x, 0, 0));
@@ -432,7 +433,7 @@ test "convert16Q12To16U / convert16UTo16Q12: 4096 <-> 65535 with the documented 
 
     // CLAMP(0, (src * 65535 + 2048) >> 12, 65535)
     q.fillRow0(&[_]Pixel_16Q12{ -1, 0, 1, 2048, 4096 });
-    try std.testing.expectEqual(@as(usize, 0), try convert16Q12To16U(&q.buf, &u.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert16Q12To16U(&q.buf, &u.buf, .{}));
     const want_u = [_]Pixel_16U{ 0, 0, 16, 32768, 65535 };
     for (want_u, 0..) |w, x| try std.testing.expectEqual(w, u.at(x, 0, 0));
 
@@ -440,7 +441,7 @@ test "convert16Q12To16U / convert16UTo16Q12: 4096 <-> 65535 with the documented 
     const q2 = try Img(Pixel_16Q12).init(allocator, 5, 1, 1);
     defer q2.deinit(allocator);
     u.fillRow0(&[_]Pixel_16U{ 0, 1, 32768, 65534, 65535 });
-    try std.testing.expectEqual(@as(usize, 0), try convert16UTo16Q12(&u.buf, &q2.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert16UTo16Q12(&u.buf, &q2.buf, .{}));
     // 1 -> 4127/65535 = 0 (lossy: 16 input levels share each 16Q12 level),
     // 65535 -> 268464127/65535 = 4096 exactly.
     const want_q = [_]Pixel_16Q12{ 0, 0, 2048, 4096, 4096 };
@@ -455,7 +456,7 @@ test "convert16Q12To16F / convert16FTo16Q12: 4096 <-> 1.0h, lossy above 0.5 with
     defer h.deinit(allocator);
 
     q.fillRow0(&[_]Pixel_16Q12{ -4096, 0, 1, 2048, 4096, 4097 });
-    try std.testing.expectEqual(@as(usize, 0), try convert16Q12To16F(&q.buf, &h.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert16Q12To16F(&q.buf, &h.buf, .{}));
 
     // Exact for the first five: 1/4096 is a normal binary16, and 0.5 and 1.0
     // are exact. 4097/4096 needs a 13th significand bit that binary16 lacks,
@@ -470,7 +471,7 @@ test "convert16Q12To16F / convert16FTo16Q12: 4096 <-> 1.0h, lossy above 0.5 with
     // And back: everything except the 4097 sample must round trip exactly.
     const q2 = try Img(Pixel_16Q12).init(allocator, 6, 1, 1);
     defer q2.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try convert16FTo16Q12(&h.buf, &q2.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert16FTo16Q12(&h.buf, &q2.buf, .{}));
     const want = [_]Pixel_16Q12{ -4096, 0, 1, 2048, 4096, 4096 };
     for (want, 0..) |w, x| try std.testing.expectEqual(w, q2.at(x, 0, 0));
 }
@@ -483,7 +484,7 @@ test "convert16FTo16Q12: 1.0h -> 4096 and out-of-range halves saturate" {
     defer q.deinit(allocator);
 
     h.fillRow0(&[_]Pixel_16F{ halfBits(1.0), halfBits(-0.25), halfBits(7.5), halfBits(100.0) });
-    try std.testing.expectEqual(@as(usize, 0), try convert16FTo16Q12(&h.buf, &q.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try convert16FTo16Q12(&h.buf, &q.buf, .{}));
 
     try std.testing.expectEqual(@as(Pixel_16Q12, 4096), q.at(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_16Q12, -1024), q.at(1, 0, 0));
@@ -511,7 +512,7 @@ test "rgb888ToPlanar16Q12 / planar16Q12ToRGB888: de-interleave, convert, re-inte
     const b = try Img(Pixel_16Q12).init(allocator, width, 2, 1);
     defer b.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try rgb888ToPlanar16Q12(&src.buf, &r.buf, &g.buf, &b.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try rgb888ToPlanar16Q12(&src.buf, &r.buf, &g.buf, &b.buf, .{}));
 
     // Same formula as convert8To16Q12: 255 -> 4096, 128 -> 2056, 0 -> 0.
     try std.testing.expectEqual(@as(Pixel_16Q12, 4096), r.at(0, 0, 0));
@@ -526,7 +527,7 @@ test "rgb888ToPlanar16Q12 / planar16Q12ToRGB888: de-interleave, convert, re-inte
 
     const back = try Img(Pixel_8).init(allocator, width, 2, 3);
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToRGB888(&r.buf, &g.buf, &b.buf, &back.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToRGB888(&r.buf, &g.buf, &b.buf, &back.buf, .{}));
 
     for (0..2) |y| for (0..width) |x| for (0..3) |ch| {
         try std.testing.expectEqual(rgb[y][x][ch], back.at(x, y, ch));
@@ -547,7 +548,7 @@ test "planar16Q12ToRGB888: channel order follows argument order, so (b,g,r) writ
 
     const dest = try Img(Pixel_8).init(allocator, 1, 1, 3);
     defer dest.deinit(allocator);
-    _ = try planar16Q12ToRGB888(&b.buf, &g.buf, &r.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try planar16Q12ToRGB888(&b.buf, &g.buf, &r.buf, &dest.buf, .{});
 
     try std.testing.expectEqual(@as(Pixel_8, 0), dest.at(0, 0, 0));
     try std.testing.expectEqual(@as(Pixel_8, 128), dest.at(0, 0, 1));
@@ -575,7 +576,7 @@ test "argb8888ToPlanar16Q12 / planar16Q12ToARGB8888: alpha is converted like any
     const b = try Img(Pixel_16Q12).init(allocator, width, 2, 1);
     defer b.deinit(allocator);
 
-    try std.testing.expectEqual(@as(usize, 0), try argb8888ToPlanar16Q12(&src.buf, &a.buf, &r.buf, &g.buf, &b.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try argb8888ToPlanar16Q12(&src.buf, &a.buf, &r.buf, &g.buf, &b.buf, .{}));
 
     try std.testing.expectEqual(@as(Pixel_16Q12, 4096), a.at(0, 0, 0)); // 255
     try std.testing.expectEqual(@as(Pixel_16Q12, 2056), r.at(0, 0, 0)); // 128
@@ -585,7 +586,7 @@ test "argb8888ToPlanar16Q12 / planar16Q12ToARGB8888: alpha is converted like any
 
     const back = try Img(Pixel_8).init(allocator, width, 2, 4);
     defer back.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToARGB8888(&a.buf, &r.buf, &g.buf, &b.buf, &back.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToARGB8888(&a.buf, &r.buf, &g.buf, &b.buf, &back.buf, .{}));
 
     for (0..2) |y| for (0..width) |x| for (0..4) |ch| {
         try std.testing.expectEqual(argb[y][x][ch], back.at(x, y, ch));
@@ -607,7 +608,7 @@ test "planar16Q12ToRGB16F: interleaves as src/4096 without clamping" {
 
     const dest = try Img(Pixel_16F).init(allocator, 2, 1, 3);
     defer dest.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToRGB16F(&r.buf, &g.buf, &b.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToRGB16F(&r.buf, &g.buf, &b.buf, &dest.buf, .{}));
 
     try std.testing.expectEqual(@as(f16, 1.0), half(dest.at(0, 0, 0)));
     try std.testing.expectEqual(@as(f16, 0.5), half(dest.at(0, 0, 1)));
@@ -641,7 +642,7 @@ test "planar16Q12ToARGB16F: four planes interleave in argument order" {
 
     const dest = try Img(Pixel_16F).init(allocator, 1, 2, 4);
     defer dest.deinit(allocator);
-    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToARGB16F(&a.buf, &r.buf, &g.buf, &b.buf, &dest.buf, Flags.kvImageNoFlags));
+    try std.testing.expectEqual(@as(usize, 0), try planar16Q12ToARGB16F(&a.buf, &r.buf, &g.buf, &b.buf, &dest.buf, .{}));
 
     const want = [2][4]f16{ .{ 1.0, 0.75, 0.25, -1.0 }, .{ 0.5, 0.125, 0.0, 4.0 } };
     for (0..2) |y| for (0..4) |ch| {
@@ -661,8 +662,8 @@ test "unsupported flag bits are rejected with kvImageUnknownFlagsBit" {
     src.fillRow0(&[_]Pixel_8{ 255, 255, 255, 255 });
 
     try std.testing.expectError(
-        VImageError.UnknownFlagsBit,
-        convert8To16Q12(&src.buf, &dest.buf, Flags.kvImageEdgeExtend),
+        Error.UnknownFlagsBit,
+        convert8To16Q12(&src.buf, &dest.buf, .{ .edge_extend = true }),
     );
     // No work was done.
     try std.testing.expectEqual(@as(Pixel_16Q12, 0), dest.at(0, 0, 0));
@@ -670,11 +671,11 @@ test "unsupported flag bits are rejected with kvImageUnknownFlagsBit" {
     // kvImageGetTempBufferSize reports 0: none of these need scratch space.
     try std.testing.expectEqual(
         @as(usize, 0),
-        try convert8To16Q12(&src.buf, &dest.buf, Flags.kvImageGetTempBufferSize),
+        try convert8To16Q12(&src.buf, &dest.buf, .{ .get_temp_buffer_size = true }),
     );
     try std.testing.expectEqual(@as(Pixel_16Q12, 0), dest.at(0, 0, 0));
 
     // kvImageDoNotTile is accepted and does the work.
-    _ = try convert8To16Q12(&src.buf, &dest.buf, Flags.kvImageDoNotTile);
+    _ = try convert8To16Q12(&src.buf, &dest.buf, .{ .do_not_tile = true });
     try std.testing.expectEqual(@as(Pixel_16Q12, 4096), dest.at(0, 0, 0));
 }

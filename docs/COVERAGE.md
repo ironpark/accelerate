@@ -194,6 +194,33 @@ way. The numbers in them were measured, not inferred — and a `sizeof` match
 alone is not enough, since two transposed fields of the same width give the
 right total size and the wrong data.
 
+## Verifying that bound code is actually compiled
+
+Zig only semantically analyses a declaration something references.
+`std.testing.refAllDecls` forces the declarations of one namespace, one level
+deep — so a `pub fn` on a struct *inside* a module is never analysed, and can
+sit in the tree not compiling through a completely green test run. Two
+declarations were in exactly that state when this was checked:
+`vimage.utilities.Converter.tempBufferSize` and
+`vimage.conversion_indexed.Dither.ordered_noise_shape_mask`.
+
+`src/root.zig` therefore walks recursively:
+
+```zig
+fn refAllDeclsDeep(comptime T: type, comptime depth: usize) void { ... }
+
+test {
+    @setEvalBranchQuota(200_000);
+    refAllDeclsDeep(@This(), 6);
+}
+```
+
+The same trap catches documentation. `examples/readme.zig` holds every code
+sample in `README.md` and is compiled by `zig build test` against both build
+configurations — but only because it ends in a `refAllDecls` block. Without
+that, `addTest` on a file of unreferenced `pub fn`s compiles nothing at all
+and reports success.
+
 ## Behaviour that contradicts the headers
 
 Measured on macOS 15.7.7 / arm64. Each is pinned by a test in the module that

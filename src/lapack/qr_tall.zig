@@ -96,7 +96,7 @@ pub fn Factorization(comptime T: type) type {
         t: []T,
         allocator: Allocator,
 
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             self.allocator.free(self.t);
         }
     };
@@ -847,7 +847,7 @@ test "geqr's Q applied to R reconstructs the original" {
     const m = 6;
     const n = 2;
     var a = tall;
-    const f = try geqr(f64, testing.allocator, m, n, &a, m);
+    var f = try geqr(f64, testing.allocator, m, n, &a, m);
     defer f.deinit();
 
     // Note there is nothing to assert about the lower triangle: like geqrf,
@@ -876,7 +876,7 @@ test "geqr's R matches geqrf's up to column signs" {
     const m = 6;
     const n = 2;
     var a_new = tall;
-    const f = try geqr(f64, testing.allocator, m, n, &a_new, m);
+    var f = try geqr(f64, testing.allocator, m, n, &a_new, m);
     defer f.deinit();
 
     var a_old = tall;
@@ -901,7 +901,7 @@ test "gelq and gemlq are the LQ counterparts" {
     };
     const original = a;
 
-    const f = try gelq(f64, testing.allocator, m, n, &a, m);
+    var f = try gelq(f64, testing.allocator, m, n, &a, m);
     defer f.deinit();
 
     // L is the lower triangle of the leading m x m block.
@@ -1146,7 +1146,7 @@ test "the complex tall-skinny path picks the C transpose" {
         Z.init(0, 1), Z.init(1, 1), Z.init(2, 0),  Z.init(3, 1),
     };
     const original = a;
-    const f = try geqr(Z, testing.allocator, m, n, &a, m);
+    var f = try geqr(Z, testing.allocator, m, n, &a, m);
     defer f.deinit();
 
     var q = [_]Z{Z.init(0, 0)} ** (m * m);

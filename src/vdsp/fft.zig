@@ -199,7 +199,7 @@ pub fn FFT(comptime T: type) type {
 
         /// Frees the memory allocated by init. May be called on a destroyed setup
         /// with no effect.
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             switch (T) {
                 f32 => c.vDSP_destroy_fftsetup(self.setup),
                 f64 => c.vDSP_destroy_fftsetupD(self.setup),
@@ -852,7 +852,7 @@ pub fn FFT(comptime T: type) type {
 
 test "FFT init/deinit and zip forward+inverse round-trip" {
     const log2n: Length = 2; // N = 4
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     // Impulse at n=0: forward DFT is a constant spectrum, [1,1,1,1] for
@@ -927,7 +927,7 @@ test "zipt2d matches zip2d (fft2d_zipt header param-name anomaly check)" {
     const total = n0 * n1;
     const ic0: Stride = @intCast(n1);
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     var zip_re: [total]f32 = undefined;
@@ -970,7 +970,7 @@ test "zopt2d matches zop2d" {
     const ia0: Stride = @intCast(n1);
     const ic0: Stride = @intCast(n1);
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     var in_re: [total]f32 = undefined;
@@ -1009,7 +1009,7 @@ test "zop matches zip (out-of-place forward equals in-place forward, asymmetric 
     // matches the wrapper's call positionally. Cross-check its result
     // against the already-verified zip on the same starting data.
     const log2n: Length = 3; // N = 8
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     const in_re = [_]f32{ 1.0, -2.5, 3.0, 0.5, -4.0, 2.0, -1.5, 6.0 };
@@ -1036,7 +1036,7 @@ test "zop matches zip (out-of-place forward equals in-place forward, asymmetric 
 
 test "zipt matches zip (temp-buffer in-place agrees with buffer-less in-place)" {
     const log2n: Length = 3; // N = 8
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     const in_re = [_]f32{ 2.0, -1.0, 0.5, 4.5, -3.0, 1.5, 0.0, -6.0 };
@@ -1063,7 +1063,7 @@ test "zipt matches zip (temp-buffer in-place agrees with buffer-less in-place)" 
 
 test "zopt matches zop (temp-buffer out-of-place agrees with buffer-less out-of-place)" {
     const log2n: Length = 3; // N = 8
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var a_re = [_]f32{ 1.0, -2.5, 3.0, 0.5, -4.0, 2.0, -1.5, 6.0 };
@@ -1101,7 +1101,7 @@ test "zrip forward matches vDSP.h's documented 2x-of-equivalent-complex-FFT scal
     // realp[j] = x[2j], imagp[j] = x[2j+1]; DC/Nyquist (both real, since the
     // input is real) are packed specially into realp[0]/imagp[0].
     const log2n: Length = 3; // N = 8
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     const x = [_]f32{ 1.0, 2.0, -3.0, 0.5, 4.0, -1.0, 2.0, 7.0 }; // asymmetric real signal
@@ -1140,7 +1140,7 @@ test "zrip inverse is unnormalized (not the 1/N vDSP.h documents)" {
     // predict. Divide by 2*N yourself for a true round trip.
     const log2n: Length = 3; // N = 8
     const n: f32 = 8.0;
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     const x = [_]f32{ 1.0, 2.0, -3.0, 0.5, 4.0, -1.0, 2.0, 7.0 };
@@ -1159,7 +1159,7 @@ test "zrip inverse is unnormalized (not the 1/N vDSP.h documents)" {
 
 test "zript matches zrip (temp-buffer real FFT agrees with buffer-less version)" {
     const log2n: Length = 3; // N = 8
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     const packed_re = [_]f32{ 1.0, -3.0, 4.0, 2.0 };
@@ -1186,7 +1186,7 @@ test "zript matches zrip (temp-buffer real FFT agrees with buffer-less version)"
 
 test "zrop matches zrip (out-of-place equals in-place, same input)" {
     const log2n: Length = 3; // N = 8
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     const packed_re = [_]f32{ 1.0, -3.0, 4.0, 2.0 };
@@ -1213,7 +1213,7 @@ test "zrop matches zrip (out-of-place equals in-place, same input)" {
 
 test "zropt matches zrop (temp-buffer out-of-place agrees with buffer-less)" {
     const log2n: Length = 3; // N = 8
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var a_re = [_]f32{ 1.0, -3.0, 4.0, 2.0 };
@@ -1282,11 +1282,11 @@ test "zip2d matches zip-based separable reference (argument order check)" {
     const total = n0 * n1;
     const ic0: Stride = @intCast(n1);
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
-    const fft_n0 = try FFT(f32).init(log2n0, .radix2);
+    var fft_n0 = try FFT(f32).init(log2n0, .radix2);
     defer fft_n0.deinit();
-    const fft_n1 = try FFT(f32).init(log2n1, .radix2);
+    var fft_n1 = try FFT(f32).init(log2n1, .radix2);
     defer fft_n1.deinit();
 
     var re: [total]f32 = undefined;
@@ -1319,7 +1319,7 @@ test "zop2d matches zip2d (out-of-place equals in-place)" {
     const ia0: Stride = @intCast(n1);
     const ic0: Stride = @intCast(n1);
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     var re: [total]f32 = undefined;
@@ -1375,7 +1375,7 @@ test "zrip2d forward+inverse round trip confirms unnormalized-inverse pattern" {
     const ic0: Stride = @intCast(n1);
     const total: usize = half_n0 * n1;
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     var re = [_]f32{0} ** total;
@@ -1402,7 +1402,7 @@ test "zript2d matches zrip2d (temp-buffer agrees with buffer-less)" {
     const ic0: Stride = @intCast(n1);
     const total: usize = half_n0 * n1;
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1436,7 +1436,7 @@ test "zrop2d matches zrip2d (out-of-place equals in-place)" {
     const ia0: Stride = @intCast(n1);
     const total: usize = half_n0 * n1;
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1470,7 +1470,7 @@ test "zropt2d matches zrop2d (temp-buffer agrees with buffer-less)" {
     const ia0: Stride = @intCast(n1);
     const total: usize = half_n0 * n1;
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1508,7 +1508,7 @@ test "mzip matches per-signal zip (M independent batched transforms)" {
     const im: Stride = 7; // > n, leaves a gap between signals
     const total: usize = 2 * 7 + n; // (m-1)*im + n
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var re = [_]f32{0} ** total;
@@ -1554,7 +1554,7 @@ test "mzipt matches mzip (temp-buffer agrees with buffer-less batched transform)
     const im: Stride = 5;
     const total: usize = n + 5;
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1586,7 +1586,7 @@ test "mzop matches mzip (out-of-place equals in-place, batched)" {
     const im: Stride = 5;
     const total: usize = n + 5;
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1624,7 +1624,7 @@ test "mzopt matches mzop (temp-buffer agrees with buffer-less, batched out-of-pl
     const im: Stride = 5;
     const total: usize = n + 5;
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1661,7 +1661,7 @@ test "mzrip matches per-signal zrip (M independent batched real transforms)" {
     const im: Stride = 6; // > N/2, leaves a gap between signals
     const total: usize = half_n + 6;
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var re = [_]f32{0} ** total;
@@ -1704,7 +1704,7 @@ test "mzript matches mzrip (temp-buffer agrees with buffer-less batched real tra
     const im: Stride = 6;
     const total: usize = half_n + 6;
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1736,7 +1736,7 @@ test "mzrop matches mzrip (out-of-place equals in-place, batched real)" {
     const im: Stride = 6;
     const total: usize = half_n + 6;
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1773,7 +1773,7 @@ test "mzropt matches mzrop (temp-buffer agrees with buffer-less, batched real ou
     const im: Stride = 6;
     const total: usize = half_n + 6;
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var seed = [_]f32{0} ** total;
@@ -1869,7 +1869,7 @@ test "zop2d matches an independent naive 2D DFT (not just another vDSP routine)"
     var out_re: [total]f32 = undefined;
     var out_im: [total]f32 = undefined;
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
     const input = SS(f32).init(&got_re, &got_im);
     const output = SS(f32).init(&out_re, &out_im);
@@ -1924,7 +1924,7 @@ test "zrip2d DC/Nyquist packing: which output slot each basis image lands in" {
     const total = half_n0 * n1;
     const ic0: Stride = @intCast(n1);
 
-    const fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
+    var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
     const Case = struct {
@@ -2005,7 +2005,7 @@ test "roundTripScale / realRoundTripScale match what the transforms actually do"
     // ever starts normalizing, these fail rather than silently misinforming.
     const log2n: Length = 4; // N = 16
     const n: usize = 16;
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     try std.testing.expectEqual(@as(f32, 16.0), fft.roundTripScale());
@@ -2095,7 +2095,7 @@ test "FFT setup is read-only during execution" {
     const log2n: Length = 8;
     const n = @as(usize, 1) << @intCast(log2n);
 
-    const fft = try FFT(f32).init(log2n, .radix2);
+    var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
     var re = [_]f32{0} ** 256;
@@ -2144,7 +2144,7 @@ test "one setup drives every smaller size, bit-identically" {
     // setup created at the smaller size. Without this, sharing one setup would
     // silently change results depending on how the planner was configured.
     const max_log2n: Length = 10;
-    const big = try FFT(f32).init(max_log2n, .radix2);
+    var big = try FFT(f32).init(max_log2n, .radix2);
     defer big.deinit();
 
     for ([_]Length{ 2, 3, 5, 7, 10 }) |log2n| {
@@ -2163,7 +2163,7 @@ test "one setup drives every smaller size, bit-identically" {
 
         // Same transform, once through a setup sized exactly for it and once
         // through the oversized shared one.
-        const exact = try FFT(f32).init(log2n, .radix2);
+        var exact = try FFT(f32).init(log2n, .radix2);
         defer exact.deinit();
         exact.zip(SS(f32).init(a_re[0..n], a_im[0..n]), .forward);
 
@@ -2215,7 +2215,7 @@ test "zop3 transforms 3 * (1 << log2n) points, matching a naive DFT" {
     const log2n: Length = 2;
     const n: usize = 12; // 3 * 4
 
-    const fft = try FFT(f32).init(log2n, .radix3);
+    var fft = try FFT(f32).init(log2n, .radix3);
     defer fft.deinit();
     try std.testing.expectEqual(n, fft.length3());
 
@@ -2247,7 +2247,7 @@ test "zop5 transforms 5 * (1 << log2n) points, matching a naive DFT" {
     const log2n: Length = 1;
     const n: usize = 10; // 5 * 2
 
-    const fft = try FFT(f64).init(log2n, .radix5);
+    var fft = try FFT(f64).init(log2n, .radix5);
     defer fft.deinit();
     try std.testing.expectEqual(n, fft.length5());
 
@@ -2284,7 +2284,7 @@ test "zop3 / zop5 round trips are unnormalized, scaling by N" {
     // a round trip multiplies by N. roundTripScale3/5 are what divides it out.
     {
         const n: usize = 24; // 3 * 8
-        const fft = try FFT(f32).init(3, .radix3);
+        var fft = try FFT(f32).init(3, .radix3);
         defer fft.deinit();
         try std.testing.expectEqual(@as(f32, 24.0), fft.roundTripScale3());
 
@@ -2301,7 +2301,7 @@ test "zop3 / zop5 round trips are unnormalized, scaling by N" {
     }
     {
         const n: usize = 20; // 5 * 4
-        const fft = try FFT(f32).init(2, .radix5);
+        var fft = try FFT(f32).init(2, .radix5);
         defer fft.deinit();
         try std.testing.expectEqual(@as(f32, 20.0), fft.roundTripScale5());
 

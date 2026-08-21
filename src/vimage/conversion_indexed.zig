@@ -48,10 +48,11 @@ const c = @import("c.zig");
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
 const vImage_Flags = types.vImage_Flags;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const Pixel_8 = types.Pixel_8;
 const Flags = types.Flags;
+const Options = types.Options;
 
 // ============================================================================
 // Dither methods
@@ -62,7 +63,7 @@ const Flags = types.Flags;
 /// Conversion.h, passed as a plain C `int`.
 ///
 /// Anything outside this set makes the conversion fail with
-/// `VImageError.InvalidParameter` (kvImageInvalidParameter, -21773).
+/// `Error.InvalidParameter` (kvImageInvalidParameter, -21773).
 ///
 /// NOTE: this belongs in types.zig once the other dithered converters
 /// (ARGB8888toARGB1555_dithered, Planar16UtoPlanar8_dithered, ...) are wrapped;
@@ -87,9 +88,34 @@ pub const Dither = struct {
     /// OR into `ordered` / `ordered_reproducible` for uniformly distributed
     /// noise: better colour fidelity, visibly noisier result.
     pub const ordered_uniform_blue: c_int = 1 << 28;
-    /// Mask covering the noise-shape bits.
-    pub const ordered_noise_shape_mask: c_int = 0xf << 28;
+    /// Mask covering the noise-shape bits, `0xF000_0000`.
+    ///
+    /// The C constant is written `(0xfU<<28)` — with a `U` suffix, which does
+    /// not fit in an `int` and so makes clang widen the whole anonymous enum
+    /// to `unsigned int`. The `dither` parameter is a plain `int`, though, so
+    /// the mask is kept as `c_int` here with the same bit pattern; written as
+    /// a decimal literal it is negative, which is why it goes through
+    /// `@bitCast` rather than being typed out.
+    pub const ordered_noise_shape_mask: c_int = @bitCast(@as(u32, 0xf) << 28);
 };
+
+test "the dither constants match the kvImageConvert_Dither* values" {
+    // Printed by a C program including <Accelerate/Accelerate.h>.
+    try testing.expectEqual(@as(c_int, 0), Dither.none);
+    try testing.expectEqual(@as(c_int, 1), Dither.ordered);
+    try testing.expectEqual(@as(c_int, 2), Dither.ordered_reproducible);
+    try testing.expectEqual(@as(c_int, 3), Dither.floyd_steinberg);
+    try testing.expectEqual(@as(c_int, 4), Dither.atkinson);
+    try testing.expectEqual(@as(c_int, 0), Dither.ordered_gaussian_blue);
+    try testing.expectEqual(@as(c_int, 1 << 28), Dither.ordered_uniform_blue);
+
+    // The mask is `(0xfU<<28)` in C. As a `c_int` that bit pattern is
+    // negative, which is the whole reason it goes through `@bitCast` -- an
+    // earlier version wrote `0xf << 28` and did not compile, and nothing
+    // referenced it, so nothing noticed.
+    try testing.expectEqual(@as(u32, 0xF000_0000), @as(u32, @bitCast(Dither.ordered_noise_shape_mask)));
+    try testing.expectEqual(Dither.ordered_uniform_blue, Dither.ordered_uniform_blue & Dither.ordered_noise_shape_mask);
+}
 
 // ============================================================================
 // Sub-byte planar -> Planar8
@@ -100,8 +126,8 @@ pub const Dither = struct {
 ///
 /// `src` must supply at least `(dest.width + 7) / 8` bytes per row; the unused
 /// low bits of a row's final byte are ignored. Does not work in place.
-pub fn planar1toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar1toPlanar8(src, dest, flags));
+pub fn planar1toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar1toPlanar8(src, dest, flags.bits()));
 }
 
 /// Expands a 2-bit-per-pixel plane to Planar8, multiplying each pixel by 85,
@@ -109,8 +135,8 @@ pub fn planar1toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, f
 ///
 /// `src` must supply at least `(dest.width + 3) / 4` bytes per row, four pixels
 /// per byte, highest-order bit pair first. Does not work in place.
-pub fn planar2toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar2toPlanar8(src, dest, flags));
+pub fn planar2toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar2toPlanar8(src, dest, flags.bits()));
 }
 
 /// Expands a 4-bit-per-pixel plane to Planar8, multiplying each pixel by 17,
@@ -119,8 +145,8 @@ pub fn planar2toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, f
 /// `src` must supply at least `(dest.width + 1) / 2` bytes per row: the even
 /// pixel is the high nibble, the odd pixel the low nibble. Does not work in
 /// place.
-pub fn planar4toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar4toPlanar8(src, dest, flags));
+pub fn planar4toPlanar8(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar4toPlanar8(src, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -137,9 +163,9 @@ pub fn indexed1toPlanar8(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     colors: *const [2]Pixel_8,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Indexed1toPlanar8(src, dest, colors, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Indexed1toPlanar8(src, dest, colors, flags.bits()));
 }
 
 /// Expands a 2-bit-per-pixel indexed image to Planar8 through a four-entry
@@ -150,9 +176,9 @@ pub fn indexed2toPlanar8(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     colors: *const [4]Pixel_8,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Indexed2toPlanar8(src, dest, colors, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Indexed2toPlanar8(src, dest, colors, flags.bits()));
 }
 
 /// Expands a 4-bit-per-pixel indexed image to Planar8 through a sixteen-entry
@@ -163,9 +189,9 @@ pub fn indexed4toPlanar8(
     src: *const vImage_Buffer,
     dest: *const vImage_Buffer,
     colors: *const [16]Pixel_8,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Indexed4toPlanar8(src, dest, colors, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Indexed4toPlanar8(src, dest, colors, flags.bits()));
 }
 
 // ============================================================================
@@ -188,9 +214,9 @@ pub fn planar8toPlanar1(
     dest: *const vImage_Buffer,
     tempBuffer: ?*anyopaque,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toPlanar1(src, dest, tempBuffer, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toPlanar1(src, dest, tempBuffer, dither, flags.bits()));
 }
 
 /// Reduces Planar8 to a 2-bit-per-pixel plane; with `Dither.none`, the result is
@@ -203,9 +229,9 @@ pub fn planar8toPlanar2(
     dest: *const vImage_Buffer,
     tempBuffer: ?*anyopaque,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toPlanar2(src, dest, tempBuffer, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toPlanar2(src, dest, tempBuffer, dither, flags.bits()));
 }
 
 /// Reduces Planar8 to a 4-bit-per-pixel plane; with `Dither.none`, the result is
@@ -218,9 +244,9 @@ pub fn planar8toPlanar4(
     dest: *const vImage_Buffer,
     tempBuffer: ?*anyopaque,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toPlanar4(src, dest, tempBuffer, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toPlanar4(src, dest, tempBuffer, dither, flags.bits()));
 }
 
 // ============================================================================
@@ -231,7 +257,7 @@ pub fn planar8toPlanar4(
 /// colour table.
 ///
 /// `colors` is in/out: a populated table must be in ascending order, otherwise
-/// vImage returns `VImageError.InvalidParameter`. Pass an all-zero table to have
+/// vImage returns `Error.InvalidParameter`. Pass an all-zero table to have
 /// vImage pick a table for the image and write it back through this pointer.
 ///
 /// `dest` needs `(dest.width + 7) / 8` bytes per row. See `planar8toPlanar1` for
@@ -242,9 +268,9 @@ pub fn planar8toIndexed1(
     tempBuffer: ?*anyopaque,
     colors: *[2]Pixel_8,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toIndexed1(src, dest, tempBuffer, colors, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toIndexed1(src, dest, tempBuffer, colors, dither, flags.bits()));
 }
 
 /// Reduces Planar8 to a 2-bit-per-pixel indexed image against a four-entry
@@ -257,9 +283,9 @@ pub fn planar8toIndexed2(
     tempBuffer: ?*anyopaque,
     colors: *[4]Pixel_8,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toIndexed2(src, dest, tempBuffer, colors, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toIndexed2(src, dest, tempBuffer, colors, dither, flags.bits()));
 }
 
 /// Reduces Planar8 to a 4-bit-per-pixel indexed image against a sixteen-entry
@@ -272,9 +298,9 @@ pub fn planar8toIndexed4(
     tempBuffer: ?*anyopaque,
     colors: *[16]Pixel_8,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8toIndexed4(src, dest, tempBuffer, colors, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8toIndexed4(src, dest, tempBuffer, colors, dither, flags.bits()));
 }
 
 // ============================================================================
@@ -304,7 +330,7 @@ test "planar1toPlanar8 unpacks MSB-first, 8 pixels per byte, scaled by 255" {
 
     const src = rowBuffer(&src_bytes, 8);
     const dest = rowBuffer(dest_bytes, 8);
-    try testing.expectEqual(@as(usize, 0), try planar1toPlanar8(&src, &dest, Flags.kvImageNoFlags));
+    try testing.expectEqual(@as(usize, 0), try planar1toPlanar8(&src, &dest, .{}));
 
     try testing.expectEqualSlices(u8, &[_]u8{ 255, 0, 255, 255, 0, 0, 0, 255 }, dest_bytes);
 }
@@ -319,7 +345,7 @@ test "planar2toPlanar8 unpacks 4 pixels per byte, scaled by 85" {
 
     const src = rowBuffer(&src_bytes, 4);
     const dest = rowBuffer(dest_bytes, 4);
-    try testing.expectEqual(@as(usize, 0), try planar2toPlanar8(&src, &dest, Flags.kvImageNoFlags));
+    try testing.expectEqual(@as(usize, 0), try planar2toPlanar8(&src, &dest, .{}));
 
     try testing.expectEqualSlices(u8, &[_]u8{ 0, 85, 170, 255 }, dest_bytes);
 }
@@ -334,7 +360,7 @@ test "planar4toPlanar8 unpacks high nibble first, scaled by 17" {
 
     const src = rowBuffer(&src_bytes, 4);
     const dest = rowBuffer(dest_bytes, 4);
-    try testing.expectEqual(@as(usize, 0), try planar4toPlanar8(&src, &dest, Flags.kvImageNoFlags));
+    try testing.expectEqual(@as(usize, 0), try planar4toPlanar8(&src, &dest, .{}));
 
     try testing.expectEqualSlices(u8, &[_]u8{ 5 * 17, 10 * 17, 0 * 17, 15 * 17 }, dest_bytes);
 }
@@ -352,7 +378,7 @@ test "planar1toPlanar8: a width-9 row needs (9+7)/8 = 2 bytes, trailing bits ign
 
     const src = rowBuffer(&src_bytes, 9);
     const dest = rowBuffer(dest_bytes, 9);
-    try testing.expectEqual(@as(usize, 0), try planar1toPlanar8(&src, &dest, Flags.kvImageNoFlags));
+    try testing.expectEqual(@as(usize, 0), try planar1toPlanar8(&src, &dest, .{}));
 
     try testing.expectEqualSlices(u8, &[_]u8{ 255, 255, 255, 255, 0, 0, 0, 0, 0 }, dest_bytes);
 }
@@ -370,7 +396,7 @@ test "planar8toPlanar1 with Dither.none thresholds at 128 and packs MSB first" {
     const dest = rowBuffer(dest_bytes, 8);
     try testing.expectEqual(
         @as(usize, 0),
-        try planar8toPlanar1(&src, &dest, null, Dither.none, Flags.kvImageNoFlags),
+        try planar8toPlanar1(&src, &dest, null, Dither.none, .{}),
     );
 
     try testing.expectEqual(@as(u8, 0b1011_0001), dest_bytes[0]);
@@ -392,12 +418,12 @@ test "Planar8 -> Planar4 -> Planar8 round trips exact multiples of 17" {
 
     try testing.expectEqual(
         @as(usize, 0),
-        try planar8toPlanar4(&src, &mid, null, Dither.none, Flags.kvImageNoFlags),
+        try planar8toPlanar4(&src, &mid, null, Dither.none, .{}),
     );
     // Exact packed bytes: nibbles 0,1 | 5,10 | 14,15.
     try testing.expectEqualSlices(u8, &[_]u8{ 0x01, 0x5A, 0xEF }, packed_bytes);
 
-    try testing.expectEqual(@as(usize, 0), try planar4toPlanar8(&mid, &back, Flags.kvImageNoFlags));
+    try testing.expectEqual(@as(usize, 0), try planar4toPlanar8(&mid, &back, .{}));
     try testing.expectEqualSlices(u8, &src_bytes, back_bytes);
 }
 
@@ -418,11 +444,11 @@ test "planar8toPlanar2 is lossy: Dither.none rounds to the nearest multiple of 8
 
     try testing.expectEqual(
         @as(usize, 0),
-        try planar8toPlanar2(&src, &mid, null, Dither.none, Flags.kvImageNoFlags),
+        try planar8toPlanar2(&src, &mid, null, Dither.none, .{}),
     );
     try testing.expectEqual(@as(u8, 0b00_01_10_11), packed_bytes[0]);
 
-    try testing.expectEqual(@as(usize, 0), try planar2toPlanar8(&mid, &back, Flags.kvImageNoFlags));
+    try testing.expectEqual(@as(usize, 0), try planar2toPlanar8(&mid, &back, .{}));
     // Every pixel is within half a quantisation step (43) of the original.
     for (src_bytes, back_bytes) |want, got| {
         const diff = @abs(@as(i32, want) - @as(i32, got));
@@ -443,7 +469,7 @@ test "indexed1toPlanar8 looks bits up in a 2-entry table instead of scaling" {
     const dest = rowBuffer(dest_bytes, 8);
     try testing.expectEqual(
         @as(usize, 0),
-        try indexed1toPlanar8(&src, &dest, &colors, Flags.kvImageNoFlags),
+        try indexed1toPlanar8(&src, &dest, &colors, .{}),
     );
 
     try testing.expectEqualSlices(u8, &[_]u8{ 200, 10, 200, 200, 10, 10, 10, 200 }, dest_bytes);
@@ -461,7 +487,7 @@ test "indexed2toPlanar8 maps each 2-bit index through a 4-entry table" {
     const dest = rowBuffer(dest_bytes, 8);
     try testing.expectEqual(
         @as(usize, 0),
-        try indexed2toPlanar8(&src, &dest, &colors, Flags.kvImageNoFlags),
+        try indexed2toPlanar8(&src, &dest, &colors, .{}),
     );
 
     try testing.expectEqualSlices(
@@ -487,7 +513,7 @@ test "indexed4toPlanar8 maps each nibble through a 16-entry table" {
     const dest = rowBuffer(dest_bytes, 6);
     try testing.expectEqual(
         @as(usize, 0),
-        try indexed4toPlanar8(&src, &dest, &colors, Flags.kvImageNoFlags),
+        try indexed4toPlanar8(&src, &dest, &colors, .{}),
     );
 
     try testing.expectEqualSlices(
@@ -510,7 +536,7 @@ test "planar8toIndexed1 with a supplied table picks the nearest of two entries" 
     const dest = rowBuffer(dest_bytes, 8);
     try testing.expectEqual(
         @as(usize, 0),
-        try planar8toIndexed1(&src, &dest, null, &colors, Dither.none, Flags.kvImageNoFlags),
+        try planar8toIndexed1(&src, &dest, null, &colors, Dither.none, .{}),
     );
 
     try testing.expectEqual(@as(u8, 0b0110_0101), dest_bytes[0]);
@@ -530,7 +556,7 @@ test "planar8toIndexed2 with an all-zero table has vImage compute the table" {
     const dest = rowBuffer(dest_bytes, 4);
     try testing.expectEqual(
         @as(usize, 0),
-        try planar8toIndexed2(&src, &dest, null, &colors, Dither.none, Flags.kvImageNoFlags),
+        try planar8toIndexed2(&src, &dest, null, &colors, Dither.none, .{}),
     );
 
     // vImage filled in a table; it must be non-descending and no longer all
@@ -549,7 +575,7 @@ test "planar8toIndexed2 with an all-zero table has vImage compute the table" {
     const back = rowBuffer(back_bytes, 4);
     try testing.expectEqual(
         @as(usize, 0),
-        try indexed2toPlanar8(&dest, &back, &colors, Flags.kvImageNoFlags),
+        try indexed2toPlanar8(&dest, &back, &colors, .{}),
     );
     for (src_bytes, back_bytes) |want, got| {
         try testing.expect(@abs(@as(i32, want) - @as(i32, got)) <= 85);
@@ -577,14 +603,14 @@ test "Planar8 -> Indexed4 -> Planar8 round trips values that are in the table" {
 
     try testing.expectEqual(
         @as(usize, 0),
-        try planar8toIndexed4(&src, &mid, null, &colors, Dither.none, Flags.kvImageNoFlags),
+        try planar8toIndexed4(&src, &mid, null, &colors, Dither.none, .{}),
     );
     // Indices 0,15 | 5,10, high nibble first.
     try testing.expectEqualSlices(u8, &[_]u8{ 0x0F, 0x5A }, packed_bytes);
 
     try testing.expectEqual(
         @as(usize, 0),
-        try indexed4toPlanar8(&mid, &back, &colors, Flags.kvImageNoFlags),
+        try indexed4toPlanar8(&mid, &back, &colors, .{}),
     );
     try testing.expectEqualSlices(u8, &src_bytes, back_bytes);
 }
@@ -601,12 +627,12 @@ test "an unrecognised dither value is rejected with kvImageInvalidParameter" {
     // 99 is outside the kvImageConvert_Dither* set; vImage returns
     // kvImageInvalidParameter (-21773), which `check` maps to InvalidParameter.
     try testing.expectError(
-        VImageError.InvalidParameter,
-        planar8toPlanar1(&src, &dest, null, 99, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        planar8toPlanar1(&src, &dest, null, 99, .{}),
     );
     try testing.expectEqual(
         @as(vImage_Error, -21773),
-        @as(vImage_Error, types.Error.kvImageInvalidParameter),
+        @as(vImage_Error, types.ErrorCode.kvImageInvalidParameter),
     );
 }
 
@@ -619,7 +645,7 @@ test "kvImageGetTempBufferSize reports a size through the return slot, not an er
 
     const src = rowBuffer(&src_bytes, 8);
     const dest = rowBuffer(dest_bytes, 8);
-    const size = try planar8toPlanar1(&src, &dest, null, Dither.none, Flags.kvImageGetTempBufferSize);
+    const size = try planar8toPlanar1(&src, &dest, null, Dither.none, .{ .get_temp_buffer_size = true });
     // Documented as "does no work, but returns the required size": whatever it
     // is, it must not have been reported as a failure, and the destination must
     // be untouched.
@@ -630,7 +656,7 @@ test "kvImageGetTempBufferSize reports a size through the return slot, not an er
         defer allocator.free(temp);
         try testing.expectEqual(
             @as(usize, 0),
-            try planar8toPlanar1(&src, &dest, temp.ptr, Dither.none, Flags.kvImageNoFlags),
+            try planar8toPlanar1(&src, &dest, temp.ptr, Dither.none, .{}),
         );
         try testing.expectEqual(@as(u8, 0b0101_0101), dest_bytes[0]);
     }
@@ -652,8 +678,8 @@ test "ordered_reproducible dithering gives the same bytes on every call" {
     const a = rowBuffer(a_bytes, 8);
     const b = rowBuffer(b_bytes, 8);
     const dither = Dither.ordered_reproducible | Dither.ordered_uniform_blue;
-    try testing.expectEqual(@as(usize, 0), try planar8toPlanar1(&src, &a, null, dither, Flags.kvImageNoFlags));
-    try testing.expectEqual(@as(usize, 0), try planar8toPlanar1(&src, &b, null, dither, Flags.kvImageNoFlags));
+    try testing.expectEqual(@as(usize, 0), try planar8toPlanar1(&src, &a, null, dither, .{}));
+    try testing.expectEqual(@as(usize, 0), try planar8toPlanar1(&src, &b, null, dither, .{}));
     try testing.expectEqual(a_bytes[0], b_bytes[0]);
 }
 
@@ -667,7 +693,7 @@ test "a destination wider than the source is refused, not silently truncated" {
     const src = rowBuffer(&src_bytes, 8);
     const dest = rowBuffer(dest_bytes, 16);
     try testing.expectError(
-        VImageError.RoiLargerThanInputBuffer,
-        planar1toPlanar8(&src, &dest, Flags.kvImageNoFlags),
+        Error.RoiLargerThanInputBuffer,
+        planar1toPlanar8(&src, &dest, .{}),
     );
 }

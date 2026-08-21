@@ -4,7 +4,7 @@ const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImage_Flags = types.vImage_Flags;
 const vImagePixelCount = types.vImagePixelCount;
@@ -13,6 +13,7 @@ const Pixel_FFFF = types.Pixel_FFFF;
 const Pixel_16F = types.Pixel_16F;
 const Pixel_ARGB_16F = types.Pixel_ARGB_16F;
 const Flags = types.Flags;
+const Options = types.Options;
 
 // ============================================================================
 // General Convolution
@@ -39,12 +40,12 @@ pub fn convolvePlanar(
     kernel_height: u32,
     kernel_width: u32,
     options: ConvolvePlanarOptions(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, options.backgroundColor, flags),
-        f32 => c.vImageConvolve_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.backgroundColor, flags),
-        f16 => c.vImageConvolve_Planar16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, halfBits(options.backgroundColor), flags),
+        u8 => c.vImageConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, options.backgroundColor, flags.bits()),
+        f32 => c.vImageConvolve_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.backgroundColor, flags.bits()),
+        f16 => c.vImageConvolve_Planar16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, halfBits(options.backgroundColor), flags.bits()),
         else => @compileError("convolvePlanar requires u8, f32 or f16"),
     });
 }
@@ -68,14 +69,14 @@ pub fn convolveInterleaved(
     kernel_height: u32,
     kernel_width: u32,
     options: ConvolveInterleavedOptions(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, &options.backgroundColor, flags),
-        f32 => c.vImageConvolve_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, &options.backgroundColor, flags),
+        u8 => c.vImageConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, &options.backgroundColor, flags.bits()),
+        f32 => c.vImageConvolve_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, &options.backgroundColor, flags.bits()),
         f16 => blk: {
             const bg = halfBits4(options.backgroundColor);
-            break :blk c.vImageConvolve_ARGB16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, &bg, flags);
+            break :blk c.vImageConvolve_ARGB16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, &bg, flags.bits());
         },
         else => @compileError("convolveInterleaved requires u8, f32 or f16"),
     });
@@ -104,12 +105,12 @@ pub fn convolveWithBiasPlanar(
     kernel_height: u32,
     kernel_width: u32,
     options: ConvolveWithBiasPlanarOptions(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageConvolveWithBias_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, options.bias, options.backgroundColor, flags),
-        f32 => c.vImageConvolveWithBias_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, options.backgroundColor, flags),
-        f16 => c.vImageConvolveWithBias_Planar16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, halfBits(options.backgroundColor), flags),
+        u8 => c.vImageConvolveWithBias_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, options.bias, options.backgroundColor, flags.bits()),
+        f32 => c.vImageConvolveWithBias_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, options.backgroundColor, flags.bits()),
+        f16 => c.vImageConvolveWithBias_Planar16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, halfBits(options.backgroundColor), flags.bits()),
         else => @compileError("convolveWithBiasPlanar requires u8, f32 or f16"),
     });
 }
@@ -130,14 +131,14 @@ pub fn convolveWithBiasInterleaved(
     kernel_height: u32,
     kernel_width: u32,
     options: ConvolveWithBiasInterleavedOptions(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageConvolveWithBias_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, options.bias, &options.backgroundColor, flags),
-        f32 => c.vImageConvolveWithBias_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, &options.backgroundColor, flags),
+        u8 => c.vImageConvolveWithBias_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.divisor, options.bias, &options.backgroundColor, flags.bits()),
+        f32 => c.vImageConvolveWithBias_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, &options.backgroundColor, flags.bits()),
         f16 => blk: {
             const bg = halfBits4(options.backgroundColor);
-            break :blk c.vImageConvolveWithBias_ARGB16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, &bg, flags);
+            break :blk c.vImageConvolveWithBias_ARGB16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel_height, kernel_width, options.bias, &bg, flags.bits());
         },
         else => @compileError("convolveWithBiasInterleaved requires u8, f32 or f16"),
     });
@@ -166,11 +167,11 @@ pub fn convolveMultiKernelInterleaved(
     kernel_height: u32,
     kernel_width: u32,
     options: MultiKernelOptions(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageConvolveMultiKernel_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernels, kernel_height, kernel_width, &options.divisors, &options.biases, &options.backgroundColor, flags),
-        f32 => c.vImageConvolveMultiKernel_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernels, kernel_height, kernel_width, &options.biases, &options.backgroundColor, flags),
+        u8 => c.vImageConvolveMultiKernel_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernels, kernel_height, kernel_width, &options.divisors, &options.biases, &options.backgroundColor, flags.bits()),
+        f32 => c.vImageConvolveMultiKernel_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernels, kernel_height, kernel_width, &options.biases, &options.backgroundColor, flags.bits()),
         else => @compileError("convolveMultiKernelInterleaved requires u8 or f32"),
     });
 }
@@ -205,11 +206,11 @@ pub fn richardsonLucyDeConvolvePlanar(
     kernel_width2: u32,
     options: DeconvolvePlanarOptions(T),
     iterationCount: u32,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageRichardsonLucyDeConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, options.divisor, options.divisor2, options.backgroundColor, iterationCount, flags),
-        f32 => c.vImageRichardsonLucyDeConvolve_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, options.backgroundColor, iterationCount, flags),
+        u8 => c.vImageRichardsonLucyDeConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, options.divisor, options.divisor2, options.backgroundColor, iterationCount, flags.bits()),
+        f32 => c.vImageRichardsonLucyDeConvolve_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, options.backgroundColor, iterationCount, flags.bits()),
         else => @compileError("richardsonLucyDeConvolvePlanar requires u8 or f32"),
     });
 }
@@ -233,11 +234,11 @@ pub fn richardsonLucyDeConvolveInterleaved(
     kernel_width2: u32,
     options: DeconvolveInterleavedOptions(T),
     iterationCount: u32,
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(switch (T) {
-        u8 => c.vImageRichardsonLucyDeConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, options.divisor, options.divisor2, &options.backgroundColor, iterationCount, flags),
-        f32 => c.vImageRichardsonLucyDeConvolve_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, &options.backgroundColor, iterationCount, flags),
+        u8 => c.vImageRichardsonLucyDeConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, options.divisor, options.divisor2, &options.backgroundColor, iterationCount, flags.bits()),
+        f32 => c.vImageRichardsonLucyDeConvolve_ARGBFFFF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel, kernel2, kernel_height, kernel_width, kernel_height2, kernel_width2, &options.backgroundColor, iterationCount, flags.bits()),
         else => @compileError("richardsonLucyDeConvolveInterleaved requires u8 or f32"),
     });
 }
@@ -263,9 +264,9 @@ pub fn boxConvolvePlanar8(
     kernel_height: u32,
     kernel_width: u32,
     backgroundColor: u8,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageBoxConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageBoxConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags.bits()));
 }
 
 /// Box convolution on a 4-channel interleaved 8-bit image.
@@ -278,9 +279,9 @@ pub fn boxConvolveARGB8888(
     kernel_height: u32,
     kernel_width: u32,
     backgroundColor: *const Pixel_8888,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageBoxConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageBoxConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags.bits()));
 }
 
 // ============================================================================
@@ -303,9 +304,9 @@ pub fn tentConvolvePlanar8(
     kernel_height: u32,
     kernel_width: u32,
     backgroundColor: u8,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageTentConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageTentConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags.bits()));
 }
 
 /// Tent convolution on a 4-channel interleaved 8-bit image.
@@ -318,9 +319,9 @@ pub fn tentConvolveARGB8888(
     kernel_height: u32,
     kernel_width: u32,
     backgroundColor: *const Pixel_8888,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageTentConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageTentConvolve_ARGB8888(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_height, kernel_width, backgroundColor, flags.bits()));
 }
 
 // ============================================================================
@@ -355,15 +356,15 @@ pub fn sepConvolvePlanar(
     kernel_x: []const f32,
     kernel_y: []const f32,
     options: SepConvolvePlanarOptions(T),
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     const kx: u32 = @intCast(kernel_x.len);
     const ky: u32 = @intCast(kernel_y.len);
     return check(switch (T) {
-        u8 => c.vImageSepConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, options.backgroundColor, flags),
-        u16 => c.vImageSepConvolve_Planar16U(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, options.backgroundColor, flags),
-        f32 => c.vImageSepConvolve_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, options.backgroundColor, flags),
-        f16 => c.vImageSepConvolve_Planar16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, halfBits(options.backgroundColor), flags),
+        u8 => c.vImageSepConvolve_Planar8(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, options.backgroundColor, flags.bits()),
+        u16 => c.vImageSepConvolve_Planar16U(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, options.backgroundColor, flags.bits()),
+        f32 => c.vImageSepConvolve_PlanarF(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, options.backgroundColor, flags.bits()),
+        f16 => c.vImageSepConvolve_Planar16F(src, dest, tempBuffer, srcOffsetToROI_X, srcOffsetToROI_Y, kernel_x.ptr, kx, kernel_y.ptr, ky, options.bias, halfBits(options.backgroundColor), flags.bits()),
         else => @compileError("sepConvolvePlanar requires u8, u16, f32 or f16"),
     });
 }
@@ -387,8 +388,8 @@ pub fn sepConvolvePlanar8to16U(
         bias: f32 = 0.0,
         backgroundColor: u8 = 0,
     },
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(c.vImageSepConvolve_Planar8to16U(
         src,
         dest,
@@ -402,7 +403,7 @@ pub fn sepConvolvePlanar8to16U(
         options.scale,
         options.bias,
         options.backgroundColor,
-        flags,
+        flags.bits(),
     ));
 }
 
@@ -422,8 +423,8 @@ pub fn sepConvolveARGB8888(
         bias: f32 = 0.0,
         backgroundColor: Pixel_8888 = .{ 0, 0, 0, 0 },
     },
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(c.vImageSepConvolve_ARGB8888(
         src,
         dest,
@@ -436,7 +437,7 @@ pub fn sepConvolveARGB8888(
         @intCast(kernel_y.len),
         options.bias,
         &options.backgroundColor,
-        flags,
+        flags.bits(),
     ));
 }
 
@@ -464,8 +465,8 @@ pub fn convolveFloatKernelARGB8888(
         bias: f32 = 0.0,
         backgroundColor: Pixel_8888 = .{ 0, 0, 0, 0 },
     },
-    flags: vImage_Flags,
-) VImageError!usize {
+    flags: Options,
+) Error!usize {
     return check(c.vImageConvolveFloatKernel_ARGB8888(
         src,
         dest,
@@ -477,7 +478,7 @@ pub fn convolveFloatKernelARGB8888(
         kernel_width,
         options.bias,
         &options.backgroundColor,
-        flags,
+        flags.bits(),
     ));
 }
 
@@ -745,7 +746,7 @@ test "convolvePlanar u8: kernel_height/kernel_width are not swapped" {
     defer allocator.free(dest.mem);
 
     const kernel = [_]i16{ 0, 0, 1 };
-    const err = convolvePlanar(u8, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{ .divisor = 1 }, Flags.kvImageEdgeExtend);
+    const err = convolvePlanar(u8, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{ .divisor = 1 }, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 6), readPlanar8(dest.buf, 1, 1));
 }
@@ -762,7 +763,7 @@ test "convolvePlanar f32: kernel_height/kernel_width are not swapped" {
     // the interior pixel (x=1,y=1) -- the complementary check to the u8 test
     // above (this time width=1, height=3).
     const kernel = [_]f32{ 0, 0, 1 };
-    const err = convolvePlanar(f32, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 3, 1, .{}, Flags.kvImageEdgeExtend);
+    const err = convolvePlanar(f32, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 3, 1, .{}, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(f32, 8), readPlanarF(dest.buf, 1, 1));
 }
@@ -792,7 +793,7 @@ test "convolveInterleaved ARGB8888: kernel_height/kernel_width are not swapped" 
     const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = height, .width = width, .rowBytes = row_bytes };
 
     const kernel = [_]i16{ 0, 0, 1 };
-    const err = convolveInterleaved(u8, &src_buf, &dest_buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{ .divisor = 1 }, Flags.kvImageEdgeExtend);
+    const err = convolveInterleaved(u8, &src_buf, &dest_buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{ .divisor = 1 }, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 6), dest_mem[1 * row_bytes + 1 * 4]);
 }
@@ -812,7 +813,7 @@ test "convolveWithBiasPlanar u8: applies (sum + bias) / divisor, matching Convol
     // Expected (integer division, truncating toward zero since (30+5)=35 is
     // positive): 35/7 = 5.
     const kernel = [_]i16{3};
-    const err = convolveWithBiasPlanar(u8, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 1, .{ .divisor = 7, .bias = 5 }, Flags.kvImageEdgeExtend);
+    const err = convolveWithBiasPlanar(u8, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 1, .{ .divisor = 7, .bias = 5 }, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 5), readPlanar8(dest.buf, 1, 1));
 }
@@ -839,7 +840,7 @@ test "convolveWithBiasInterleaved f32: bias is added to the weighted sum" {
 
     // 1x1 kernel {3.0}, bias=0.5: sum = 3*2=6, +bias = 6.5.
     const kernel = [_]f32{3.0};
-    const err = convolveWithBiasInterleaved(f32, &src_buf, &dest_buf, null, 0, 0, kernel[0..].ptr, 1, 1, .{ .bias = 0.5 }, Flags.kvImageEdgeExtend);
+    const err = convolveWithBiasInterleaved(f32, &src_buf, &dest_buf, null, 0, 0, kernel[0..].ptr, 1, 1, .{ .bias = 0.5 }, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectApproxEqAbs(@as(f32, 6.5), dest_mem[1 * row_elems + 1 * 4], 1e-6);
 }
@@ -871,7 +872,7 @@ test "convolveMultiKernelInterleaved u8: each channel uses its own kernel/diviso
     const kG = [_]i16{1};
     const kB = [_]i16{1};
     const kernels = [4][*]const i16{ kA[0..].ptr, kR[0..].ptr, kG[0..].ptr, kB[0..].ptr };
-    const err = convolveMultiKernelInterleaved(u8, &src_buf, &dest_buf, null, 0, 0, &kernels, 1, 1, .{ .divisors = .{ 1, 2, 3, 4 } }, Flags.kvImageEdgeExtend);
+    const err = convolveMultiKernelInterleaved(u8, &src_buf, &dest_buf, null, 0, 0, &kernels, 1, 1, .{ .divisors = .{ 1, 2, 3, 4 } }, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 10, 10, 10, 10 }, dest_mem[0..4]);
 }
@@ -912,7 +913,7 @@ test "richardsonLucyDeConvolvePlanar u8: identity PSFs converge to the source im
         1,
         .{ .divisor = 1, .divisor2 = 1 },
         5,
-        Flags.kvImageEdgeExtend,
+        .{ .edge_extend = true },
     );
     try std.testing.expectEqual(@as(usize, 0), try err);
     for (0..3) |y| {
@@ -955,7 +956,7 @@ test "richardsonLucyDeConvolveInterleaved u8: smoke test (identity PSFs preserve
         1,
         .{ .divisor = 1, .divisor2 = 1 },
         3,
-        Flags.kvImageEdgeExtend,
+        .{ .edge_extend = true },
     );
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqualSlices(u8, mem[0 .. width * 4], dest_mem[0 .. width * 4]);
@@ -976,7 +977,7 @@ test "boxConvolvePlanar8: uniform average over kernel_height x kernel_width, mat
     var dest = try makeEmptyPlanar8Buffer(allocator, 3, 3, 1);
     defer allocator.free(dest.mem);
 
-    const err = boxConvolvePlanar8(&src.buf, &dest.buf, null, 0, 0, 3, 3, 0, Flags.kvImageEdgeExtend);
+    const err = boxConvolvePlanar8(&src.buf, &dest.buf, null, 0, 0, 3, 3, 0, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 5), readPlanar8(dest.buf, 1, 1));
 }
@@ -998,7 +999,7 @@ test "boxConvolvePlanar8: kernel_height/kernel_width are not swapped (non-square
     var dest = try makeEmptyPlanar8Buffer(allocator, 3, 3, 1);
     defer allocator.free(dest.mem);
 
-    const err = boxConvolvePlanar8(&src.buf, &dest.buf, null, 0, 0, 1, 3, 0, Flags.kvImageEdgeExtend);
+    const err = boxConvolvePlanar8(&src.buf, &dest.buf, null, 0, 0, 1, 3, 0, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 23), readPlanar8(dest.buf, 1, 1));
 }
@@ -1018,7 +1019,7 @@ test "boxConvolveARGB8888: smoke test, error == 0" {
     const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = height, .width = width, .rowBytes = row_bytes };
     const bg = Pixel_8888{ 0, 0, 0, 0 };
 
-    const err = boxConvolveARGB8888(&src_buf, &dest_buf, null, 0, 0, 3, 3, &bg, Flags.kvImageEdgeExtend);
+    const err = boxConvolveARGB8888(&src_buf, &dest_buf, null, 0, 0, 3, 3, &bg, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     // Uniform input -> uniform output, unweighted average preserves the constant.
     try std.testing.expectEqualSlices(u8, &[_]u8{ 5, 5, 5, 5 }, dest_mem[1 * row_bytes + 1 * 4 ..][0..4]);
@@ -1050,7 +1051,7 @@ test "tentConvolvePlanar8: runtime-confirmed triangular weighting for kernel siz
     var dest = try makeEmptyPlanar8Buffer(allocator, 3, 3, 1);
     defer allocator.free(dest.mem);
 
-    const err = tentConvolvePlanar8(&src.buf, &dest.buf, null, 0, 0, 3, 3, 0, Flags.kvImageEdgeExtend);
+    const err = tentConvolvePlanar8(&src.buf, &dest.buf, null, 0, 0, 3, 3, 0, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqual(@as(u8, 5), readPlanar8(dest.buf, 1, 1));
 }
@@ -1070,7 +1071,7 @@ test "tentConvolveARGB8888: smoke test, error == 0" {
     const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = height, .width = width, .rowBytes = row_bytes };
     const bg = Pixel_8888{ 0, 0, 0, 0 };
 
-    const err = tentConvolveARGB8888(&src_buf, &dest_buf, null, 0, 0, 3, 3, &bg, Flags.kvImageEdgeExtend);
+    const err = tentConvolveARGB8888(&src_buf, &dest_buf, null, 0, 0, 3, 3, &bg, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), try err);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 7, 7, 7, 7 }, dest_mem[1 * row_bytes + 1 * 4 ..][0..4]);
 }
@@ -1139,7 +1140,7 @@ test "sepConvolvePlanar u8: kernelX and kernelY are not swapped" {
 
     const kx = [_]f32{ 0, 0, 1 };
     const ky = [_]f32{ 0, 1, 0 };
-    const err = try sepConvolvePlanar(u8, &src.buf, &dest.buf, null, 0, 0, &kx, &ky, .{}, Flags.kvImageEdgeExtend);
+    const err = try sepConvolvePlanar(u8, &src.buf, &dest.buf, null, 0, 0, &kx, &ky, .{}, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(usize, 0), err);
     try std.testing.expectEqual(@as(u8, 6), readPlanar8(dest.buf, 1, 1));
 }
@@ -1168,7 +1169,7 @@ test "sepConvolvePlanar f32: separable pair equals the outer-product 2D kernel" 
     defer allocator.free(sep_src.mem);
     var sep_dest = try makePlanarFBuffer(allocator, h, w, 3, &[_]f32{0} ** (w * h));
     defer allocator.free(sep_dest.mem);
-    _ = try sepConvolvePlanar(f32, &sep_src.buf, &sep_dest.buf, null, 0, 0, &kx, &ky, .{}, Flags.kvImageEdgeExtend);
+    _ = try sepConvolvePlanar(f32, &sep_src.buf, &sep_dest.buf, null, 0, 0, &kx, &ky, .{}, .{ .edge_extend = true });
 
     // The equivalent 2D kernel, in the row-major (kernel_height x
     // kernel_width) order convolvePlanar expects.
@@ -1180,7 +1181,7 @@ test "sepConvolvePlanar f32: separable pair equals the outer-product 2D kernel" 
     defer allocator.free(full_src.mem);
     var full_dest = try makePlanarFBuffer(allocator, h, w, 3, &[_]f32{0} ** (w * h));
     defer allocator.free(full_dest.mem);
-    _ = try convolvePlanar(f32, &full_src.buf, &full_dest.buf, null, 0, 0, kernel2d[0..].ptr, 3, 3, .{}, Flags.kvImageEdgeExtend);
+    _ = try convolvePlanar(f32, &full_src.buf, &full_dest.buf, null, 0, 0, kernel2d[0..].ptr, 3, 3, .{}, .{ .edge_extend = true });
 
     for (0..h) |y| {
         for (0..w) |x| {
@@ -1202,7 +1203,7 @@ test "sepConvolvePlanar u16: bias is added to the weighted sum" {
     defer allocator.free(dest.mem);
 
     const identity = [_]f32{ 0, 1, 0 };
-    _ = try sepConvolvePlanar(u16, &src.buf, &dest.buf, null, 0, 0, &identity, &identity, .{ .bias = 50 }, Flags.kvImageEdgeExtend);
+    _ = try sepConvolvePlanar(u16, &src.buf, &dest.buf, null, 0, 0, &identity, &identity, .{ .bias = 50 }, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(u16, 550), readPlanar16U(dest.buf, 1, 1));
 }
 
@@ -1216,7 +1217,7 @@ test "sepConvolvePlanar f16: half-precision pixels, single-precision weights" {
 
     const kx = [_]f32{ 0, 0, 1 };
     const ky = [_]f32{ 0, 1, 0 };
-    _ = try sepConvolvePlanar(f16, &src.buf, &dest.buf, null, 0, 0, &kx, &ky, .{}, Flags.kvImageEdgeExtend);
+    _ = try sepConvolvePlanar(f16, &src.buf, &dest.buf, null, 0, 0, &kx, &ky, .{}, .{ .edge_extend = true });
     try std.testing.expectApproxEqAbs(@as(f16, 6), readPlanar16F(dest.buf, 1, 1), 0.01);
 }
 
@@ -1232,7 +1233,7 @@ test "sepConvolvePlanar8to16U: scale widens past what 8 bits could hold" {
     defer allocator.free(dest.mem);
 
     const identity = [_]f32{ 0, 1, 0 };
-    _ = try sepConvolvePlanar8to16U(&src.buf, &dest.buf, null, 0, 0, &identity, &identity, .{ .scale = 100, .bias = 7 }, Flags.kvImageEdgeExtend);
+    _ = try sepConvolvePlanar8to16U(&src.buf, &dest.buf, null, 0, 0, &identity, &identity, .{ .scale = 100, .bias = 7 }, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(u16, 20007), readPlanar16U(dest.buf, 1, 1));
 }
 
@@ -1257,7 +1258,7 @@ test "sepConvolveARGB8888: kernelX and kernelY are not swapped" {
 
     const kx = [_]f32{ 0, 0, 1 };
     const ky = [_]f32{ 0, 1, 0 };
-    _ = try sepConvolveARGB8888(&src_buf, &dest_buf, null, 0, 0, &kx, &ky, .{}, Flags.kvImageEdgeExtend);
+    _ = try sepConvolveARGB8888(&src_buf, &dest_buf, null, 0, 0, &kx, &ky, .{}, .{ .edge_extend = true });
     try std.testing.expectEqual(@as(u8, 6), dest_mem[1 * row_bytes + 1 * 4]);
 }
 
@@ -1285,7 +1286,7 @@ test "convolveFloatKernelARGB8888: fractional weights without an integer divisor
 
     const third: f32 = 1.0 / 3.0;
     const kernel = [_]f32{ third, third, third }; // 1x3 horizontal mean
-    _ = try convolveFloatKernelARGB8888(&src_buf, &dest_buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{}, Flags.kvImageEdgeExtend);
+    _ = try convolveFloatKernelARGB8888(&src_buf, &dest_buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{}, .{ .edge_extend = true });
     // (30 + 60 + 90) / 3 = 60 at the centre.
     try std.testing.expectEqual(@as(u8, 60), dest_mem[1 * row_bytes + 1 * 4]);
 }
@@ -1300,7 +1301,7 @@ test "convolvePlanar / convolveWithBiasPlanar f16: the 16F prongs run" {
         var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &[_]f16{0} ** 9);
         defer allocator.free(dest.mem);
         const kernel = [_]f32{ 0, 0, 1 }; // 1x3: one column right
-        _ = try convolvePlanar(f16, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{}, Flags.kvImageEdgeExtend);
+        _ = try convolvePlanar(f16, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{}, .{ .edge_extend = true });
         try std.testing.expectApproxEqAbs(@as(f16, 6), readPlanar16F(dest.buf, 1, 1), 0.01);
     }
     {
@@ -1309,7 +1310,7 @@ test "convolvePlanar / convolveWithBiasPlanar f16: the 16F prongs run" {
         var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &[_]f16{0} ** 9);
         defer allocator.free(dest.mem);
         const kernel = [_]f32{ 0, 1, 0 };
-        _ = try convolveWithBiasPlanar(f16, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{ .bias = 10 }, Flags.kvImageEdgeExtend);
+        _ = try convolveWithBiasPlanar(f16, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{ .bias = 10 }, .{ .edge_extend = true });
         try std.testing.expectApproxEqAbs(@as(f16, 15), readPlanar16F(dest.buf, 1, 1), 0.01);
     }
 }
@@ -1335,12 +1336,12 @@ test "convolveInterleaved / convolveWithBiasInterleaved f16: the ARGB16F prongs 
     const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = height, .width = width, .rowBytes = row_elems * @sizeOf(f16) };
 
     const shift_right = [_]f32{ 0, 0, 1 };
-    _ = try convolveInterleaved(f16, &src_buf, &dest_buf, null, 0, 0, shift_right[0..].ptr, 1, 3, .{}, Flags.kvImageEdgeExtend);
+    _ = try convolveInterleaved(f16, &src_buf, &dest_buf, null, 0, 0, shift_right[0..].ptr, 1, 3, .{}, .{ .edge_extend = true });
     try std.testing.expectApproxEqAbs(@as(f16, 6), dest_mem[1 * row_elems + 1 * 4], 0.01);
 
     @memset(dest_mem, 0);
     const identity = [_]f32{ 0, 1, 0 };
-    _ = try convolveWithBiasInterleaved(f16, &src_buf, &dest_buf, null, 0, 0, identity[0..].ptr, 1, 3, .{ .bias = 10 }, Flags.kvImageEdgeExtend);
+    _ = try convolveWithBiasInterleaved(f16, &src_buf, &dest_buf, null, 0, 0, identity[0..].ptr, 1, 3, .{ .bias = 10 }, .{ .edge_extend = true });
     try std.testing.expectApproxEqAbs(@as(f16, 15), dest_mem[1 * row_elems + 1 * 4], 0.01);
 }
 

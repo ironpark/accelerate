@@ -59,7 +59,7 @@ const c = @import("c.zig");
 
 const vImage_Buffer = types.vImage_Buffer;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImage_Flags = types.vImage_Flags;
 const Pixel_8 = types.Pixel_8;
@@ -69,6 +69,7 @@ const Pixel_FFFF = types.Pixel_FFFF;
 const Pixel_16U = types.Pixel_16U;
 const Pixel_ARGB_16U = types.Pixel_ARGB_16U;
 const Flags = types.Flags;
+const Options = types.Options;
 
 // ============================================================================
 // Dither methods
@@ -83,7 +84,7 @@ const Flags = types.Flags;
 ///     Dither.ordered_reproducible | Dither.ordered_uniform_blue
 ///
 /// Only the ordered methods honour the shape bits. Anything vImage does not
-/// recognise comes back as `VImageError.InvalidParameter`.
+/// recognise comes back as `Error.InvalidParameter`.
 pub const Dither = struct {
     /// Round to nearest. Deterministic, and identical to the undithered
     /// conversion of the same pair.
@@ -116,8 +117,8 @@ pub const Dither = struct {
 ///     dest[i] = (t * 65535 + (t << 4) + 2055) >> 12   // t = 12-bit sample
 ///
 /// Does not work in place.
-pub fn convert12UTo16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_12UTo16U(src, dest, flags));
+pub fn convert12UTo16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_12UTo16U(src, dest, flags.bits()));
 }
 
 /// Pack a Planar16U image down to 12 bits per sample.
@@ -127,8 +128,8 @@ pub fn convert12UTo16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 /// then two consecutive `t` values are packed into three bytes. `dest.width`
 /// counts samples and must be even; `dest.rowBytes >= width * 3 / 2`.
 /// Does not work in place.
-pub fn convert16UTo12U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16UTo12U(src, dest, flags));
+pub fn convert16UTo12U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16UTo12U(src, dest, flags.bits()));
 }
 
 /// Convert Planar16U to Planar16F (IEEE 754 binary16 bit patterns).
@@ -140,8 +141,8 @@ pub fn convert16UTo12U(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 /// by the channel count. Works in place when
 /// `src.data == dest.data and src.rowBytes >= dest.rowBytes` (add
 /// `kvImageDoNotTile` if the rowBytes differ).
-pub fn convert16Uto16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Uto16F(src, dest, flags));
+pub fn convert16Uto16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Uto16F(src, dest, flags.bits()));
 }
 
 /// Convert Planar16F (binary16 bit patterns) to Planar16U.
@@ -151,8 +152,8 @@ pub fn convert16Uto16F(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 /// against 16U's 16, so a 16U -> 16F -> 16U round trip is lossy for values
 /// that are not exactly representable (25700 comes back as 25696). For
 /// interleaved data, multiply `width` by the channel count.
-pub fn convert16Fto16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_16Fto16U(src, dest, flags));
+pub fn convert16Fto16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_16Fto16U(src, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -168,7 +169,7 @@ pub fn convert16Fto16U(src: *const vImage_Buffer, dest: *const vImage_Buffer, fl
 /// (The header writes the first line as the truncating
 /// `(v * 255 + 32767) / 65535`; the implementation rounds to nearest.)
 /// Every `permuteMap` entry must be 0..3 or vImage returns
-/// `VImageError.InvalidParameter`. `backgroundColor` may not be null even when
+/// `Error.InvalidParameter`. `backgroundColor` may not be null even when
 /// `copyMask` is 0. Works in place.
 pub fn argb16UToARGB8888(
     src: *const vImage_Buffer,
@@ -176,9 +177,9 @@ pub fn argb16UToARGB8888(
     permute_map: *const [4]u8,
     copy_mask: u8,
     background_color: *const Pixel_8888,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB16UToARGB8888(src, dest, permute_map, copy_mask, background_color, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB16UToARGB8888(src, dest, permute_map, copy_mask, background_color, flags.bits()));
 }
 
 /// Widen ARGB8888 to ARGB16U, permuting channels and optionally substituting
@@ -194,9 +195,9 @@ pub fn argb8888ToARGB16U(
     permute_map: *const [4]u8,
     copy_mask: u8,
     background_color: *const Pixel_ARGB_16U,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888ToARGB16U(src, dest, permute_map, copy_mask, background_color, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB8888ToARGB16U(src, dest, permute_map, copy_mask, background_color, flags.bits()));
 }
 
 /// Widen a 4-channel 8-bit image to a 3-channel 16U image, dropping whichever
@@ -212,9 +213,9 @@ pub fn argb8888ToRGB16U(
     permute_map: *const [3]u8,
     copy_mask: u8,
     background_color: *const [3]Pixel_16U,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB8888ToRGB16U(src, dest, permute_map, copy_mask, background_color, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB8888ToRGB16U(src, dest, permute_map, copy_mask, background_color, flags.bits()));
 }
 
 /// Narrow a 3-channel 16U image to a 4-channel 8-bit image, synthesising the
@@ -230,9 +231,9 @@ pub fn rgb16UToARGB8888(
     permute_map: *const [4]u8,
     copy_mask: u8,
     background_color: *const Pixel_8888,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB16UToARGB8888(src, dest, permute_map, copy_mask, background_color, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB16UToARGB8888(src, dest, permute_map, copy_mask, background_color, flags.bits()));
 }
 
 // ============================================================================
@@ -247,9 +248,9 @@ pub fn argb16UtoPlanar16U(
     r_dest: *const vImage_Buffer,
     g_dest: *const vImage_Buffer,
     b_dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB16UtoPlanar16U(argb_src, a_dest, r_dest, g_dest, b_dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB16UtoPlanar16U(argb_src, a_dest, r_dest, g_dest, b_dest, flags.bits()));
 }
 
 /// Interleave four Planar16U buffers into ARGB16U, in memory order.
@@ -260,9 +261,9 @@ pub fn planar16UtoARGB16U(
     g_src: *const vImage_Buffer,
     b_src: *const vImage_Buffer,
     argb_dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar16UtoARGB16U(a_src, r_src, g_src, b_src, argb_dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar16UtoARGB16U(a_src, r_src, g_src, b_src, argb_dest, flags.bits()));
 }
 
 /// De-interleave RGB16U (3 channels, 6 bytes per pixel) into three Planar16U
@@ -272,9 +273,9 @@ pub fn rgb16UtoPlanar16U(
     r_dest: *const vImage_Buffer,
     g_dest: *const vImage_Buffer,
     b_dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB16UtoPlanar16U(rgb_src, r_dest, g_dest, b_dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB16UtoPlanar16U(rgb_src, r_dest, g_dest, b_dest, flags.bits()));
 }
 
 /// Interleave three Planar16U buffers into RGB16U. Not in place.
@@ -283,9 +284,9 @@ pub fn planar16UtoRGB16U(
     g_src: *const vImage_Buffer,
     b_src: *const vImage_Buffer,
     rgb_dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar16UtoRGB16U(r_src, g_src, b_src, rgb_dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar16UtoRGB16U(r_src, g_src, b_src, rgb_dest, flags.bits()));
 }
 
 // ============================================================================
@@ -294,21 +295,21 @@ pub fn planar16UtoRGB16U(
 
 /// Drop the leading channel of an ARGB16U image: `dest[i] = src[i + 1]`.
 /// Not in place.
-pub fn argb16UtoRGB16U(argb_src: *const vImage_Buffer, rgb_dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_ARGB16UtoRGB16U(argb_src, rgb_dest, flags));
+pub fn argb16UtoRGB16U(argb_src: *const vImage_Buffer, rgb_dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_ARGB16UtoRGB16U(argb_src, rgb_dest, flags.bits()));
 }
 
 /// Drop the trailing channel of an RGBA16U image: `dest[i] = src[i]` for
 /// i in 0..2. This is the one member of the family that can work in place,
 /// provided `src.data == dest.data` and the rowBytes match.
-pub fn rgba16UtoRGB16U(rgba_src: *const vImage_Buffer, rgb_dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGBA16UtoRGB16U(rgba_src, rgb_dest, flags));
+pub fn rgba16UtoRGB16U(rgba_src: *const vImage_Buffer, rgb_dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGBA16UtoRGB16U(rgba_src, rgb_dest, flags.bits()));
 }
 
 /// Drop the trailing channel of a BGRA16U image *and* reverse the remaining
 /// three, so `dest = {src[2], src[1], src[0]}`. Not in place.
-pub fn bgra16UtoRGB16U(bgra_src: *const vImage_Buffer, rgb_dest: *const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_BGRA16UtoRGB16U(bgra_src, rgb_dest, flags));
+pub fn bgra16UtoRGB16U(bgra_src: *const vImage_Buffer, rgb_dest: *const vImage_Buffer, flags: Options) Error!usize {
+    return check(c.vImageConvert_BGRA16UtoRGB16U(bgra_src, rgb_dest, flags.bits()));
 }
 
 // ============================================================================
@@ -329,9 +330,9 @@ pub fn rgb16UtoARGB16U(
     alpha: Pixel_16U,
     argb_dest: *const vImage_Buffer,
     premultiply: bool,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB16UtoARGB16U(rgb_src, a_src, alpha, argb_dest, premultiply, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB16UtoARGB16U(rgb_src, a_src, alpha, argb_dest, premultiply, flags.bits()));
 }
 
 /// Append an alpha channel to an RGB16U image, producing RGBA16U.
@@ -342,9 +343,9 @@ pub fn rgb16UtoRGBA16U(
     alpha: Pixel_16U,
     rgba_dest: *const vImage_Buffer,
     premultiply: bool,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB16UtoRGBA16U(rgb_src, a_src, alpha, rgba_dest, premultiply, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB16UtoRGBA16U(rgb_src, a_src, alpha, rgba_dest, premultiply, flags.bits()));
 }
 
 /// Reverse an RGB16U image's channels and append alpha, producing BGRA16U.
@@ -355,9 +356,9 @@ pub fn rgb16UtoBGRA16U(
     alpha: Pixel_16U,
     bgra_dest: *const vImage_Buffer,
     premultiply: bool,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGB16UtoBGRA16U(rgb_src, a_src, alpha, bgra_dest, premultiply, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGB16UtoBGRA16U(rgb_src, a_src, alpha, bgra_dest, premultiply, flags.bits()));
 }
 
 // ============================================================================
@@ -368,14 +369,14 @@ pub fn rgb16UtoBGRA16U(
 ///
 /// With `Dither.none` this is `round(v * 255 / 65535)`. Works in
 /// place when `src.data == dest.data` and `src.rowBytes >= dest.rowBytes`.
-pub fn planar16UtoPlanar8Dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_Planar16UtoPlanar8_dithered(src, dest, dither, flags));
+pub fn planar16UtoPlanar8Dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: Options) Error!usize {
+    return check(c.vImageConvert_Planar16UtoPlanar8_dithered(src, dest, dither, flags.bits()));
 }
 
 /// Narrow RGB16U to RGB888 (3 channels, no alpha) with a chosen dither
 /// method. Per-channel behaviour matches `planar16UtoPlanar8Dithered`.
-pub fn rgb16UtoRGB888Dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: vImage_Flags) VImageError!usize {
-    return check(c.vImageConvert_RGB16UtoRGB888_dithered(src, dest, dither, flags));
+pub fn rgb16UtoRGB888Dithered(src: *const vImage_Buffer, dest: *const vImage_Buffer, dither: c_int, flags: Options) Error!usize {
+    return check(c.vImageConvert_RGB16UtoRGB888_dithered(src, dest, dither, flags.bits()));
 }
 
 /// Narrow ARGB16U to ARGB8888 with a chosen dither method, permuting channels
@@ -386,9 +387,9 @@ pub fn argb16UtoARGB8888Dithered(
     dest: *const vImage_Buffer,
     dither: c_int,
     permute_map: *const [4]u8,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGB16UtoARGB8888_dithered(src, dest, dither, permute_map, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGB16UtoARGB8888_dithered(src, dest, dither, permute_map, flags.bits()));
 }
 
 /// Narrow PlanarF to Planar8 with a chosen dither method.
@@ -403,9 +404,9 @@ pub fn planarFtoPlanar8Dithered(
     max_float: Pixel_F,
     min_float: Pixel_F,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFtoPlanar8_dithered(src, dest, max_float, min_float, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFtoPlanar8_dithered(src, dest, max_float, min_float, dither, flags.bits()));
 }
 
 /// Narrow RGBFFF (3-channel float) to RGB888 with a chosen dither method.
@@ -417,9 +418,9 @@ pub fn rgbFFFtoRGB888Dithered(
     max_float: *const [3]Pixel_F,
     min_float: *const [3]Pixel_F,
     dither: c_int,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_RGBFFFtoRGB888_dithered(src, dest, max_float, min_float, dither, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_RGBFFFtoRGB888_dithered(src, dest, max_float, min_float, dither, flags.bits()));
 }
 
 /// Narrow ARGBFFFF to ARGB8888 with a chosen dither method and a channel
@@ -432,9 +433,9 @@ pub fn argbFFFFtoARGB8888Dithered(
     min_float: *const Pixel_FFFF,
     dither: c_int,
     permute_map: *const [4]u8,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_ARGBFFFFtoARGB8888_dithered(src, dest, max_float, min_float, dither, permute_map, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_ARGBFFFFtoARGB8888_dithered(src, dest, max_float, min_float, dither, permute_map, flags.bits()));
 }
 
 // ============================================================================
@@ -452,9 +453,9 @@ pub fn xrgb8888ToPlanar8(
     red: *const vImage_Buffer,
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_XRGB8888ToPlanar8(src, red, green, blue, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_XRGB8888ToPlanar8(src, red, green, blue, flags.bits()));
 }
 
 /// Split BGRX8888 into three Planar8 buffers, discarding the trailing X byte:
@@ -466,9 +467,9 @@ pub fn bgrx8888ToPlanar8(
     blue: *const vImage_Buffer,
     green: *const vImage_Buffer,
     red: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_BGRX8888ToPlanar8(src, blue, green, red, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_BGRX8888ToPlanar8(src, blue, green, red, flags.bits()));
 }
 
 /// Split XRGBFFFF into three PlanarF buffers, discarding the leading X float.
@@ -477,9 +478,9 @@ pub fn xrgbFFFFToPlanarF(
     red: *const vImage_Buffer,
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_XRGBFFFFToPlanarF(src, red, green, blue, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_XRGBFFFFToPlanarF(src, red, green, blue, flags.bits()));
 }
 
 /// Split BGRXFFFF into three PlanarF buffers, discarding the trailing X float.
@@ -488,9 +489,9 @@ pub fn bgrxFFFFToPlanarF(
     blue: *const vImage_Buffer,
     green: *const vImage_Buffer,
     red: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_BGRXFFFFToPlanarF(src, blue, green, red, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_BGRXFFFFToPlanarF(src, blue, green, red, flags.bits()));
 }
 
 // ============================================================================
@@ -508,9 +509,9 @@ pub fn planar8ToXRGB8888(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8ToXRGB8888(alpha, red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8ToXRGB8888(alpha, red, green, blue, dest, flags.bits()));
 }
 
 /// Interleave three Planar8 buffers into BGRX8888, writing `alpha` into the
@@ -523,9 +524,9 @@ pub fn planar8ToBGRX8888(
     red: *const vImage_Buffer,
     alpha: Pixel_8,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8ToBGRX8888(blue, green, red, alpha, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8ToBGRX8888(blue, green, red, alpha, dest, flags.bits()));
 }
 
 /// Interleave three Planar8 buffers into XRGBFFFF, scaling each 8-bit channel
@@ -543,9 +544,9 @@ pub fn planar8ToXRGBFFFF(
     dest: *const vImage_Buffer,
     max_float: *const Pixel_FFFF,
     min_float: *const Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8ToXRGBFFFF(alpha, red, green, blue, dest, max_float, min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8ToXRGBFFFF(alpha, red, green, blue, dest, max_float, min_float, flags.bits()));
 }
 
 /// Interleave three Planar8 buffers into BGRXFFFF with the same per-channel
@@ -559,9 +560,9 @@ pub fn planar8ToBGRXFFFF(
     dest: *const vImage_Buffer,
     max_float: *const Pixel_FFFF,
     min_float: *const Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_Planar8ToBGRXFFFF(blue, green, red, alpha, dest, max_float, min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_Planar8ToBGRXFFFF(blue, green, red, alpha, dest, max_float, min_float, flags.bits()));
 }
 
 /// Interleave three PlanarF buffers into XRGB8888, quantising each channel:
@@ -582,9 +583,9 @@ pub fn planarFToXRGB8888(
     dest: *const vImage_Buffer,
     max_float: *const Pixel_FFFF,
     min_float: *const Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFToXRGB8888(alpha, red, green, blue, dest, max_float, min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFToXRGB8888(alpha, red, green, blue, dest, max_float, min_float, flags.bits()));
 }
 
 /// Interleave three PlanarF buffers into BGRX8888 with the same quantisation
@@ -597,9 +598,9 @@ pub fn planarFToBGRX8888(
     dest: *const vImage_Buffer,
     max_float: *const Pixel_FFFF,
     min_float: *const Pixel_FFFF,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFToBGRX8888(blue, green, red, alpha, dest, max_float, min_float, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFToBGRX8888(blue, green, red, alpha, dest, max_float, min_float, flags.bits()));
 }
 
 /// Interleave three PlanarF buffers into XRGBFFFF: a straight copy with the
@@ -610,9 +611,9 @@ pub fn planarFToXRGBFFFF(
     green: *const vImage_Buffer,
     blue: *const vImage_Buffer,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFToXRGBFFFF(alpha, red, green, blue, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFToXRGBFFFF(alpha, red, green, blue, dest, flags.bits()));
 }
 
 /// Interleave three PlanarF buffers into BGRXFFFF: a straight copy with the
@@ -624,9 +625,9 @@ pub fn planarFToBGRXFFFF(
     red: *const vImage_Buffer,
     alpha: Pixel_F,
     dest: *const vImage_Buffer,
-    flags: vImage_Flags,
-) VImageError!usize {
-    return check(c.vImageConvert_PlanarFToBGRXFFFF(blue, green, red, alpha, dest, flags));
+    flags: Options,
+) Error!usize {
+    return check(c.vImageConvert_PlanarFToBGRXFFFF(blue, green, red, alpha, dest, flags.bits()));
 }
 
 // ============================================================================
@@ -724,7 +725,7 @@ test "convert12UTo16U: dest = (t * 65535 + (t << 4) + 2055) >> 12, two samples p
     for (samples, 0..) |s, i| put12(src, 0, i, s);
     try std.testing.expectEqualSlices(u8, &[_]u8{ 0xFF, 0xF0, 0x00, 0x80, 0x00, 0x01 }, src.mem[0..6]);
 
-    _ = try convert12UTo16U(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try convert12UTo16U(&src.buf, &dest.buf, .{});
 
     // (4095*65535 + 65520 + 2055) >> 12 = 268433400 >> 12 = 65535
     // (0    *65535 + 0     + 2055) >> 12 = 0
@@ -744,7 +745,7 @@ test "convert16UTo12U: t = (v * 4095 + 32767 + (v >> 4)) >> 16, and the 12U roun
     const vals = [_]u16{ 65535, 0, 32776, 16 };
     for (vals, 0..) |v, i| src.set(u16, 0, i, v);
 
-    _ = try convert16UTo12U(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try convert16UTo12U(&src.buf, &dest.buf, .{});
 
     // (65535*4095 + 32767 + 4095) >> 16 = 268402687 >> 16 = 4095
     // (0                        ) >> 16 = 0
@@ -767,7 +768,7 @@ test "convert16Uto16F and convert16Fto16U: 16U 0..65535 maps to 16F 0.0..1.0, no
     const vals = [_]u16{ 0, 32768, 65535, 257 };
     for (vals, 0..) |v, i| src.set(u16, 0, i, v);
 
-    _ = try convert16Uto16F(&src.buf, &half.buf, Flags.kvImageNoFlags);
+    _ = try convert16Uto16F(&src.buf, &half.buf, .{});
 
     // The stored bits are the binary16 encodings of v / 65535. If this were
     // the plain integer -> float cast the header's pseudo-code implies, 65535
@@ -781,7 +782,7 @@ test "convert16Uto16F and convert16Fto16U: 16U 0..65535 maps to 16F 0.0..1.0, no
     }
 
     // These four are exactly representable, so the round trip is exact.
-    _ = try convert16Fto16U(&half.buf, &back.buf, Flags.kvImageNoFlags);
+    _ = try convert16Fto16U(&half.buf, &back.buf, .{});
     for (vals, 0..) |v, i| try std.testing.expectEqual(v, back.get(u16, 0, i));
 }
 
@@ -799,8 +800,8 @@ test "convert16Uto16F is lossy for values needing more than 11 significant bits"
     // round trip can lose up to 4. Measured: 25700 -> 25696.
     src.set(u16, 0, 0, 25700);
     src.set(u16, 0, 1, 65534);
-    _ = try convert16Uto16F(&src.buf, &half.buf, Flags.kvImageNoFlags);
-    _ = try convert16Fto16U(&half.buf, &back.buf, Flags.kvImageNoFlags);
+    _ = try convert16Uto16F(&src.buf, &half.buf, .{});
+    _ = try convert16Fto16U(&half.buf, &back.buf, .{});
 
     try std.testing.expectEqual(@as(u16, 25696), back.get(u16, 0, 0));
     try std.testing.expectApproxEqAbs(
@@ -833,7 +834,7 @@ test "argb16UToARGB8888: result[i] = round(src[permuteMap[i]] * 255 / 65535), th
 
     const identity = [_]u8{ 0, 1, 2, 3 };
     const bg = Pixel_8888{ 9, 9, 9, 9 };
-    _ = try argb16UToARGB8888(&src.buf, &dest.buf, &identity, 0, &bg, Flags.kvImageNoFlags);
+    _ = try argb16UToARGB8888(&src.buf, &dest.buf, &identity, 0, &bg, .{});
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 128), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 2));
@@ -844,7 +845,7 @@ test "argb16UToARGB8888: result[i] = round(src[permuteMap[i]] * 255 / 65535), th
     // rather than a pointer this would read garbage.
     const reversed = [_]u8{ 3, 2, 1, 0 };
     const bg2 = Pixel_8888{ 42, 0, 0, 0 };
-    _ = try argb16UToARGB8888(&src.buf, &dest.buf, &reversed, 0x8, &bg2, Flags.kvImageNoFlags);
+    _ = try argb16UToARGB8888(&src.buf, &dest.buf, &reversed, 0x8, &bg2, .{});
     try std.testing.expectEqual(@as(u8, 42), dest.get(u8, 0, 0)); // from background
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 1)); // src[2] = 0
     try std.testing.expectEqual(@as(u8, 128), dest.get(u8, 0, 2)); // src[1] = 32768
@@ -864,7 +865,7 @@ test "argb8888ToARGB16U: result[i] = (src[permuteMap[i]] * 65535 + 127) / 255, t
 
     const identity = [_]u8{ 0, 1, 2, 3 };
     const bg = Pixel_ARGB_16U{ 7, 7, 7, 7 };
-    _ = try argb8888ToARGB16U(&src.buf, &dest.buf, &identity, 0, &bg, Flags.kvImageNoFlags);
+    _ = try argb8888ToARGB16U(&src.buf, &dest.buf, &identity, 0, &bg, .{});
     try std.testing.expectEqual(@as(u16, 65535), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 32896), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 0), dest.get(u16, 0, 2));
@@ -874,7 +875,7 @@ test "argb8888ToARGB16U: result[i] = (src[permuteMap[i]] * 65535 + 127) / 255, t
     // Background entries for the untouched channels are deliberately distinct
     // from the converted values, so a wrong bit order would show up.
     const bg2 = Pixel_ARGB_16U{ 1111, 2222, 3333, 4444 };
-    _ = try argb8888ToARGB16U(&src.buf, &dest.buf, &identity, 0x3, &bg2, Flags.kvImageNoFlags);
+    _ = try argb8888ToARGB16U(&src.buf, &dest.buf, &identity, 0x3, &bg2, .{});
     try std.testing.expectEqual(@as(u16, 65535), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 32896), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 3333), dest.get(u16, 0, 2));
@@ -895,14 +896,14 @@ test "argb8888ToRGB16U: 3-entry permuteMap picks which source channels survive" 
     // these, since 20*65535+127 = 255*5140 + 127.
     const skip_alpha = [_]u8{ 1, 2, 3 };
     const bg = [3]Pixel_16U{ 0, 0, 0 };
-    _ = try argb8888ToRGB16U(&src.buf, &dest.buf, &skip_alpha, 0, &bg, Flags.kvImageNoFlags);
+    _ = try argb8888ToRGB16U(&src.buf, &dest.buf, &skip_alpha, 0, &bg, .{});
     try std.testing.expectEqual(@as(u16, 5140), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 7710), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 10280), dest.get(u16, 0, 2));
 
     // copyMask is only 3 bits wide here: 0x4 -> first channel.
     const bg2 = [3]Pixel_16U{ 60000, 0, 0 };
-    _ = try argb8888ToRGB16U(&src.buf, &dest.buf, &skip_alpha, 0x4, &bg2, Flags.kvImageNoFlags);
+    _ = try argb8888ToRGB16U(&src.buf, &dest.buf, &skip_alpha, 0x4, &bg2, .{});
     try std.testing.expectEqual(@as(u16, 60000), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 7710), dest.get(u16, 0, 1));
 }
@@ -921,7 +922,7 @@ test "rgb16UToARGB8888: permuteMap indexes the synthesised {255, R, G, B}" {
     // 255, 128 and 1.
     const identity = [_]u8{ 0, 1, 2, 3 };
     const bg = Pixel_8888{ 0, 0, 0, 0 };
-    _ = try rgb16UToARGB8888(&src.buf, &dest.buf, &identity, 0, &bg, Flags.kvImageNoFlags);
+    _ = try rgb16UToARGB8888(&src.buf, &dest.buf, &identity, 0, &bg, .{});
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 128), dest.get(u8, 0, 2));
@@ -929,7 +930,7 @@ test "rgb16UToARGB8888: permuteMap indexes the synthesised {255, R, G, B}" {
 
     // BGRA order: {3,2,1,0} puts blue first and the synthesised alpha last.
     const bgra = [_]u8{ 3, 2, 1, 0 };
-    _ = try rgb16UToARGB8888(&src.buf, &dest.buf, &bgra, 0, &bg, Flags.kvImageNoFlags);
+    _ = try rgb16UToARGB8888(&src.buf, &dest.buf, &bgra, 0, &bg, .{});
     try std.testing.expectEqual(@as(u8, 1), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 128), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 2));
@@ -953,7 +954,7 @@ test "argb16UtoPlanar16U and planar16UtoARGB16U: A,R,G,B memory order round-trip
         src.set(u16, y, x * 4 + ch, @intCast(1000 * (ch + 1) + 10 * y + x));
     };
 
-    _ = try argb16UtoPlanar16U(&src.buf, &a.buf, &r.buf, &g.buf, &b.buf, Flags.kvImageNoFlags);
+    _ = try argb16UtoPlanar16U(&src.buf, &a.buf, &r.buf, &g.buf, &b.buf, .{});
     const planes = [_]Buf{ a, r, g, b };
     for (planes, 0..) |p, ch| {
         for (0..2) |y| for (0..2) |x| {
@@ -963,7 +964,7 @@ test "argb16UtoPlanar16U and planar16UtoARGB16U: A,R,G,B memory order round-trip
 
     const dest = try alloc(allocator, u16, 2, 2, 4);
     defer dest.free(allocator);
-    _ = try planar16UtoARGB16U(&a.buf, &r.buf, &g.buf, &b.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try planar16UtoARGB16U(&a.buf, &r.buf, &g.buf, &b.buf, &dest.buf, .{});
     for (0..2) |y| for (0..2) |x| for (0..4) |ch| {
         try std.testing.expectEqual(src.get(u16, y, x * 4 + ch), dest.get(u16, y, x * 4 + ch));
     };
@@ -983,7 +984,7 @@ test "rgb16UtoPlanar16U and planar16UtoRGB16U: R,G,B memory order round-trip" {
     const vals = [_]u16{ 100, 200, 300, 400, 500, 600 };
     for (vals, 0..) |v, i| src.set(u16, 0, i, v);
 
-    _ = try rgb16UtoPlanar16U(&src.buf, &r.buf, &g.buf, &b.buf, Flags.kvImageNoFlags);
+    _ = try rgb16UtoPlanar16U(&src.buf, &r.buf, &g.buf, &b.buf, .{});
     try std.testing.expectEqual(@as(u16, 100), r.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 400), r.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 200), g.get(u16, 0, 0));
@@ -993,7 +994,7 @@ test "rgb16UtoPlanar16U and planar16UtoRGB16U: R,G,B memory order round-trip" {
 
     const dest = try alloc(allocator, u16, 1, 2, 3);
     defer dest.free(allocator);
-    _ = try planar16UtoRGB16U(&r.buf, &g.buf, &b.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try planar16UtoRGB16U(&r.buf, &g.buf, &b.buf, &dest.buf, .{});
     for (vals, 0..) |v, i| try std.testing.expectEqual(v, dest.get(u16, 0, i));
 }
 
@@ -1007,12 +1008,12 @@ test "argb16UtoRGB16U drops channel 0, rgba16U drops channel 3, bgra16U drops 3 
     const vals = [_]u16{ 1000, 2000, 3000, 4000 };
     for (vals, 0..) |v, i| src.set(u16, 0, i, v);
 
-    _ = try argb16UtoRGB16U(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try argb16UtoRGB16U(&src.buf, &dest.buf, .{});
     try std.testing.expectEqual(@as(u16, 2000), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 3000), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 4000), dest.get(u16, 0, 2));
 
-    _ = try rgba16UtoRGB16U(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try rgba16UtoRGB16U(&src.buf, &dest.buf, .{});
     try std.testing.expectEqual(@as(u16, 1000), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 2000), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 3000), dest.get(u16, 0, 2));
@@ -1020,7 +1021,7 @@ test "argb16UtoRGB16U drops channel 0, rgba16U drops channel 3, bgra16U drops 3 
     // The header's prose claims all three "skip the first channel", but
     // BGRA16UtoRGB16U actually emits {src[2], src[1], src[0]} - it has to, to
     // turn BGR into RGB.
-    _ = try bgra16UtoRGB16U(&src.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try bgra16UtoRGB16U(&src.buf, &dest.buf, .{});
     try std.testing.expectEqual(@as(u16, 3000), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 2000), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 1000), dest.get(u16, 0, 2));
@@ -1041,21 +1042,21 @@ test "rgb16Uto{ARGB,RGBA,BGRA}16U: alpha placement, channel order, and premultip
     a.set(u16, 0, 0, 40000);
 
     // Not premultiplied: straight interleave, alpha leading.
-    _ = try rgb16UtoARGB16U(&rgb.buf, &a.buf, 0, &dest.buf, false, Flags.kvImageNoFlags);
+    _ = try rgb16UtoARGB16U(&rgb.buf, &a.buf, 0, &dest.buf, false, .{});
     try std.testing.expectEqual(@as(u16, 40000), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 65535), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 32768), dest.get(u16, 0, 2));
     try std.testing.expectEqual(@as(u16, 0), dest.get(u16, 0, 3));
 
     // Alpha trailing, colours in source order.
-    _ = try rgb16UtoRGBA16U(&rgb.buf, &a.buf, 0, &dest.buf, false, Flags.kvImageNoFlags);
+    _ = try rgb16UtoRGBA16U(&rgb.buf, &a.buf, 0, &dest.buf, false, .{});
     try std.testing.expectEqual(@as(u16, 65535), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 32768), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 0), dest.get(u16, 0, 2));
     try std.testing.expectEqual(@as(u16, 40000), dest.get(u16, 0, 3));
 
     // Alpha trailing, colours reversed.
-    _ = try rgb16UtoBGRA16U(&rgb.buf, &a.buf, 0, &dest.buf, false, Flags.kvImageNoFlags);
+    _ = try rgb16UtoBGRA16U(&rgb.buf, &a.buf, 0, &dest.buf, false, .{});
     try std.testing.expectEqual(@as(u16, 0), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 32768), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 65535), dest.get(u16, 0, 2));
@@ -1066,7 +1067,7 @@ test "rgb16Uto{ARGB,RGBA,BGRA}16U: alpha placement, channel order, and premultip
     //   (32768*32768 + 32767) / 65535 = 1073774592 / 65535 = 16384
     //   0 -> 0.  Alpha itself is stored unscaled.
     a.set(u16, 0, 0, 32768);
-    _ = try rgb16UtoARGB16U(&rgb.buf, &a.buf, 0, &dest.buf, true, Flags.kvImageNoFlags);
+    _ = try rgb16UtoARGB16U(&rgb.buf, &a.buf, 0, &dest.buf, true, .{});
     try std.testing.expectEqual(@as(u16, 32768), dest.get(u16, 0, 0));
     try std.testing.expectEqual(@as(u16, 32768), dest.get(u16, 0, 1));
     try std.testing.expectEqual(@as(u16, 16384), dest.get(u16, 0, 2));
@@ -1085,7 +1086,7 @@ test "planar16UtoPlanar8Dithered with Dither.none: (v * 255 + 32767) / 65535" {
     const vals = [_]u16{ 0, 257, 25700, 65535 };
     for (vals, 0..) |v, i| src.set(u16, 0, i, v);
 
-    _ = try planar16UtoPlanar8Dithered(&src.buf, &dest.buf, Dither.none, Flags.kvImageNoFlags);
+    _ = try planar16UtoPlanar8Dithered(&src.buf, &dest.buf, Dither.none, .{});
     const expected = [_]u8{ 0, 1, 100, 255 };
     for (expected, 0..) |e, i| try std.testing.expectEqual(e, dest.get(u8, 0, i));
 }
@@ -1099,7 +1100,7 @@ test "rgb16UtoRGB888Dithered and argb16UtoARGB8888Dithered with Dither.none" {
 
     const vals3 = [_]u16{ 0, 25700, 65535 };
     for (vals3, 0..) |v, i| src3.set(u16, 0, i, v);
-    _ = try rgb16UtoRGB888Dithered(&src3.buf, &dest3.buf, Dither.none, Flags.kvImageNoFlags);
+    _ = try rgb16UtoRGB888Dithered(&src3.buf, &dest3.buf, Dither.none, .{});
     try std.testing.expectEqual(@as(u8, 0), dest3.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 100), dest3.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 255), dest3.get(u8, 0, 2));
@@ -1112,7 +1113,7 @@ test "rgb16UtoRGB888Dithered and argb16UtoARGB8888Dithered with Dither.none" {
     const vals4 = [_]u16{ 257, 25700, 65535, 0 };
     for (vals4, 0..) |v, i| src4.set(u16, 0, i, v);
     const reversed = [_]u8{ 3, 2, 1, 0 };
-    _ = try argb16UtoARGB8888Dithered(&src4.buf, &dest4.buf, Dither.none, &reversed, Flags.kvImageNoFlags);
+    _ = try argb16UtoARGB8888Dithered(&src4.buf, &dest4.buf, Dither.none, &reversed, .{});
     try std.testing.expectEqual(@as(u8, 0), dest4.get(u8, 0, 0)); // src[3]
     try std.testing.expectEqual(@as(u8, 255), dest4.get(u8, 0, 1)); // src[2]
     try std.testing.expectEqual(@as(u8, 100), dest4.get(u8, 0, 2)); // src[1]
@@ -1131,7 +1132,7 @@ test "planarFtoPlanar8Dithered with Dither.none: 255 * (v - min) / (max - min), 
     src.set(f32, 0, 2, 1.0);
     src.set(f32, 0, 3, 5.0); // above max -> saturates
 
-    _ = try planarFtoPlanar8Dithered(&src.buf, &dest.buf, 1.0, 0.0, Dither.none, Flags.kvImageNoFlags);
+    _ = try planarFtoPlanar8Dithered(&src.buf, &dest.buf, 1.0, 0.0, Dither.none, .{});
     const expected = [_]u8{ 0, 100, 255, 255 };
     for (expected, 0..) |e, i| try std.testing.expectEqual(e, dest.get(u8, 0, i));
 }
@@ -1149,7 +1150,7 @@ test "rgbFFFtoRGB888Dithered: per-channel max/min, and a negative range inverts 
 
     const max = [3]Pixel_F{ 1.0, 1.0, 1.0 };
     const min = [3]Pixel_F{ 0.0, 0.0, 0.0 };
-    _ = try rgbFFFtoRGB888Dithered(&src.buf, &dest.buf, &max, &min, Dither.none, Flags.kvImageNoFlags);
+    _ = try rgbFFFtoRGB888Dithered(&src.buf, &dest.buf, &max, &min, Dither.none, .{});
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 100), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 2));
@@ -1157,7 +1158,7 @@ test "rgbFFFtoRGB888Dithered: per-channel max/min, and a negative range inverts 
     // Channel 2 with max < min: 0.0 is now full intensity.
     const max2 = [3]Pixel_F{ 1.0, 1.0, 0.0 };
     const min2 = [3]Pixel_F{ 0.0, 0.0, 1.0 };
-    _ = try rgbFFFtoRGB888Dithered(&src.buf, &dest.buf, &max2, &min2, Dither.none, Flags.kvImageNoFlags);
+    _ = try rgbFFFtoRGB888Dithered(&src.buf, &dest.buf, &max2, &min2, Dither.none, .{});
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 2));
 }
 
@@ -1176,13 +1177,13 @@ test "argbFFFFtoARGB8888Dithered: max/min are indexed in destination order, afte
     const max = Pixel_FFFF{ 1.0, 1.0, 1.0, 1.0 };
     const min = Pixel_FFFF{ 0.0, 0.0, 0.0, 0.0 };
     const identity = [_]u8{ 0, 1, 2, 3 };
-    _ = try argbFFFFtoARGB8888Dithered(&src.buf, &dest.buf, &max, &min, Dither.none, &identity, Flags.kvImageNoFlags);
+    _ = try argbFFFFtoARGB8888Dithered(&src.buf, &dest.buf, &max, &min, Dither.none, &identity, .{});
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 100), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 2));
 
     const reversed = [_]u8{ 3, 2, 1, 0 };
-    _ = try argbFFFFtoARGB8888Dithered(&src.buf, &dest.buf, &max, &min, Dither.none, &reversed, Flags.kvImageNoFlags);
+    _ = try argbFFFFtoARGB8888Dithered(&src.buf, &dest.buf, &max, &min, Dither.none, &reversed, .{});
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 1)); // src[2] = 0.0
     try std.testing.expectEqual(@as(u8, 100), dest.get(u8, 0, 2)); // src[1]
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 3)); // src[0] = 1.0
@@ -1203,14 +1204,14 @@ test "xrgb8888ToPlanar8 / bgrx8888ToPlanar8: X is dropped from opposite ends" {
     for (vals, 0..) |v, i| src.set(u8, 0, i, v);
 
     // XRGB: the leading 10 is discarded.
-    _ = try xrgb8888ToPlanar8(&src.buf, &p0.buf, &p1.buf, &p2.buf, Flags.kvImageNoFlags);
+    _ = try xrgb8888ToPlanar8(&src.buf, &p0.buf, &p1.buf, &p2.buf, .{});
     try std.testing.expectEqual(@as(u8, 20), p0.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 30), p1.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 40), p2.get(u8, 0, 0));
 
     // BGRX: the trailing 40 is discarded. Arguments are (blue, green, red), so
     // p0 receives src[0] = 10 as blue.
-    _ = try bgrx8888ToPlanar8(&src.buf, &p0.buf, &p1.buf, &p2.buf, Flags.kvImageNoFlags);
+    _ = try bgrx8888ToPlanar8(&src.buf, &p0.buf, &p1.buf, &p2.buf, .{});
     try std.testing.expectEqual(@as(u8, 10), p0.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 20), p1.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 30), p2.get(u8, 0, 0));
@@ -1230,12 +1231,12 @@ test "xrgbFFFFToPlanarF / bgrxFFFFToPlanarF: X is dropped from opposite ends" {
     const vals = [_]f32{ 0.125, 0.25, 0.5, 0.75 };
     for (vals, 0..) |v, i| src.set(f32, 0, i, v);
 
-    _ = try xrgbFFFFToPlanarF(&src.buf, &p0.buf, &p1.buf, &p2.buf, Flags.kvImageNoFlags);
+    _ = try xrgbFFFFToPlanarF(&src.buf, &p0.buf, &p1.buf, &p2.buf, .{});
     try std.testing.expectEqual(@as(f32, 0.25), p0.get(f32, 0, 0));
     try std.testing.expectEqual(@as(f32, 0.5), p1.get(f32, 0, 0));
     try std.testing.expectEqual(@as(f32, 0.75), p2.get(f32, 0, 0));
 
-    _ = try bgrxFFFFToPlanarF(&src.buf, &p0.buf, &p1.buf, &p2.buf, Flags.kvImageNoFlags);
+    _ = try bgrxFFFFToPlanarF(&src.buf, &p0.buf, &p1.buf, &p2.buf, .{});
     try std.testing.expectEqual(@as(f32, 0.125), p0.get(f32, 0, 0));
     try std.testing.expectEqual(@as(f32, 0.25), p1.get(f32, 0, 0));
     try std.testing.expectEqual(@as(f32, 0.5), p2.get(f32, 0, 0));
@@ -1256,13 +1257,13 @@ test "planar8ToXRGB8888 / planar8ToBGRX8888: the scalar X lands first or last" {
     g.set(u8, 0, 0, 2);
     b.set(u8, 0, 0, 3);
 
-    _ = try planar8ToXRGB8888(99, &r.buf, &g.buf, &b.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try planar8ToXRGB8888(99, &r.buf, &g.buf, &b.buf, &dest.buf, .{});
     try std.testing.expectEqual(@as(u8, 99), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 1), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 2), dest.get(u8, 0, 2));
     try std.testing.expectEqual(@as(u8, 3), dest.get(u8, 0, 3));
 
-    _ = try planar8ToBGRX8888(&b.buf, &g.buf, &r.buf, 99, &dest.buf, Flags.kvImageNoFlags);
+    _ = try planar8ToBGRX8888(&b.buf, &g.buf, &r.buf, 99, &dest.buf, .{});
     try std.testing.expectEqual(@as(u8, 3), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 2), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 1), dest.get(u8, 0, 2));
@@ -1287,13 +1288,13 @@ test "planar8ToXRGBFFFF / planar8ToBGRXFFFF: colours scale by max/min, the X flo
     const max = Pixel_FFFF{ 1.0, 1.0, 1.0, 1.0 };
     const min = Pixel_FFFF{ 0.0, 0.0, 0.0, 0.0 };
 
-    _ = try planar8ToXRGBFFFF(0.25, &r.buf, &g.buf, &b.buf, &dest.buf, &max, &min, Flags.kvImageNoFlags);
+    _ = try planar8ToXRGBFFFF(0.25, &r.buf, &g.buf, &b.buf, &dest.buf, &max, &min, .{});
     try std.testing.expectEqual(@as(f32, 0.25), dest.get(f32, 0, 0));
     try std.testing.expectEqual(@as(f32, 1.0), dest.get(f32, 0, 1));
     try std.testing.expectEqual(@as(f32, 0.0), dest.get(f32, 0, 2));
     try std.testing.expectApproxEqAbs(@as(f32, 0.2), dest.get(f32, 0, 3), 1e-6);
 
-    _ = try planar8ToBGRXFFFF(&b.buf, &g.buf, &r.buf, 0.25, &dest.buf, &max, &min, Flags.kvImageNoFlags);
+    _ = try planar8ToBGRXFFFF(&b.buf, &g.buf, &r.buf, 0.25, &dest.buf, &max, &min, .{});
     try std.testing.expectApproxEqAbs(@as(f32, 0.2), dest.get(f32, 0, 0), 1e-6);
     try std.testing.expectEqual(@as(f32, 0.0), dest.get(f32, 0, 1));
     try std.testing.expectEqual(@as(f32, 1.0), dest.get(f32, 0, 2));
@@ -1301,7 +1302,7 @@ test "planar8ToXRGBFFFF / planar8ToBGRXFFFF: colours scale by max/min, the X flo
 
     // A doubled range halves the result: max = 2 -> 255 maps to 2.0.
     const max2 = Pixel_FFFF{ 2.0, 2.0, 2.0, 2.0 };
-    _ = try planar8ToXRGBFFFF(0.25, &r.buf, &g.buf, &b.buf, &dest.buf, &max2, &min, Flags.kvImageNoFlags);
+    _ = try planar8ToXRGBFFFF(0.25, &r.buf, &g.buf, &b.buf, &dest.buf, &max2, &min, .{});
     try std.testing.expectEqual(@as(f32, 0.25), dest.get(f32, 0, 0)); // X unchanged
     try std.testing.expectEqual(@as(f32, 2.0), dest.get(f32, 0, 1));
 }
@@ -1323,13 +1324,13 @@ test "planarFToXRGB8888 / planarFToBGRX8888: quantise to 0..255 with a Pixel_8 X
     const max = Pixel_FFFF{ 1.0, 1.0, 1.0, 1.0 };
     const min = Pixel_FFFF{ 0.0, 0.0, 0.0, 0.0 };
 
-    _ = try planarFToXRGB8888(7, &r.buf, &g.buf, &b.buf, &dest.buf, &max, &min, Flags.kvImageNoFlags);
+    _ = try planarFToXRGB8888(7, &r.buf, &g.buf, &b.buf, &dest.buf, &max, &min, .{});
     try std.testing.expectEqual(@as(u8, 7), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 100), dest.get(u8, 0, 2));
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 3));
 
-    _ = try planarFToBGRX8888(&b.buf, &g.buf, &r.buf, 7, &dest.buf, &max, &min, Flags.kvImageNoFlags);
+    _ = try planarFToBGRX8888(&b.buf, &g.buf, &r.buf, 7, &dest.buf, &max, &min, .{});
     try std.testing.expectEqual(@as(u8, 0), dest.get(u8, 0, 0));
     try std.testing.expectEqual(@as(u8, 100), dest.get(u8, 0, 1));
     try std.testing.expectEqual(@as(u8, 255), dest.get(u8, 0, 2));
@@ -1355,7 +1356,7 @@ test "planarFToXRGBFFFF / planarFToBGRXFFFF: straight interleave, no scaling arg
     g.set(f32, 0, 1, 2.0);
     b.set(f32, 0, 1, 3.0);
 
-    _ = try planarFToXRGBFFFF(-1.0, &r.buf, &g.buf, &b.buf, &dest.buf, Flags.kvImageNoFlags);
+    _ = try planarFToXRGBFFFF(-1.0, &r.buf, &g.buf, &b.buf, &dest.buf, .{});
     try std.testing.expectEqual(@as(f32, -1.0), dest.get(f32, 0, 0));
     try std.testing.expectEqual(@as(f32, -3.5), dest.get(f32, 0, 1));
     try std.testing.expectEqual(@as(f32, 17.25), dest.get(f32, 0, 2));
@@ -1363,7 +1364,7 @@ test "planarFToXRGBFFFF / planarFToBGRXFFFF: straight interleave, no scaling arg
     try std.testing.expectEqual(@as(f32, -1.0), dest.get(f32, 0, 4));
     try std.testing.expectEqual(@as(f32, 1.0), dest.get(f32, 0, 5));
 
-    _ = try planarFToBGRXFFFF(&b.buf, &g.buf, &r.buf, -1.0, &dest.buf, Flags.kvImageNoFlags);
+    _ = try planarFToBGRXFFFF(&b.buf, &g.buf, &r.buf, -1.0, &dest.buf, .{});
     try std.testing.expectEqual(@as(f32, 0.0), dest.get(f32, 0, 0));
     try std.testing.expectEqual(@as(f32, 17.25), dest.get(f32, 0, 1));
     try std.testing.expectEqual(@as(f32, -3.5), dest.get(f32, 0, 2));
@@ -1380,10 +1381,10 @@ test "an out-of-range permuteMap entry is rejected with kvImageInvalidParameter 
     const bad = [_]u8{ 0, 1, 2, 4 }; // 4 is not a channel index
     const bg = Pixel_8888{ 0, 0, 0, 0 };
     try std.testing.expectError(
-        VImageError.InvalidParameter,
-        argb16UToARGB8888(&src.buf, &dest.buf, &bad, 0, &bg, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        argb16UToARGB8888(&src.buf, &dest.buf, &bad, 0, &bg, .{}),
     );
-    try std.testing.expectEqual(@as(vImage_Error, -21773), types.Error.kvImageInvalidParameter);
+    try std.testing.expectEqual(@as(vImage_Error, -21773), types.ErrorCode.kvImageInvalidParameter);
 }
 
 test "an unsupported dither method is rejected with kvImageInvalidParameter" {
@@ -1395,9 +1396,9 @@ test "an unsupported dither method is rejected with kvImageInvalidParameter" {
 
     // 99 is not one of the kvImageConvert_Dither* constants.
     try std.testing.expectError(
-        VImageError.InvalidParameter,
-        planar16UtoPlanar8Dithered(&src.buf, &dest.buf, 99, Flags.kvImageNoFlags),
+        Error.InvalidParameter,
+        planar16UtoPlanar8Dithered(&src.buf, &dest.buf, 99, .{}),
     );
     // Dither.none, by contrast, is accepted.
-    _ = try planar16UtoPlanar8Dithered(&src.buf, &dest.buf, Dither.none, Flags.kvImageNoFlags);
+    _ = try planar16UtoPlanar8Dithered(&src.buf, &dest.buf, Dither.none, .{});
 }

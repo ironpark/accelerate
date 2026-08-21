@@ -12,7 +12,7 @@
 //!   the default - Sparse's parameter checks call `_SparseTrap()`, i.e.
 //!   `__builtin_trap()`, killing the process. This binding installs a callback
 //!   and checks the numeric `status` field, so both failure channels arrive as
-//!   `SparseError`.
+//!   `Error`.
 //! * **The solve workspace comes from a `std.mem.Allocator`.** Apple's inline
 //!   `SparseSolve` wrappers `malloc` and `free` a scratch buffer on every call.
 //!   The size is computable from public fields, so `solve` takes an allocator,
@@ -33,7 +33,7 @@ const types = @import("types.zig");
 const matrix = @import("matrix.zig");
 
 const Attributes = types.Attributes;
-const SparseError = types.SparseError;
+const Error = types.Error;
 const FactorizationType = types.FactorizationType;
 
 fn cMalloc(size: usize) callconv(.c) ?*anyopaque {
@@ -129,7 +129,7 @@ pub fn Factorization(comptime T: type) type {
         /// Takes no allocator: Sparse allocates the factor through
         /// `SymbolicOptions.malloc`, which has no context pointer. See the
         /// module docs.
-        pub fn init(algorithm: FactorizationType, a: Sparse, options: Options) SparseError!Self {
+        pub fn init(algorithm: FactorizationType, a: Sparse, options: Options) Error!Self {
             if (algorithm.isSymmetric()) {
                 // For a complex matrix `SparseFactor` accepts either kind and
                 // routes Hermitian to its own entry point; for a real one only
@@ -138,19 +138,19 @@ pub fn Factorization(comptime T: type) type {
                     a.attributes.kind == .symmetric or a.attributes.kind == .hermitian
                 else
                     a.attributes.kind == .symmetric;
-                if (!kind_ok) return SparseError.ParameterError;
-                if (a.row_count != a.column_count) return SparseError.ParameterError;
+                if (!kind_ok) return Error.ParameterError;
+                if (a.row_count != a.column_count) return Error.ParameterError;
                 // COLAMD orders A^T A and is meaningless for a symmetric
                 // factorization; Sparse rejects it rather than silently coping.
-                if (options.order == .colamd) return SparseError.ParameterError;
+                if (options.order == .colamd) return Error.ParameterError;
             }
             // LU is square-only. `SparseFactorLU` traps on a rectangular
             // matrix rather than reporting it.
-            if (algorithm.isLu() and a.row_count != a.column_count) return SparseError.ParameterError;
-            if (a.column_count == 0) return SparseError.ParameterError;
+            if (algorithm.isLu() and a.row_count != a.column_count) return Error.ParameterError;
+            if (a.column_count == 0) return Error.ParameterError;
             if (options.order == .user) {
                 if (options.user_order) |o| {
-                    if (o.len < a.column_count) return SparseError.ParameterError;
+                    if (o.len < a.column_count) return Error.ParameterError;
                 }
             }
 
@@ -235,7 +235,7 @@ pub fn Factorization(comptime T: type) type {
         }
 
         /// Solves `A x = b`, allocating the scratch buffer for the call.
-        pub fn solve(self: Self, allocator: std.mem.Allocator, b: []const T, x: []T) (SparseError || std.mem.Allocator.Error)!void {
+        pub fn solve(self: Self, allocator: std.mem.Allocator, b: []const T, x: []T) (Error || std.mem.Allocator.Error)!void {
             return self.solveMatrix(
                 allocator,
                 Dense.fromSlice(@constCast(b)),
@@ -247,19 +247,19 @@ pub fn Factorization(comptime T: type) type {
         ///
         /// For a non-square system `xb` must be `max(rows, columns)` long, not
         /// just the size of the solution.
-        pub fn solveInPlace(self: Self, allocator: std.mem.Allocator, xb: []T) (SparseError || std.mem.Allocator.Error)!void {
+        pub fn solveInPlace(self: Self, allocator: std.mem.Allocator, xb: []T) (Error || std.mem.Allocator.Error)!void {
             return self.solveMatrixInPlace(allocator, Dense.fromSlice(xb));
         }
 
         /// Multi-right-hand-side out-of-place solve.
-        pub fn solveMatrix(self: Self, allocator: std.mem.Allocator, b: Dense, x: Dense) (SparseError || std.mem.Allocator.Error)!void {
+        pub fn solveMatrix(self: Self, allocator: std.mem.Allocator, b: Dense, x: Dense) (Error || std.mem.Allocator.Error)!void {
             const workspace = try allocator.alignedAlloc(u8, .@"16", self.workspaceSize(b.rhsCount()));
             defer allocator.free(workspace);
             return self.solveWithWorkspace(b, x, workspace);
         }
 
         /// Multi-right-hand-side in-place solve.
-        pub fn solveMatrixInPlace(self: Self, allocator: std.mem.Allocator, xb: Dense) (SparseError || std.mem.Allocator.Error)!void {
+        pub fn solveMatrixInPlace(self: Self, allocator: std.mem.Allocator, xb: Dense) (Error || std.mem.Allocator.Error)!void {
             const workspace = try allocator.alignedAlloc(u8, .@"16", self.workspaceSize(xb.rhsCount()));
             defer allocator.free(workspace);
             return self.solveWithWorkspace(null, xb, workspace);
@@ -271,7 +271,7 @@ pub fn Factorization(comptime T: type) type {
         /// Passing `null` for `b` means an in-place solve, with `x` holding the
         /// right-hand side on entry. `workspace` must be at least
         /// `workspaceSize(x.rhsCount())` bytes.
-        pub fn solveWithWorkspace(self: Self, b: ?Dense, x: Dense, workspace: []align(16) u8) SparseError!void {
+        pub fn solveWithWorkspace(self: Self, b: ?Dense, x: Dense, workspace: []align(16) u8) Error!void {
             std.debug.assert(workspace.len >= self.workspaceSize(x.rhsCount()));
 
             const rows = self.rowCount();
@@ -327,7 +327,7 @@ pub fn Factorization(comptime T: type) type {
         /// This is the payoff for repeated solves on a structurally fixed
         /// problem: the ordering and symbolic analysis - usually the expensive
         /// part - are not redone.
-        pub fn refactor(self: *Self, allocator: std.mem.Allocator, a: Sparse, options: Options) (SparseError || std.mem.Allocator.Error)!void {
+        pub fn refactor(self: *Self, allocator: std.mem.Allocator, a: Sparse, options: Options) (Error || std.mem.Allocator.Error)!void {
             const workspace = try allocator.alignedAlloc(u8, .@"16", self.refactorWorkspaceSize());
             defer allocator.free(workspace);
             return self.refactorWithWorkspace(a, options, workspace);
@@ -339,16 +339,16 @@ pub fn Factorization(comptime T: type) type {
         /// `workspace` must be at least `refactorWorkspaceSize()` bytes. It is
         /// `_Nonnull` on the C side and is *not* optional: passing null does
         /// not fall back to an internal allocation, it hangs.
-        pub fn refactorWithWorkspace(self: *Self, a: Sparse, options: Options, workspace: []align(16) u8) SparseError!void {
+        pub fn refactorWithWorkspace(self: *Self, a: Sparse, options: Options, workspace: []align(16) u8) Error!void {
             std.debug.assert(workspace.len >= self.refactorWorkspaceSize());
 
             const s = self.raw.symbolicFactorization;
             // SPARSE_CHECK_MATCH_SYMB_FACTOR checks exactly these four; a
             // mismatch would trap.
-            if (a.row_count != @as(usize, @intCast(s.rowCount))) return SparseError.ParameterError;
-            if (a.column_count != @as(usize, @intCast(s.columnCount))) return SparseError.ParameterError;
-            if (a.block_size != s.blockSize) return SparseError.ParameterError;
-            if (a.attributes.transpose != s.attributes.transpose) return SparseError.ParameterError;
+            if (a.row_count != @as(usize, @intCast(s.rowCount))) return Error.ParameterError;
+            if (a.column_count != @as(usize, @intCast(s.columnCount))) return Error.ParameterError;
+            if (a.block_size != s.blockSize) return Error.ParameterError;
+            if (a.attributes.transpose != s.attributes.transpose) return Error.ParameterError;
 
             const nf = options.numeric();
             const raw_a = a.raw();
@@ -381,19 +381,19 @@ pub fn Factorization(comptime T: type) type {
         /// LU only, and specifically the three explicitly-pivoted spellings -
         /// `.lu` itself, the alias, is rejected. `update` must have the same
         /// sparsity pattern as the matrix originally factored.
-        pub fn updateLu(self: *Self, updated_indices: []const c_int, update: Sparse) SparseError!void {
+        pub fn updateLu(self: *Self, updated_indices: []const c_int, update: Sparse) Error!void {
             switch (self.kind()) {
                 .lu_unpivoted, .lu_spp, .lu_tpp => {},
-                else => return SparseError.ParameterError,
+                else => return Error.ParameterError,
             }
 
             const s = self.raw.symbolicFactorization;
             // The same four checks SPARSE_CHECK_MATCH_SYMB_FACTOR makes; a
             // mismatch would trap rather than report.
-            if (update.row_count != @as(usize, @intCast(s.rowCount))) return SparseError.ParameterError;
-            if (update.column_count != @as(usize, @intCast(s.columnCount))) return SparseError.ParameterError;
-            if (update.block_size != s.blockSize) return SparseError.ParameterError;
-            if (update.attributes.transpose != s.attributes.transpose) return SparseError.ParameterError;
+            if (update.row_count != @as(usize, @intCast(s.rowCount))) return Error.ParameterError;
+            if (update.column_count != @as(usize, @intCast(s.columnCount))) return Error.ParameterError;
+            if (update.block_size != s.blockSize) return Error.ParameterError;
+            if (update.attributes.transpose != s.attributes.transpose) return Error.ParameterError;
 
             types.clearReportedError();
             f.updatePartialRefactorLU(
@@ -411,14 +411,14 @@ pub fn Factorization(comptime T: type) type {
         /// Only meaningful for an `LDL^T` factorization. Near-zero eigenvalues
         /// make the computed inertia sensitive to `Options.zero_tolerance`, so
         /// treat it as a numerical result rather than an exact one.
-        pub fn inertia(self: Self) SparseError!Inertia {
+        pub fn inertia(self: Self) Error!Inertia {
             if (comptime types.isComplex(T)) {
                 @compileError("inertia is defined for real symmetric factorizations only; " ++
                     "vecLib exports no complex SparseGetInertia");
             }
             switch (self.kind()) {
                 .ldlt, .ldlt_unpivoted, .ldlt_sbk, .ldlt_tpp => {},
-                else => return SparseError.ParameterError,
+                else => return Error.ParameterError,
             }
 
             var positive: c_int = 0;
@@ -582,7 +582,7 @@ test "Cholesky of an indefinite matrix fails instead of trapping" {
     });
 
     try testing.expectError(
-        SparseError.FactorizationFailed,
+        Error.FactorizationFailed,
         Factorization(f64).init(.cholesky, a, .{}),
     );
 }
@@ -593,7 +593,7 @@ test "a symmetric factorization rejects a matrix that is not marked symmetric" {
     const a = matrix.Sparse(f64).init(4, 4, &TestMatrix.column_starts, &TestMatrix.row_indices, &vals, .{});
 
     try testing.expectError(
-        SparseError.ParameterError,
+        Error.ParameterError,
         Factorization(f64).init(.cholesky, a, .{}),
     );
 }
@@ -602,7 +602,7 @@ test "COLAMD is rejected for a symmetric factorization" {
     const vals = TestMatrix.values(f64);
     const a = TestMatrix.matrix(f64, &vals);
     try testing.expectError(
-        SparseError.ParameterError,
+        Error.ParameterError,
         Factorization(f64).init(.cholesky, a, .{ .order = .colamd }),
     );
 }
@@ -629,7 +629,7 @@ test "inertia is rejected for a non-LDL^T factorization" {
     const a = TestMatrix.matrix(f64, &vals);
     var fac = try Factorization(f64).init(.cholesky, a, .{});
     defer fac.deinit();
-    try testing.expectError(SparseError.ParameterError, fac.inertia());
+    try testing.expectError(Error.ParameterError, fac.inertia());
 }
 
 test "refactor reuses the symbolic analysis for new values" {
@@ -667,7 +667,7 @@ test "refactor rejects a different sparsity pattern" {
         .attributes = .{ .kind = .symmetric, .triangle = .lower },
     });
 
-    try testing.expectError(SparseError.ParameterError, fac.refactor(testing.allocator, small, .{}));
+    try testing.expectError(Error.ParameterError, fac.refactor(testing.allocator, small, .{}));
 }
 
 test "QR solves a least-squares problem" {
@@ -857,7 +857,7 @@ test "Cholesky rejects the non-symmetric matrix LU accepts" {
     // catches that before Sparse can trap on it.
     const vals = LuMatrix.values(f64);
     const a = LuMatrix.make(f64, &vals);
-    try testing.expectError(SparseError.ParameterError, Factorization(f64).init(.cholesky, a, .{}));
+    try testing.expectError(Error.ParameterError, Factorization(f64).init(.cholesky, a, .{}));
 }
 
 test "LU is rejected for a rectangular matrix" {
@@ -867,7 +867,7 @@ test "LU is rejected for a rectangular matrix" {
     const rows = [_]c_int{ 0, 1, 1, 2 };
     const vals = [_]f64{ 1, 2, 3, 4 };
     const a = matrix.Sparse(f64).init(3, 2, &starts, &rows, &vals, .{});
-    try testing.expectError(SparseError.ParameterError, Factorization(f64).init(.lu, a, .{}));
+    try testing.expectError(Error.ParameterError, Factorization(f64).init(.lu, a, .{}));
 }
 
 test "inertia is rejected for an LU factorization" {
@@ -875,7 +875,7 @@ test "inertia is rejected for an LU factorization" {
     const a = LuMatrix.make(f64, &vals);
     var fac = try Factorization(f64).init(.lu_tpp, a, .{});
     defer fac.deinit();
-    try testing.expectError(SparseError.ParameterError, fac.inertia());
+    try testing.expectError(Error.ParameterError, fac.inertia());
 }
 
 test "LU refactor reuses the symbolic analysis for new values" {
@@ -909,7 +909,7 @@ test "updateLu is LU-only and refactors after a column change" {
         var fac = try Factorization(f64).init(.cholesky, a, .{});
         defer fac.deinit();
         const idx = [_]c_int{0};
-        try testing.expectError(SparseError.ParameterError, fac.updateLu(&idx, a));
+        try testing.expectError(Error.ParameterError, fac.updateLu(&idx, a));
     }
     {
         const vals = LuMatrix.values(f64);
@@ -1041,5 +1041,5 @@ test "complex factorization rejects an ordinary matrix for a symmetric algorithm
     const Z = types.Complex(f64);
     const vals = HermitianMatrix.values(f64);
     const a = matrix.Sparse(Z).init(3, 3, &HermitianMatrix.column_starts, &HermitianMatrix.row_indices, &vals, .{});
-    try testing.expectError(SparseError.ParameterError, Factorization(Z).init(.cholesky, a, .{}));
+    try testing.expectError(Error.ParameterError, Factorization(Z).init(.cholesky, a, .{}));
 }

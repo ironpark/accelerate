@@ -42,7 +42,7 @@ const types = @import("types.zig");
 const matrix = @import("matrix.zig");
 const block = @import("block.zig");
 
-const SparseError = types.SparseError;
+const Error = types.Error;
 
 pub const Transpose = c.Transpose;
 pub const IterativeStatus = c.IterativeStatus;
@@ -115,8 +115,8 @@ pub fn Iterative(comptime T: type) type {
             ///
             /// `.diagonal` (Jacobi) and `.diag_scaling` are cheap and often
             /// enough for a diagonally dominant system.
-            pub fn init(kind: PreconditionerType, a: Sparse) SparseError!Preconditioner {
-                if (kind == .user) return SparseError.ParameterError;
+            pub fn init(kind: PreconditionerType, a: Sparse) Error!Preconditioner {
+                if (kind == .user) return Error.ParameterError;
                 var raw_a = a.raw();
                 types.clearReportedError();
                 const p = f.createPreconditioner(kind, &raw_a);
@@ -219,7 +219,7 @@ pub fn Iterative(comptime T: type) type {
             x: Dense,
             options: CGOptions,
             preconditioner: ?*const Preconditioner,
-        ) SparseError!IterativeStatus {
+        ) Error!IterativeStatus {
             try checkShapes(a, b, x, .square);
             return conjugateGradientOperator(Sparse, a, matrixOperator, b, x, options, preconditioner);
         }
@@ -233,7 +233,7 @@ pub fn Iterative(comptime T: type) type {
             x: Dense,
             options: CGOptions,
             preconditioner: ?*const Preconditioner,
-        ) SparseError!IterativeStatus {
+        ) Error!IterativeStatus {
             var raw = c.CGOptions{
                 .reportError = types.report_error_callback,
                 .maxIterations = options.max_iterations,
@@ -250,7 +250,7 @@ pub fn Iterative(comptime T: type) type {
             x: Dense,
             options: GMRESOptions,
             preconditioner: ?*const Preconditioner,
-        ) SparseError!IterativeStatus {
+        ) Error!IterativeStatus {
             try checkShapes(a, b, x, .square);
             return gmresOperator(Sparse, a, matrixOperator, b, x, options, preconditioner);
         }
@@ -264,11 +264,11 @@ pub fn Iterative(comptime T: type) type {
             x: Dense,
             options: GMRESOptions,
             preconditioner: ?*const Preconditioner,
-        ) SparseError!IterativeStatus {
+        ) Error!IterativeStatus {
             // Sparse reports this one cleanly rather than trapping, but
             // catching it here names the constraint at the call site.
             if (options.variant == .fgmres and preconditioner == null) {
-                return SparseError.ParameterError;
+                return Error.ParameterError;
             }
             var raw = c.GMRESOptions{
                 .reportError = types.report_error_callback,
@@ -288,7 +288,7 @@ pub fn Iterative(comptime T: type) type {
             x: Dense,
             options: LSMROptions,
             preconditioner: ?*const Preconditioner,
-        ) SparseError!IterativeStatus {
+        ) Error!IterativeStatus {
             try checkShapes(a, b, x, .any);
             return lsmrOperator(Sparse, a, matrixOperator, b, x, options, preconditioner);
         }
@@ -305,7 +305,7 @@ pub fn Iterative(comptime T: type) type {
             x: Dense,
             options: LSMROptions,
             preconditioner: ?*const Preconditioner,
-        ) SparseError!IterativeStatus {
+        ) Error!IterativeStatus {
             var raw = c.LSMROptions{
                 .reportError = types.report_error_callback,
                 .lambda = options.lambda,
@@ -333,9 +333,9 @@ pub fn Iterative(comptime T: type) type {
             options: anytype,
             solver: anytype,
             preconditioner: ?*const Preconditioner,
-        ) SparseError!IterativeStatus {
-            if (b.rhsCount() != x.rhsCount()) return SparseError.ParameterError;
-            if (b.rhsCount() == 0) return SparseError.ParameterError;
+        ) Error!IterativeStatus {
+            if (b.rhsCount() != x.rhsCount()) return Error.ParameterError;
+            if (b.rhsCount() == 0) return Error.ParameterError;
 
             const captured = OpContext(Context){ .ctx = ctx, .apply = apply };
             const blk = OpBlock(Context).init(&invokeOperator(Context), &captured);
@@ -359,8 +359,8 @@ pub fn Iterative(comptime T: type) type {
             // still returns `.max_iterations`. Treating any reported message as
             // a failure would turn that into an error, which it is not.
             switch (status) {
-                .parameter_error => return SparseError.ParameterError,
-                .internal_error => return SparseError.InternalError,
+                .parameter_error => return Error.ParameterError,
+                .internal_error => return Error.InternalError,
                 else => {
                     // Drop the advisory message so it cannot be mistaken for a
                     // pending failure by the next call on this thread.
@@ -373,18 +373,18 @@ pub fn Iterative(comptime T: type) type {
         const ShapeRule = enum { square, any };
 
         /// The dimension checks the C wrappers do before dispatching.
-        fn checkShapes(a: Sparse, b: Dense, x: Dense, rule: ShapeRule) SparseError!void {
+        fn checkShapes(a: Sparse, b: Dense, x: Dense, rule: ShapeRule) Error!void {
             const block_size: usize = a.block_size;
             const am = block_size * if (a.attributes.transpose) a.column_count else a.row_count;
             const an = block_size * if (a.attributes.transpose) a.row_count else a.column_count;
-            if (am == 0 or an == 0) return SparseError.ParameterError;
+            if (am == 0 or an == 0) return Error.ParameterError;
 
-            if (b.rhsCount() != x.rhsCount()) return SparseError.ParameterError;
-            if (x.size() != an) return SparseError.ParameterError;
-            if (b.size() != am) return SparseError.ParameterError;
+            if (b.rhsCount() != x.rhsCount()) return Error.ParameterError;
+            if (x.size() != an) return Error.ParameterError;
+            if (b.size() != am) return Error.ParameterError;
             // CG and GMRES need a square operator; LSMR is the whole point of
             // allowing a rectangular one.
-            if (rule == .square and am != an) return SparseError.ParameterError;
+            if (rule == .square and am != an) return Error.ParameterError;
         }
     };
 }
@@ -479,7 +479,7 @@ test "FGMRES without a preconditioner is an error, not a trap" {
 
     var b = [_]f64{ 6, 15, 20 };
     var x = [_]f64{ 0, 0, 0 };
-    try testing.expectError(SparseError.ParameterError, It64.gmres(
+    try testing.expectError(Error.ParameterError, It64.gmres(
         a,
         D64.fromSlice(&b),
         D64.fromSlice(&x),
@@ -741,7 +741,7 @@ test "a preconditioner may not be constructed with type .user" {
     const vals = TestMatrix.values(f64);
     const a = TestMatrix.matrix(f64, &vals);
     // .user has no matrix to build from; the callback form is `user()`.
-    try testing.expectError(SparseError.ParameterError, It64.Preconditioner.init(.user, a));
+    try testing.expectError(Error.ParameterError, It64.Preconditioner.init(.user, a));
 }
 
 test "mismatched shapes are rejected rather than trapped" {
@@ -750,7 +750,7 @@ test "mismatched shapes are rejected rather than trapped" {
 
     var b = TestMatrix.rhs(f64);
     var short = [_]f64{ 0, 0, 0 };
-    try testing.expectError(SparseError.ParameterError, It64.conjugateGradient(
+    try testing.expectError(Error.ParameterError, It64.conjugateGradient(
         a,
         D64.fromSlice(&b),
         D64.fromSlice(&short),
@@ -765,7 +765,7 @@ test "mismatched shapes are rejected rather than trapped" {
     const rect = S64.init(4, 2, &starts, &rows, &rect_vals, .{});
     var rb = [_]f64{ 1, 2, 3, 5 };
     var rx = [_]f64{ 0, 0 };
-    try testing.expectError(SparseError.ParameterError, It64.conjugateGradient(
+    try testing.expectError(Error.ParameterError, It64.conjugateGradient(
         rect,
         D64.fromSlice(&rb),
         D64.fromSlice(&rx),

@@ -22,9 +22,10 @@ const vImage_Buffer = types.vImage_Buffer;
 const vImagePixelCount = types.vImagePixelCount;
 const vImage_Flags = types.vImage_Flags;
 const vImage_Error = types.vImage_Error;
-const VImageError = types.VImageError;
+const Error = types.Error;
 const check = types.check;
 const vImageConverter = types.vImageConverter;
+const Options = types.Options;
 
 const CGFloat = cg.CGFloat;
 
@@ -61,17 +62,18 @@ pub const BufferLayout = struct {
 /// `pixel_bits` is bits per *pixel* for an interleaved format and bits per
 /// *component* for a planar one. A value not divisible by 8 is padded out, so
 /// two scanlines never share a byte.
-pub fn bufferInit(buf: *vImage_Buffer, height: vImagePixelCount, width: vImagePixelCount, pixel_bits: u32, flags: vImage_Flags) VImageError!void {
-    _ = try check(c.vImageBuffer_Init(buf, height, width, pixel_bits, flags));
+pub fn bufferInit(buf: *vImage_Buffer, height: vImagePixelCount, width: vImagePixelCount, pixel_bits: u32, flags: Options) Error!void {
+    _ = try check(c.vImageBuffer_Init(buf, height, width, pixel_bits, flags.bits()));
 }
 
 /// Ask vImage for the preferred layout without allocating anything.
 ///
-/// `vImageBuffer_Init` with `kvImageNoAllocate`. In that mode the return slot
+/// `vImageBuffer_Init` with `.do_not_allocate` (`kvImageNoAllocate`). In that
+/// mode the return slot
 /// carries the preferred *alignment* as a positive value rather than an error
 /// code — which is exactly why `check` treats every non-negative value as
 /// success. `buf.data` is left null.
-pub fn bufferLayout(height: vImagePixelCount, width: vImagePixelCount, pixel_bits: u32) VImageError!BufferLayout {
+pub fn bufferLayout(height: vImagePixelCount, width: vImagePixelCount, pixel_bits: u32) Error!BufferLayout {
     var buf: vImage_Buffer = undefined;
     const alignment = try check(c.vImageBuffer_Init(&buf, height, width, pixel_bits, types.Flags.kvImageNoAllocate));
     return .{ .alignment = alignment, .row_bytes = buf.rowBytes };
@@ -137,10 +139,10 @@ pub fn bufferInitWithCGImage(
     format: *CGImageFormat,
     background_color: ?[]const CGFloat,
     image: *cg.CGImage,
-    flags: vImage_Flags,
-) VImageError!void {
+    flags: Options,
+) Error!void {
     const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
-    _ = try check(c.vImageBuffer_InitWithCGImage(buf, format, bg, image, flags));
+    _ = try check(c.vImageBuffer_InitWithCGImage(buf, format, bg, image, flags.bits()));
 }
 
 /// Wrap a buffer in a new `CGImage`.
@@ -156,7 +158,8 @@ pub fn bufferInitWithCGImage(
 /// equality check against the format you passed in will fail. Measured on
 /// macOS 15.7; the header does not mention it.
 ///
-/// Pass `kvImageNoAllocate` in `flags` for no-copy mode, in which the
+/// Set `.do_not_allocate` (`kvImageNoAllocate`) in `flags` for no-copy mode,
+/// in which the
 /// `CGImage` takes ownership of `buf.data` and calls `callback(user_data,
 /// buf.data)` — or `free`, if `callback` is null — when it is done. The
 /// callback may fire on any thread, and possibly before this function has
@@ -168,14 +171,14 @@ pub fn createCGImageFromBuffer(
     format: *const CGImageFormat,
     callback: ?*const fn (user_data: ?*anyopaque, buf_data: ?*anyopaque) callconv(.c) void,
     user_data: ?*anyopaque,
-    flags: vImage_Flags,
-) VImageError!cg.Image {
+    flags: Options,
+) Error!cg.Image {
     var err: vImage_Error = 0;
-    const image = c.vImageCreateCGImageFromBuffer(buf, format, callback, user_data, flags, &err);
+    const image = c.vImageCreateCGImageFromBuffer(buf, format, callback, user_data, flags.bits(), &err);
     if (image) |ref| return cg.Image.adopt(ref);
     // A null return always comes with an error code written through `err`.
     _ = try check(err);
-    return VImageError.Unknown;
+    return Error.Unknown;
 }
 
 // ============================================================================
@@ -208,7 +211,7 @@ pub const Converter = struct {
     }
 
     /// `vImageConverter_Release`.
-    pub fn deinit(self: Converter) void {
+    pub fn deinit(self: *Converter) void {
         c.vImageConverter_Release(self.ref);
     }
 
@@ -220,15 +223,15 @@ pub const Converter = struct {
     /// `background_color` is used when alpha has to be flattened away; it
     /// needs one entry per destination colour channel and may be null when
     /// the conversion does not need one.
-    pub fn createWithCGImageFormat(
+    pub fn initWithCGImageFormat(
         src_format: *const CGImageFormat,
         dest_format: *const CGImageFormat,
         background_color: ?[]const CGFloat,
-        flags: vImage_Flags,
-    ) VImageError!Converter {
+        flags: Options,
+    ) Error!Converter {
         var err: vImage_Error = 0;
         const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
-        const ref = c.vImageConverter_CreateWithCGImageFormat(src_format, dest_format, bg, flags, &err);
+        const ref = c.vImageConverter_CreateWithCGImageFormat(src_format, dest_format, bg, flags.bits(), &err);
         return finish(ref, err);
     }
 
@@ -239,16 +242,16 @@ pub const Converter = struct {
     /// colour transform has to match one CoreGraphics would apply exactly,
     /// including any black-point compensation or rendering intent baked into
     /// the `CGColorConversionInfo`.
-    pub fn createWithCGColorConversionInfo(
+    pub fn initWithCGColorConversionInfo(
         info: *cg.CGColorConversionInfo,
         src_format: *const CGImageFormat,
         dest_format: *const CGImageFormat,
         background_color: ?[]const CGFloat,
-        flags: vImage_Flags,
-    ) VImageError!Converter {
+        flags: Options,
+    ) Error!Converter {
         var err: vImage_Error = 0;
         const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
-        const ref = c.vImageConverter_CreateWithCGColorConversionInfo(info, src_format, dest_format, bg, flags, &err);
+        const ref = c.vImageConverter_CreateWithCGColorConversionInfo(info, src_format, dest_format, bg, flags.bits(), &err);
         return finish(ref, err);
     }
 
@@ -258,25 +261,25 @@ pub const Converter = struct {
     /// `vImageConverter_CreateWithColorSyncCodeFragment`. `code_fragment` is
     /// a ColorSync code fragment, produced by ColorSync APIs this package
     /// does not bind; it is typed as an opaque `CFTypeRef` to pass through.
-    pub fn createWithColorSyncCodeFragment(
+    pub fn initWithColorSyncCodeFragment(
         code_fragment: cg.CFTypeRef,
         src_format: *const CGImageFormat,
         dest_format: *const CGImageFormat,
         background_color: ?[]const CGFloat,
-        flags: vImage_Flags,
-    ) VImageError!Converter {
+        flags: Options,
+    ) Error!Converter {
         var err: vImage_Error = 0;
         const bg: ?[*]const CGFloat = if (background_color) |b| b.ptr else null;
-        const ref = c.vImageConverter_CreateWithColorSyncCodeFragment(code_fragment, src_format, dest_format, bg, flags, &err);
+        const ref = c.vImageConverter_CreateWithColorSyncCodeFragment(code_fragment, src_format, dest_format, bg, flags.bits(), &err);
         return finish(ref, err);
     }
 
     /// Shared tail for the `Create*` entry points: a null return always comes
     /// with a code written through the `error` out-parameter.
-    fn finish(ref: ?*vImageConverter, err: vImage_Error) VImageError!Converter {
+    fn finish(ref: ?*vImageConverter, err: vImage_Error) Error!Converter {
         if (ref) |r| return adopt(r);
         _ = try check(err);
-        return VImageError.Unknown;
+        return Error.Unknown;
     }
 
     /// How many source buffers `convert` expects.
@@ -327,12 +330,12 @@ pub const Converter = struct {
         self: Converter,
         srcs: ?[]const vImage_Buffer,
         dests: ?[]const vImage_Buffer,
-        flags: vImage_Flags,
-    ) VImageError!bool {
+        flags: Options,
+    ) Error!bool {
         const s: ?[*]const vImage_Buffer = if (srcs) |x| x.ptr else null;
         const d: ?[*]const vImage_Buffer = if (dests) |x| x.ptr else null;
-        const e = c.vImageConverter_MustOperateOutOfPlace(self.ref, s, d, flags);
-        if (e == types.Error.kvImageOutOfPlaceOperationRequired) return true;
+        const e = c.vImageConverter_MustOperateOutOfPlace(self.ref, s, d, flags.bits());
+        if (e == types.ErrorCode.kvImageOutOfPlaceOperationRequired) return true;
         _ = try check(e);
         return false;
     }
@@ -345,26 +348,28 @@ pub const Converter = struct {
     /// cannot detect.
     ///
     /// `temp_buffer` may be null, in which case vImage allocates any scratch
-    /// space it needs itself. To supply your own, call once with
-    /// `kvImageGetTempBufferSize` in `flags` — the size comes back through
+    /// space it needs itself. To supply your own, call `tempBufferSize`
+    /// — the size comes back through
     /// the return value rather than an out-parameter.
     pub fn convert(
         self: Converter,
         srcs: []const vImage_Buffer,
         dests: []const vImage_Buffer,
         temp_buffer: ?*anyopaque,
-        flags: vImage_Flags,
-    ) VImageError!usize {
+        flags: Options,
+    ) Error!usize {
         std.debug.assert(srcs.len == self.sourceBufferCount());
         std.debug.assert(dests.len == self.destinationBufferCount());
-        return check(c.vImageConvert_AnyToAny(self.ref, srcs.ptr, dests.ptr, temp_buffer, flags));
+        return check(c.vImageConvert_AnyToAny(self.ref, srcs.ptr, dests.ptr, temp_buffer, flags.bits()));
     }
 
     /// The scratch size `convert` would want for these buffers, in bytes.
     ///
     /// `vImageConvert_AnyToAny` with `kvImageGetTempBufferSize`.
-    pub fn tempBufferSize(self: Converter, srcs: []const vImage_Buffer, dests: []const vImage_Buffer, flags: vImage_Flags) VImageError!usize {
-        return self.convert(srcs, dests, null, flags | types.Flags.kvImageGetTempBufferSize);
+    pub fn tempBufferSize(self: Converter, srcs: []const vImage_Buffer, dests: []const vImage_Buffer, flags: Options) Error!usize {
+        var query = flags;
+        query.get_temp_buffer_size = true;
+        return self.convert(srcs, dests, null, query);
     }
 };
 
@@ -400,7 +405,7 @@ test "bufferLayout reports an alignment through the return slot, not an error" {
 
 test "bufferInit allocates a usable buffer with the requested geometry" {
     var buf: vImage_Buffer = undefined;
-    try bufferInit(&buf, 17, 33, 32, 0);
+    try bufferInit(&buf, 17, 33, 32, .{});
     defer bufferFree(&buf);
 
     try testing.expectEqual(@as(usize, 17), buf.height);
@@ -423,11 +428,11 @@ test "bufferSize returns the width and height as a CGSize" {
 }
 
 test "componentCount counts alpha and padding channels, not just colours" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
-    const gray = try cg.ColorSpace.deviceGray();
+    var gray = try cg.ColorSpace.initDeviceGray();
     defer gray.deinit();
-    const cmyk = try cg.ColorSpace.deviceCMYK();
+    var cmyk = try cg.ColorSpace.initDeviceCMYK();
     defer cmyk.deinit();
 
     try testing.expectEqual(@as(u32, 4), componentCount(&CGImageFormat.argb8888(rgb.ref)));
@@ -453,7 +458,7 @@ test "componentCount counts alpha and padding channels, not just colours" {
 }
 
 test "formatsEqual distinguishes formats that differ only in channel order" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     const argb = CGImageFormat.argb8888(rgb.ref);
@@ -472,14 +477,14 @@ test "formatsEqual distinguishes formats that differ only in channel order" {
 }
 
 test "a buffer survives a round trip through a CGImage unchanged" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     var storage: [4 * 4 * 4]u8 = undefined;
     const src = makeTestBuffer(&storage, 4, 4);
     const fmt = CGImageFormat.argb8888(rgb.ref);
 
-    const image = try createCGImageFromBuffer(&src, &fmt, null, null, 0);
+    var image = try createCGImageFromBuffer(&src, &fmt, null, null, .{});
     defer image.deinit();
 
     try testing.expectEqual(@as(usize, 4), image.width());
@@ -494,7 +499,7 @@ test "a buffer survives a round trip through a CGImage unchanged" {
 
     var dst_fmt = fmt;
     var dst: vImage_Buffer = undefined;
-    try bufferInitWithCGImage(&dst, &dst_fmt, null, image.ref, 0);
+    try bufferInitWithCGImage(&dst, &dst_fmt, null, image.ref, .{});
     defer bufferFree(&dst);
 
     try testing.expectEqual(@as(usize, 4), dst.width);
@@ -509,13 +514,13 @@ test "a buffer survives a round trip through a CGImage unchanged" {
 }
 
 test "bufferInitWithCGImage decodes against a null colour space without filling it in" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     var storage: [4 * 4 * 4]u8 = undefined;
     const src = makeTestBuffer(&storage, 4, 4);
     const fmt = CGImageFormat.argb8888(rgb.ref);
-    const image = try createCGImageFromBuffer(&src, &fmt, null, null, 0);
+    var image = try createCGImageFromBuffer(&src, &fmt, null, null, .{});
     defer image.deinit();
 
     // The C parameter is non-const, so it looks like an out-parameter — but
@@ -528,7 +533,7 @@ test "bufferInitWithCGImage decodes against a null colour space without filling 
         .bitmapInfo = .{ .alpha = .premultiplied_first },
     };
     var dst: vImage_Buffer = undefined;
-    try bufferInitWithCGImage(&dst, &dst_fmt, null, image.ref, 0);
+    try bufferInitWithCGImage(&dst, &dst_fmt, null, image.ref, .{});
     defer bufferFree(&dst);
 
     try testing.expectEqual(@as(usize, 4), dst.width);
@@ -537,13 +542,13 @@ test "bufferInitWithCGImage decodes against a null colour space without filling 
 }
 
 test "a CG-format converter uses exactly one buffer on each side" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     const src_fmt = CGImageFormat.argb8888(rgb.ref);
     const dst_fmt = CGImageFormat.bgra8888(rgb.ref);
 
-    const conv = try Converter.createWithCGImageFormat(&src_fmt, &dst_fmt, null, 0);
+    var conv = try Converter.initWithCGImageFormat(&src_fmt, &dst_fmt, null, .{});
     defer conv.deinit();
 
     try testing.expectEqual(@as(usize, 1), conv.sourceBufferCount());
@@ -554,12 +559,12 @@ test "a CG-format converter uses exactly one buffer on each side" {
 }
 
 test "AnyToAny performs the ARGB-to-BGRA channel swap it was compiled for" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     const src_fmt = CGImageFormat.argb8888(rgb.ref);
     const dst_fmt = CGImageFormat.bgra8888(rgb.ref);
-    const conv = try Converter.createWithCGImageFormat(&src_fmt, &dst_fmt, null, 0);
+    var conv = try Converter.initWithCGImageFormat(&src_fmt, &dst_fmt, null, .{});
     defer conv.deinit();
 
     var src_storage: [4 * 4 * 4]u8 = undefined;
@@ -567,7 +572,7 @@ test "AnyToAny performs the ARGB-to-BGRA channel swap it was compiled for" {
     var dst_storage: [4 * 4 * 4]u8 = @splat(0);
     const dst = vImage_Buffer{ .data = &dst_storage, .height = 4, .width = 4, .rowBytes = 4 * 4 };
 
-    _ = try conv.convert(&.{src}, &.{dst}, null, 0);
+    _ = try conv.convert(&.{src}, &.{dst}, null, .{});
 
     // ARGB stored big-endian, read back as a 32-bit little-endian swap, is
     // the byte sequence reversed: {A,R,G,B} -> {B,G,R,A}.
@@ -582,18 +587,18 @@ test "AnyToAny performs the ARGB-to-BGRA channel swap it was compiled for" {
 }
 
 test "AnyToAny converts between colour spaces, not just channel orders" {
-    const device = try cg.ColorSpace.deviceRGB();
+    var device = try cg.ColorSpace.initDeviceRGB();
     defer device.deinit();
-    const srgb = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+    var srgb = try cg.ColorSpace.initNamed(cg.ColorSpaceName.srgb());
     defer srgb.deinit();
-    const gray = try cg.ColorSpace.deviceGray();
+    var gray = try cg.ColorSpace.initDeviceGray();
     defer gray.deinit();
 
     // RGB -> grayscale collapses three channels into one, so the converter
     // has to do real colour work rather than shuffle bytes.
     const src_fmt = CGImageFormat.argb8888(srgb.ref);
     const dst_fmt = CGImageFormat.gray8(gray.ref);
-    const conv = try Converter.createWithCGImageFormat(&src_fmt, &dst_fmt, &[_]CGFloat{1.0}, 0);
+    var conv = try Converter.initWithCGImageFormat(&src_fmt, &dst_fmt, &[_]CGFloat{1.0}, .{});
     defer conv.deinit();
 
     // Two solid pixels: opaque white and opaque black.
@@ -602,7 +607,7 @@ test "AnyToAny converts between colour spaces, not just channel orders" {
     var dst_storage = [_]u8{ 0, 0 };
     const dst = vImage_Buffer{ .data = &dst_storage, .height = 1, .width = 2, .rowBytes = 2 };
 
-    _ = try conv.convert(&.{src}, &.{dst}, null, 0);
+    _ = try conv.convert(&.{src}, &.{dst}, null, .{});
 
     try testing.expectEqual(@as(u8, 0xFF), dst_storage[0]);
     // Black, to within the rounding of a linear-light round trip.
@@ -610,34 +615,34 @@ test "AnyToAny converts between colour spaces, not just channel orders" {
 }
 
 test "mustOperateOutOfPlace answers false for a same-size in-place-capable conversion" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     const src_fmt = CGImageFormat.argb8888(rgb.ref);
     const dst_fmt = CGImageFormat.bgra8888(rgb.ref);
-    const conv = try Converter.createWithCGImageFormat(&src_fmt, &dst_fmt, null, 0);
+    var conv = try Converter.initWithCGImageFormat(&src_fmt, &dst_fmt, null, .{});
     defer conv.deinit();
 
     // kvImageOutOfPlaceOperationRequired is the affirmative answer here, not
     // a failure, so a `try` on the raw code would turn "yes" into an error.
-    const general = try conv.mustOperateOutOfPlace(null, null, 0);
+    const general = try conv.mustOperateOutOfPlace(null, null, .{});
     try testing.expect(!general);
 }
 
 test "a converter built from a CGColorConversionInfo converts the same pixels" {
-    const p3 = try cg.ColorSpace.named(cg.ColorSpaceName.displayP3());
+    var p3 = try cg.ColorSpace.initNamed(cg.ColorSpaceName.displayP3());
     defer p3.deinit();
-    const srgb = try cg.ColorSpace.named(cg.ColorSpaceName.srgb());
+    var srgb = try cg.ColorSpace.initNamed(cg.ColorSpaceName.srgb());
     defer srgb.deinit();
 
     // Both spaces must be colorimetrically defined; a device colour space
     // makes CGColorConversionInfoCreate return null.
-    const info = try cg.ColorConversionInfo.init(srgb.ref, p3.ref);
+    var info = try cg.ColorConversionInfo.init(srgb.ref, p3.ref);
     defer info.deinit();
 
     const src_fmt = CGImageFormat.argb8888(srgb.ref);
     const dst_fmt = CGImageFormat.argb8888(p3.ref);
-    const conv = try Converter.createWithCGColorConversionInfo(info.ref, &src_fmt, &dst_fmt, null, 0);
+    var conv = try Converter.initWithCGColorConversionInfo(info.ref, &src_fmt, &dst_fmt, null, .{});
     defer conv.deinit();
 
     var src_storage: [4 * 4 * 4]u8 = undefined;
@@ -645,7 +650,7 @@ test "a converter built from a CGColorConversionInfo converts the same pixels" {
     var dst_storage: [4 * 4 * 4]u8 = @splat(0);
     const dst = vImage_Buffer{ .data = &dst_storage, .height = 4, .width = 4, .rowBytes = 16 };
 
-    _ = try conv.convert(&.{src}, &.{dst}, null, 0);
+    _ = try conv.convert(&.{src}, &.{dst}, null, .{});
 
     // Alpha is untouched by a colour-space change, and something was written.
     try testing.expectEqual(@as(u8, 0xFF), dst_storage[0]);
@@ -653,22 +658,22 @@ test "a converter built from a CGColorConversionInfo converts the same pixels" {
 }
 
 test "retain and release balance out on a converter" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
     const fmt = CGImageFormat.argb8888(rgb.ref);
-    const conv = try Converter.createWithCGImageFormat(&fmt, &fmt, null, 0);
+    var conv = try Converter.initWithCGImageFormat(&fmt, &fmt, null, .{});
     defer conv.deinit();
 
     // vImageConverterRef is CFType-bridged, so CFGetRetainCount applies.
     const before = cg.CFGetRetainCount(conv.ref);
-    const second = conv.retain();
+    var second = conv.retain();
     try testing.expectEqual(before + 1, cg.CFGetRetainCount(conv.ref));
     second.deinit();
     try testing.expectEqual(before, cg.CFGetRetainCount(conv.ref));
 }
 
 test "a failed converter creation surfaces the code from the error out-parameter" {
-    const rgb = try cg.ColorSpace.deviceRGB();
+    var rgb = try cg.ColorSpace.initDeviceRGB();
     defer rgb.deinit();
 
     // 24 bits per pixel cannot hold three 8-bit colour channels *and* an
@@ -680,7 +685,7 @@ test "a failed converter creation surfaces the code from the error out-parameter
         .bitmapInfo = .{ .alpha = .premultiplied_first },
     };
     const good = CGImageFormat.argb8888(rgb.ref);
-    try testing.expectError(VImageError.InvalidImageFormat, Converter.createWithCGImageFormat(&bad, &good, null, 0));
+    try testing.expectError(Error.InvalidImageFormat, Converter.initWithCGImageFormat(&bad, &good, null, .{}));
 
     // Not every documented constraint is actually enforced, though: the
     // header says bitsPerComponent must be one of 5, 8, 16 or 32, and a
@@ -692,6 +697,6 @@ test "a failed converter creation surfaces the code from the error out-parameter
         .colorSpace = rgb.ref,
         .bitmapInfo = .{ .alpha = .premultiplied_first },
     };
-    const accepted = try Converter.createWithCGImageFormat(&undocumented, &good, null, 0);
+    var accepted = try Converter.initWithCGImageFormat(&undocumented, &good, null, .{});
     accepted.deinit();
 }
