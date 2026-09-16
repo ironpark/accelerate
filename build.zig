@@ -32,7 +32,14 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
         .target = target,
     });
-    mod.linkFramework("Accelerate", .{});
+    // Accelerate is a Darwin framework, so only a Darwin target links it. The
+    // bindings are plain `extern fn` declarations with no headers behind them,
+    // so a non-Darwin target still compiles this module: its callers are
+    // reflected over, not run, and the symbols stay undefined. That is what
+    // lets a Linux host build the generator tools for a Darwin cross-build.
+    if (target.result.os.tag.isDarwin()) {
+        mod.linkFramework("Accelerate", .{});
+    }
 
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
