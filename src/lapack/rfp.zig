@@ -380,7 +380,7 @@ test "trttf and tfttr round-trip exactly, in both layouts" {
         var arf: [10]f64 = undefined;
         try trttf(f64, transr, .upper, n, &spd4, n, &arf);
 
-        var back = [_]f64{-1} ** (n * n);
+        var back: [n * n]f64 = @splat(-1);
         try tfttr(f64, transr, .upper, n, &arf, &back, n);
 
         // Exact, not approximate: this is an elementwise copy.
@@ -459,7 +459,7 @@ test "pftrf then pftrs solves, and pftri inverts" {
     }
 
     try pftri(f64, .normal, .upper, n, &arf);
-    var inv = [_]f64{0} ** (n * n);
+    var inv: [n * n]f64 = @splat(0);
     try tfttr(f64, .normal, .upper, n, &arf, &inv, n);
     // A A^-1 = I, reading the inverse's lower half by symmetry.
     for (0..n) |j| for (0..n) |i| {
@@ -491,7 +491,7 @@ test "tftri matches trtri" {
     var arf: [10]f64 = undefined;
     try trttf(f64, .normal, .upper, n, &t, n, &arf);
     try tftri(f64, .normal, .upper, .non_unit, n, &arf);
-    var from_rfp = [_]f64{0} ** (n * n);
+    var from_rfp: [n * n]f64 = @splat(0);
     try tfttr(f64, .normal, .upper, n, &arf, &from_rfp, n);
 
     var direct = t;
@@ -526,11 +526,11 @@ test "sfrk takes real alpha and beta even for a complex T" {
     const n = 3;
     const k = 2;
     const a = [_]f64{ 1, 2, 3, 4, 5, 6 };
-    var cf = [_]f64{0} ** 6;
+    var cf: [6]f64 = @splat(0);
 
     sfrk(f64, .normal, .upper, .no_trans, n, k, 1, &a, n, 0, &cf);
 
-    var full = [_]f64{0} ** (n * n);
+    var full: [n * n]f64 = @splat(0);
     try tfttr(f64, .normal, .upper, n, &cf, &full, n);
 
     // A A^T for the 3x2 A.
@@ -549,11 +549,11 @@ test "hfrk keeps a real diagonal, which a complex alpha would not" {
         Z.init(1, 1), Z.init(2, -1),
         Z.init(0, 2), Z.init(3, 0),
     };
-    var cf = [_]Z{Z.init(0, 0)} ** 3;
+    var cf: [3]Z = @splat(Z.init(0, 0));
 
     hfrk(Z, .normal, .upper, .no_trans, n, k, 2, &a, n, 0, &cf);
 
-    var full = [_]Z{Z.init(0, 0)} ** (n * n);
+    var full: [n * n]Z = @splat(Z.init(0, 0));
     try tfttr(Z, .normal, .upper, n, &cf, &full, n);
 
     // A Hermitian matrix has a real diagonal; that is why the scale factors are

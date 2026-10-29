@@ -463,7 +463,7 @@ test "Cholesky factor and solve, both element types" {
         try testing.expectEqual(FactorizationType.cholesky, fac.kind());
 
         var b = TestMatrix.rhs(T);
-        var x = [_]T{0} ** 4;
+        var x: [4]T = @splat(0);
         try fac.solve(testing.allocator, &b, &x);
 
         for (TestMatrix.solution(T), x) |want, got| {
@@ -481,7 +481,7 @@ test "every symmetric factorization type reaches the same solution" {
         defer fac.deinit();
 
         var b = TestMatrix.rhs(f64);
-        var x = [_]f64{0} ** 4;
+        var x: [4]f64 = @splat(0);
         try fac.solve(testing.allocator, &b, &x);
         for (TestMatrix.solution(f64), x) |want, got| {
             try testing.expectApproxEqAbs(want, got, 1e-10);
@@ -513,12 +513,12 @@ test "solveWithWorkspace reuses one buffer across many solves" {
 
     // Solving A x = A e_j must return e_j, for every j.
     for (0..4) |j| {
-        var e = [_]f64{0} ** 4;
+        var e: [4]f64 = @splat(0);
         e[j] = 1;
-        var b = [_]f64{0} ** 4;
+        var b: [4]f64 = @splat(0);
         try a.multiply(1, matrix.Dense(f64).fromSlice(&e), matrix.Dense(f64).fromSlice(&b), false);
 
-        var x = [_]f64{0} ** 4;
+        var x: [4]f64 = @splat(0);
         try fac.solveWithWorkspace(
             matrix.Dense(f64).fromSlice(&b),
             matrix.Dense(f64).fromSlice(&x),
@@ -548,16 +548,16 @@ test "multi-RHS solve inverts the matrix column by column" {
     defer fac.deinit();
 
     // Right-hand sides are the four columns of A, so the solution is I.
-    var b = [_]f64{0} ** 16;
+    var b: [16]f64 = @splat(0);
     for (0..4) |j| {
-        var e = [_]f64{0} ** 4;
+        var e: [4]f64 = @splat(0);
         e[j] = 1;
-        var col = [_]f64{0} ** 4;
+        var col: [4]f64 = @splat(0);
         try a.multiply(1, matrix.Dense(f64).fromSlice(&e), matrix.Dense(f64).fromSlice(&col), false);
         @memcpy(b[j * 4 ..][0..4], &col);
     }
 
-    var x = [_]f64{0} ** 16;
+    var x: [16]f64 = @splat(0);
     try fac.solveMatrix(
         testing.allocator,
         matrix.Dense(f64).init(&b, 4, 4, 4),
@@ -646,7 +646,7 @@ test "refactor reuses the symbolic analysis for new values" {
 
     var b = TestMatrix.rhs(f64);
     for (&b) |*v| v.* *= 2;
-    var x = [_]f64{0} ** 4;
+    var x: [4]f64 = @splat(0);
     try fac.solve(testing.allocator, &b, &x);
     for (TestMatrix.solution(f64), x) |want, got| {
         try testing.expectApproxEqAbs(want, got, 1e-10);
@@ -706,7 +706,7 @@ test "retain keeps the factorization alive past the first deinit" {
 
     // The second handle must still solve correctly.
     var b = TestMatrix.rhs(f64);
-    var x = [_]f64{0} ** 4;
+    var x: [4]f64 = @splat(0);
     try second.solve(testing.allocator, &b, &x);
     for (TestMatrix.solution(f64), x) |want, got| {
         try testing.expectApproxEqAbs(want, got, 1e-10);
@@ -736,7 +736,7 @@ test "solving from a matrix built by fromCoordinate" {
     defer fac.deinit();
 
     var b = TestMatrix.rhs(f64);
-    var x = [_]f64{0} ** 4;
+    var x: [4]f64 = @splat(0);
     try fac.solve(alloc, &b, &x);
     for (TestMatrix.solution(f64), x) |want, got| {
         try testing.expectApproxEqAbs(want, got, 1e-10);
@@ -780,7 +780,7 @@ test "refactorWithWorkspace reuses one buffer across a sequence of value updates
 
         var b = TestMatrix.rhs(f64);
         for (&b) |*v| v.* *= k;
-        var x = [_]f64{0} ** 4;
+        var x: [4]f64 = @splat(0);
         try fac.solveWithWorkspace(
             matrix.Dense(f64).fromSlice(&b),
             matrix.Dense(f64).fromSlice(&x),
@@ -842,7 +842,7 @@ test "LU factors a non-symmetric matrix and solves, all four pivoting modes" {
             try testing.expectEqual(expected_kind, fac.kind());
 
             var b = LuMatrix.rhs(T);
-            var x = [_]T{0} ** 4;
+            var x: [4]T = @splat(0);
             try fac.solve(testing.allocator, &b, &x);
 
             const want = LuMatrix.solution(T);
@@ -892,7 +892,7 @@ test "LU refactor reuses the symbolic analysis for new values" {
     try fac.refactor(testing.allocator, a2, .{});
 
     var b = LuMatrix.rhs(f64);
-    var x = [_]f64{0} ** 4;
+    var x: [4]f64 = @splat(0);
     try fac.solve(testing.allocator, &b, &x);
 
     const want = LuMatrix.solution(f64);
@@ -927,7 +927,7 @@ test "updateLu is LU-only and refactors after a column change" {
         // a[0][0] = 8, A * [1,2,3,4]^T has first entry 8 + 2 = 10.
         var b = LuMatrix.rhs(f64);
         b[0] = 10;
-        var x = [_]f64{0} ** 4;
+        var x: [4]f64 = @splat(0);
         try fac.solve(testing.allocator, &b, &x);
 
         const want = LuMatrix.solution(f64);
@@ -979,7 +979,7 @@ test "complex Hermitian Cholesky factors and solves" {
         defer fac.deinit();
 
         var b = HermitianMatrix.rhs(R);
-        var x = [_]Z{Z.init(0, 0)} ** 3;
+        var x: [3]Z = @splat(Z.init(0, 0));
         try fac.solve(testing.allocator, &b, &x);
 
         for (0..3) |i| {
@@ -999,7 +999,7 @@ test "complex LDL^T solves the same Hermitian system" {
     defer fac.deinit();
 
     var b = HermitianMatrix.rhs(f64);
-    var x = [_]Z{Z.init(0, 0)} ** 3;
+    var x: [3]Z = @splat(Z.init(0, 0));
     try fac.solve(testing.allocator, &b, &x);
 
     for (0..3) |i| {
@@ -1027,7 +1027,7 @@ test "complex LU factors a non-Hermitian matrix" {
     // b = A * [1, 2, 3, 4]^T. Only row 2 changes from the real case: the
     // 2 + i entry multiplies x[1] = 2, adding 2i.
     var b = [_]Z{ Z.init(6, 0), Z.init(10, 0), Z.init(23, 2), Z.init(11, 0) };
-    var x = [_]Z{Z.init(0, 0)} ** 4;
+    var x: [4]Z = @splat(Z.init(0, 0));
     try fac.solve(testing.allocator, &b, &x);
 
     for (0..4) |i| {

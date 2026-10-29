@@ -40,7 +40,7 @@ pub fn vdspExample() !void {
     // both component buffers, so the transform size cannot disagree with the
     // storage.
     var realp = [_]f32{ 1, 2, 3, 4, 5, 6, 7, 8 };
-    var imagp = [_]f32{0} ** 8;
+    var imagp: [8]f32 = @splat(0);
     const io = vdsp.SplitSlice(f32).init(&realp, &imagp);
 
     var fft = try vdsp.FFT(f32).init(3, .radix2);
@@ -97,7 +97,7 @@ pub fn vimageExample(top: *anyopaque, bottom: *anyopaque, out: *anyopaque, h: us
     // vImage reports a scratch-buffer size through the same slot it reports
     // errors in, so the success test is `>= 0`, not `== 0`. With
     // `.get_temp_buffer_size` the return value is that size; otherwise it is 0.
-    const kernel = [_]u8{0} ** 9;
+    const kernel: [9]u8 = @splat(0);
     const scratch = try vimage.morphology.dilate(u8, &src, &dst, 0, 0, &kernel, 3, 3, .{
         .get_temp_buffer_size = true,
     });

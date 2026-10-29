@@ -491,7 +491,7 @@ behaviour contradicts its own headers.
 ## Requirements
 
 - macOS or iOS (Accelerate framework)
-- Zig 0.16.0+
+- Zig 0.17.0+
 - CoreGraphics, CoreVideo and CoreFoundation, only with `-Dcoregraphics=true`
 
 ## License

@@ -202,8 +202,8 @@ test "fft16_zopv forward: impulse closed form" {
     // swapped, which this test would catch.
     const a: f32 = 3.0;
     const b: f32 = -7.0;
-    var in_re = [_]f32{0.0} ** 16;
-    var in_im = [_]f32{0.0} ** 16;
+    var in_re: [16]f32 = @splat(0.0);
+    var in_im: [16]f32 = @splat(0.0);
     in_re[0] = a;
     in_im[0] = b;
 
@@ -218,8 +218,8 @@ test "fft16_zopv forward: impulse closed form" {
 test "fft32_zopv forward: impulse closed form" {
     const a: f32 = -5.0;
     const b: f32 = 2.0;
-    var in_re = [_]f32{0.0} ** 32;
-    var in_im = [_]f32{0.0} ** 32;
+    var in_re: [32]f32 = @splat(0.0);
+    var in_im: [32]f32 = @splat(0.0);
     in_re[0] = a;
     in_im[0] = b;
 
@@ -240,8 +240,8 @@ test "fft16_zopv forward+inverse round-trip is unnormalized (N times original)" 
     // the actual runtime scaling behavior is still worth pinning down.
     const a: f32 = 1.0;
     const b: f32 = 0.0;
-    var re = [_]f32{0.0} ** 16;
-    var im = [_]f32{0.0} ** 16;
+    var re: [16]f32 = @splat(0.0);
+    var im: [16]f32 = @splat(0.0);
     re[0] = a;
     im[0] = b;
 

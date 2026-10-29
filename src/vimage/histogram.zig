@@ -514,7 +514,7 @@ test "histogramCalculation_Planar8 bins a known pixel-value distribution" {
     const h = 2;
     const w = 4; // 8 pixels total
     var src = [_]u8{ 10, 10, 10, 200, 0, 0, 0, 0 };
-    var histogram: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
+    var histogram: [256]vImagePixelCount = @splat(0);
     const b_src = bufFromBytes(&src, h, w, w);
 
     const err = histogramCalculation_Planar8(&b_src, &histogram, .{});
@@ -535,7 +535,7 @@ test "histogramCalculation_PlanarF bins pixel values into histogram_entries bins
     // Range [0, 100), 10 bins -> bin width 10. Values 5 -> bin 0, 95 -> bin 9,
     // 50 -> bin 5. One value (200) is above maxVal and must clamp into the last bin.
     var src = [_]f32{ 5.0, 95.0, 50.0, 200.0 };
-    var histogram: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
+    var histogram: [10]vImagePixelCount = @splat(0);
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, w * @sizeOf(f32));
 
     const err = histogramCalculation_PlanarF(&b_src, &histogram, 10, 0.0, 100.0, .{});
@@ -551,10 +551,10 @@ test "histogramCalculation_ARGB8888 bins each channel independently, alpha-first
     const row_bytes = w * 4;
     // Pixel0: A=10 R=20 G=30 B=40 ; Pixel1: A=10 R=21 G=31 B=41
     var src = [_]u8{ 10, 20, 30, 40, 10, 21, 31, 41 };
-    var hist_a: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
-    var hist_r: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
-    var hist_g: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
-    var hist_b: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
+    var hist_a: [256]vImagePixelCount = @splat(0);
+    var hist_r: [256]vImagePixelCount = @splat(0);
+    var hist_g: [256]vImagePixelCount = @splat(0);
+    var hist_b: [256]vImagePixelCount = @splat(0);
     var histogram: [4][*]vImagePixelCount = .{ &hist_a, &hist_r, &hist_g, &hist_b };
     const b_src = bufFromBytes(&src, h, w, row_bytes);
 
@@ -574,10 +574,10 @@ test "histogramCalculation_ARGBFFFF bins each channel independently over [minVal
     const h = 1;
     const w = 1;
     var src = [_]f32{ 1.0, 51.0, 76.0, 99.0 }; // A R G B
-    var hist_a: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
-    var hist_r: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
-    var hist_g: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
-    var hist_b: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
+    var hist_a: [10]vImagePixelCount = @splat(0);
+    var hist_r: [10]vImagePixelCount = @splat(0);
+    var hist_g: [10]vImagePixelCount = @splat(0);
+    var hist_b: [10]vImagePixelCount = @splat(0);
     var histogram: [4][*]vImagePixelCount = .{ &hist_a, &hist_r, &hist_g, &hist_b };
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, 4 * @sizeOf(f32));
 
@@ -593,8 +593,8 @@ test "histogramCalculation dispatch wrapper matches direct Planar8/PlanarF calls
     const h = 1;
     const w = 4;
     var src8 = [_]u8{ 10, 10, 10, 200 };
-    var hist_direct: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
-    var hist_dispatch: [256]vImagePixelCount = [_]vImagePixelCount{0} ** 256;
+    var hist_direct: [256]vImagePixelCount = @splat(0);
+    var hist_dispatch: [256]vImagePixelCount = @splat(0);
     const b1 = bufFromBytes(&src8, h, w, w);
     const b2 = bufFromBytes(&src8, h, w, w);
     _ = try histogramCalculation_Planar8(&b1, &hist_direct, .{});
@@ -602,8 +602,8 @@ test "histogramCalculation dispatch wrapper matches direct Planar8/PlanarF calls
     try std.testing.expectEqualSlices(vImagePixelCount, &hist_direct, &hist_dispatch);
 
     var srcf = [_]f32{ 5.0, 95.0, 50.0, 200.0 };
-    var hist_direct_f: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
-    var hist_dispatch_f: [10]vImagePixelCount = [_]vImagePixelCount{0} ** 10;
+    var hist_direct_f: [10]vImagePixelCount = @splat(0);
+    var hist_dispatch_f: [10]vImagePixelCount = @splat(0);
     const bf1 = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, w * @sizeOf(f32));
     const bf2 = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, w * @sizeOf(f32));
     _ = try histogramCalculation_PlanarF(&bf1, &hist_direct_f, 10, 0.0, 100.0, .{});
@@ -624,7 +624,7 @@ test "equalization_Planar8 preserves relative order (monotonic transform)" {
     const h = 1;
     const w = 4;
     var src = [_]u8{ 10, 80, 150, 220 };
-    var dest = [_]u8{0} ** 4;
+    var dest: [4]u8 = @splat(0);
     const b_src = bufFromBytes(&src, h, w, w);
     const b_dest = bufFromBytes(&dest, h, w, w);
 
@@ -648,7 +648,7 @@ test "equalization_PlanarF preserves relative order over an explicit range" {
     const h = 1;
     const w = 4;
     var src = [_]f32{ 10.0, 40.0, 70.0, 95.0 };
-    var dest = [_]f32{0} ** 4;
+    var dest: [4]f32 = @splat(0);
     const rb = w * @sizeOf(f32);
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, rb);
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
@@ -672,7 +672,7 @@ test "equalization_ARGB8888 processes each channel independently, alpha-first" {
         src[x * 4 + 2] = 128; // G constant
         src[x * 4 + 3] = 128; // B constant
     }
-    var dest = [_]u8{0} ** 16;
+    var dest: [16]u8 = @splat(0);
     const b_src = bufFromBytes(&src, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
 
@@ -697,7 +697,7 @@ test "equalization_ARGBFFFF processes each channel independently" {
         src[x * 4 + 2] = 50.0;
         src[x * 4 + 3] = 50.0;
     }
-    var dest = [_]f32{0} ** 16;
+    var dest: [16]f32 = @splat(0);
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, row_bytes);
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, row_bytes);
 
@@ -712,8 +712,8 @@ test "equalization dispatch wrapper matches direct Planar8/PlanarF calls" {
     const h = 1;
     const w = 4;
     var src8 = [_]u8{ 10, 80, 150, 220 };
-    var dest_direct = [_]u8{0} ** 4;
-    var dest_dispatch = [_]u8{0} ** 4;
+    var dest_direct: [4]u8 = @splat(0);
+    var dest_dispatch: [4]u8 = @splat(0);
     const b1s = bufFromBytes(&src8, h, w, w);
     const b1d = bufFromBytes(&dest_direct, h, w, w);
     _ = try equalization_Planar8(&b1s, &b1d, .{});
@@ -732,7 +732,7 @@ test "histogramSpecification_Planar8 succeeds and preserves ordering with an asc
     const h = 1;
     const w = 4;
     var src = [_]u8{ 10, 80, 150, 220 };
-    var dest = [_]u8{0} ** 4;
+    var dest: [4]u8 = @splat(0);
     var desired: [256]vImagePixelCount = undefined;
     for (0..256) |i| desired[i] = @intCast(i); // linearly increasing target weights
     const b_src = bufFromBytes(&src, h, w, w);
@@ -749,7 +749,7 @@ test "histogramSpecification_PlanarF succeeds and preserves ordering" {
     const h = 1;
     const w = 4;
     var src = [_]f32{ 10.0, 40.0, 70.0, 95.0 };
-    var dest = [_]f32{0} ** 4;
+    var dest: [4]f32 = @splat(0);
     var desired: [256]vImagePixelCount = undefined;
     for (0..256) |i| desired[i] = @intCast(i);
     const rb = w * @sizeOf(f32);
@@ -768,7 +768,7 @@ test "histogramSpecification_ARGB8888/ARGBFFFF succeed with per-channel desired 
     const w = 2;
     const row_bytes = w * 4;
     var src = [_]u8{ 10, 20, 30, 40, 200, 220, 230, 240 };
-    var dest = [_]u8{0} ** 8;
+    var dest: [8]u8 = @splat(0);
     var desired: [256]vImagePixelCount = undefined;
     for (0..256) |i| desired[i] = @intCast(i);
     const per_channel: [4][*]const vImagePixelCount = .{ &desired, &desired, &desired, &desired };
@@ -781,7 +781,7 @@ test "histogramSpecification_ARGB8888/ARGBFFFF succeed with per-channel desired 
     try std.testing.expect(dest[0] <= dest[4]);
 
     var srcf = [_]f32{ 10.0, 20.0, 30.0, 40.0, 80.0, 85.0, 90.0, 95.0 };
-    var destf = [_]f32{0} ** 8;
+    var destf: [8]f32 = @splat(0);
     const rbf = w * 4 * @sizeOf(f32);
     const b_srcf = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, rbf);
     const b_destf = bufFromBytes(std.mem.sliceAsBytes(&destf), h, w, rbf);
@@ -794,8 +794,8 @@ test "histogramSpecification dispatch wrapper matches direct Planar8 call" {
     const h = 1;
     const w = 4;
     var src = [_]u8{ 10, 80, 150, 220 };
-    var dest_direct = [_]u8{0} ** 4;
-    var dest_dispatch = [_]u8{0} ** 4;
+    var dest_direct: [4]u8 = @splat(0);
+    var dest_dispatch: [4]u8 = @splat(0);
     var desired: [256]vImagePixelCount = undefined;
     for (0..256) |i| desired[i] = @intCast(i);
 
@@ -812,7 +812,7 @@ test "contrastStretch_Planar8 widens a narrow input range toward [0,255]" {
     const h = 1;
     const w = 4;
     var src = [_]u8{ 100, 110, 120, 130 }; // narrow range
-    var dest = [_]u8{0} ** 4;
+    var dest: [4]u8 = @splat(0);
     const b_src = bufFromBytes(&src, h, w, w);
     const b_dest = bufFromBytes(&dest, h, w, w);
 
@@ -828,7 +828,7 @@ test "contrastStretch_PlanarF widens a narrow input range toward [minVal,maxVal]
     const h = 1;
     const w = 4;
     var src = [_]f32{ 40.0, 45.0, 50.0, 55.0 };
-    var dest = [_]f32{0} ** 4;
+    var dest: [4]f32 = @splat(0);
     const rb = w * @sizeOf(f32);
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, rb);
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
@@ -851,7 +851,7 @@ test "contrastStretch_ARGB8888/ARGBFFFF widen per-channel, alpha-first" {
         src[x * 4 + 2] = 128;
         src[x * 4 + 3] = 128;
     }
-    var dest = [_]u8{0} ** 16;
+    var dest: [16]u8 = @splat(0);
     const b_src = bufFromBytes(&src, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
     const err = contrastStretch_ARGB8888(&b_src, &b_dest, .{});
@@ -864,8 +864,8 @@ test "contrastStretch dispatch wrapper matches direct Planar8 call" {
     const h = 1;
     const w = 4;
     var src = [_]u8{ 100, 110, 120, 130 };
-    var dest_direct = [_]u8{0} ** 4;
-    var dest_dispatch = [_]u8{0} ** 4;
+    var dest_direct: [4]u8 = @splat(0);
+    var dest_dispatch: [4]u8 = @splat(0);
     const b1s = bufFromBytes(&src, h, w, w);
     const b1d = bufFromBytes(&dest_direct, h, w, w);
     _ = try contrastStretch_Planar8(&b1s, &b1d, .{});
@@ -891,7 +891,7 @@ test "endsInContrastStretch_Planar8 with nonzero clipping percentage widens the 
     const h = 1;
     const w = 10;
     var src = [_]u8{ 100, 105, 110, 115, 120, 125, 130, 135, 140, 145 };
-    var dest = [_]u8{0} ** 10;
+    var dest: [10]u8 = @splat(0);
     const b_src = bufFromBytes(&src, h, w, w);
     const b_dest = bufFromBytes(&dest, h, w, w);
 
@@ -910,7 +910,7 @@ test "endsInContrastStretch_PlanarF with nonzero clipping percentage widens the 
     const h = 1;
     const w = 10;
     var src = [_]f32{ 100, 105, 110, 115, 120, 125, 130, 135, 140, 145 };
-    var dest = [_]f32{0} ** 10;
+    var dest: [10]f32 = @splat(0);
     const rb = w * @sizeOf(f32);
     const b_src = bufFromBytes(std.mem.sliceAsBytes(&src), h, w, rb);
     const b_dest = bufFromBytes(std.mem.sliceAsBytes(&dest), h, w, rb);
@@ -940,7 +940,7 @@ test "endsInContrastStretch_ARGB8888/ARGBFFFF accept per-channel percent arrays"
         src[x * 4 + 2] = 128;
         src[x * 4 + 3] = 128;
     }
-    var dest = [_]u8{0} ** 40;
+    var dest: [40]u8 = @splat(0);
     const b_src = bufFromBytes(&src, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
     const percent_low: [4]c_uint = .{ 10, 0, 0, 0 };
@@ -962,7 +962,7 @@ test "endsInContrastStretch_ARGB8888/ARGBFFFF accept per-channel percent arrays"
         srcf[x * 4 + 2] = 50.0;
         srcf[x * 4 + 3] = 50.0;
     }
-    var destf = [_]f32{0} ** 40;
+    var destf: [40]f32 = @splat(0);
     const rbf = w * 4 * @sizeOf(f32);
     const b_srcf = bufFromBytes(std.mem.sliceAsBytes(&srcf), h, w, rbf);
     const b_destf = bufFromBytes(std.mem.sliceAsBytes(&destf), h, w, rbf);
@@ -975,8 +975,8 @@ test "endsInContrastStretch dispatch wrapper matches direct Planar8 call" {
     const h = 1;
     const w = 4;
     var src = [_]u8{ 100, 110, 120, 130 };
-    var dest_direct = [_]u8{0} ** 4;
-    var dest_dispatch = [_]u8{0} ** 4;
+    var dest_direct: [4]u8 = @splat(0);
+    var dest_dispatch: [4]u8 = @splat(0);
     const b1s = bufFromBytes(&src, h, w, w);
     const b1d = bufFromBytes(&dest_direct, h, w, w);
     _ = try endsInContrastStretch_Planar8(&b1s, &b1d, 0, 0, .{});

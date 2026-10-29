@@ -975,8 +975,8 @@ pub extern var kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2: *const vImage_ARGBToYpCbC
 test "every declared vImage symbol resolves and links" {
     const std = @import("std");
     var sink: usize = 0;
-    inline for (@typeInfo(@This()).@"struct".decls) |decl| {
-        const field = @field(@This(), decl.name);
+    inline for (@typeInfo(@This()).@"struct".decl_names) |decl_name| {
+        const field = @field(@This(), decl_name);
         if (@typeInfo(@TypeOf(field)) == .@"fn") {
             sink +%= @intFromPtr(&field);
         }

@@ -194,8 +194,8 @@ pub const BLASGetThreading = @extern(*const fn () callconv(.c) c_uint, .{ .name 
 test "every declared symbol resolves and links" {
     const std = @import("std");
     var sink: usize = 0;
-    inline for (@typeInfo(@This()).@"struct".decls) |decl| {
-        const field = @field(@This(), decl.name);
+    inline for (@typeInfo(@This()).@"struct".decl_names) |decl_name| {
+        const field = @field(@This(), decl_name);
         if (@typeInfo(@TypeOf(field)) == .pointer) {
             sink +%= @intFromPtr(field);
         }

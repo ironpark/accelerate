@@ -882,11 +882,11 @@ test "sysv workspace query reports a usable size" {
     const size = try sysvWorkspaceSize(f64, .upper, 8, 1, 8, 8);
     try testing.expect(size >= 1);
 
-    var a = [_]f64{0} ** 64;
+    var a: [64]f64 = @splat(0);
     for (0..8) |i| a[i + i * 8] = 4;
     a[0 + 1 * 8] = 1;
     a[1 + 0 * 8] = 1;
-    var b = [_]f64{1} ** 8;
+    var b: [8]f64 = @splat(1);
     var ipiv: [8]Int = undefined;
     const buf = try testing.allocator.alloc(f64, size);
     defer testing.allocator.free(buf);
@@ -954,7 +954,7 @@ test "gbsv wants the extra kl rows that gbmv does not" {
     const kl = 1;
     const ku = 1;
     const ldab = 2 * kl + ku + 1;
-    var ab = [_]f64{0} ** (ldab * 3);
+    var ab: [ldab * 3]f64 = @splat(0);
     const full = [_]f64{ 2, 1, 0, 1, 2, 1, 0, 1, 2 };
     for (0..3) |j| {
         for (0..3) |i| {
@@ -989,10 +989,10 @@ test "dsgesv refines a single-precision factorization back to double" {
     const full = [_]f64{ 4, 1, 0, 0, 1, 4, 1, 0, 0, 1, 4, 1, 0, 0, 1, 4 };
     var a = full;
     const b = [_]f64{ 1, 2, 3, 4 };
-    var x = [_]f64{0} ** n;
+    var x: [n]f64 = @splat(0);
     var ipiv: [n]Int = undefined;
-    var workd = [_]f64{0} ** (n * 1);
-    var works = [_]f32{0} ** (n * (n + 1));
+    var workd: [n * 1]f64 = @splat(0);
+    var works: [n * (n + 1)]f32 = @splat(0);
 
     const iter = try sgesvIterative(n, 1, &a, n, &ipiv, &b, n, &x, n, &workd, &works);
 
@@ -1015,9 +1015,9 @@ test "dsposv refines a positive definite system" {
     const full = [_]f64{ 4, 1, 0, 1, 4, 1, 0, 1, 4 };
     var a = full;
     const b = [_]f64{ 1, 2, 3 };
-    var x = [_]f64{0} ** n;
-    var workd = [_]f64{0} ** n;
-    var works = [_]f32{0} ** (n * (n + 1));
+    var x: [n]f64 = @splat(0);
+    var workd: [n]f64 = @splat(0);
+    var works: [n * (n + 1)]f32 = @splat(0);
 
     _ = try sposvIterative(.upper, n, 1, &a, n, &b, n, &x, n, &workd, &works);
 

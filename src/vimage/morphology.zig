@@ -174,10 +174,10 @@ fn bufFromBytes(data: []u8, height: usize, width: usize, rowBytes: usize) vImage
 }
 
 test "dilate Planar8 spreads the MAX value into the kernel neighborhood" {
-    var src = [_]u8{50} ** 25; // 5x5, row-major, rowBytes = 5
+    var src: [25]u8 = @splat(50); // 5x5, row-major, rowBytes = 5
     src[1 * 5 + 3] = 200; // spike at (row=1, col=3)
-    var dest = [_]u8{0} ** 9; // 3x3
-    var kernel = [_]u8{0} ** 9; // 3x3 all-zero kernel
+    var dest: [9]u8 = @splat(0); // 3x3
+    var kernel: [9]u8 = @splat(0); // 3x3 all-zero kernel
 
     const b_src = bufFromBytes(&src, 5, 5, 5);
     const b_dest = bufFromBytes(&dest, 3, 3, 3);
@@ -192,10 +192,10 @@ test "dilate Planar8 spreads the MAX value into the kernel neighborhood" {
 }
 
 test "erode Planar8 spreads the MIN value into the kernel neighborhood" {
-    var src = [_]u8{50} ** 25;
+    var src: [25]u8 = @splat(50);
     src[1 * 5 + 3] = 10; // dark spike at (row=1, col=3)
-    var dest = [_]u8{0} ** 9;
-    var kernel = [_]u8{0} ** 9;
+    var dest: [9]u8 = @splat(0);
+    var kernel: [9]u8 = @splat(0);
 
     const b_src = bufFromBytes(&src, 5, 5, 5);
     const b_dest = bufFromBytes(&dest, 3, 3, 3);
@@ -209,13 +209,13 @@ test "erode Planar8 spreads the MIN value into the kernel neighborhood" {
 }
 
 test "dilate PlanarF spreads MAX, erode PlanarF spreads MIN (not swapped)" {
-    var src_hi = [_]f32{1.0} ** 25;
+    var src_hi: [25]f32 = @splat(1.0);
     src_hi[1 * 5 + 3] = 9.0; // bright spike
-    var src_lo = [_]f32{1.0} ** 25;
+    var src_lo: [25]f32 = @splat(1.0);
     src_lo[1 * 5 + 3] = -9.0; // dark spike
-    var dest_hi = [_]f32{0} ** 9;
-    var dest_lo = [_]f32{0} ** 9;
-    var kernel = [_]f32{0} ** 9;
+    var dest_hi: [9]f32 = @splat(0);
+    var dest_lo: [9]f32 = @splat(0);
+    var kernel: [9]f32 = @splat(0);
     const rb_src = 5 * @sizeOf(f32);
     const rb_dest = 3 * @sizeOf(f32);
 
@@ -254,7 +254,7 @@ test "dilate/erode ARGB8888 apply per-channel MAX/MIN independently, alpha-first
         }
     }
     var dest: [3 * 3 * 4]u8 = undefined;
-    var kernel = [_]u8{0} ** 9;
+    var kernel: [9]u8 = @splat(0);
     const b_src = bufFromBytes(&src, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, 3, 3, 12);
 
@@ -281,11 +281,11 @@ test "max (rectangular fast path) matches dilate with an equivalent all-zero ker
     // kernel that contains all the same value." Cross-check vImageMax_Planar8
     // against vImageDilate_Planar8 with an explicit all-zero 3x3 kernel on the
     // same input -- they must agree pixel-for-pixel.
-    var src = [_]u8{50} ** 25;
+    var src: [25]u8 = @splat(50);
     src[1 * 5 + 3] = 200;
-    var dest_max = [_]u8{0} ** 9;
-    var dest_dilate = [_]u8{0} ** 9;
-    var kernel = [_]u8{0} ** 9;
+    var dest_max: [9]u8 = @splat(0);
+    var dest_dilate: [9]u8 = @splat(0);
+    var kernel: [9]u8 = @splat(0);
 
     const b_src1 = bufFromBytes(&src, 5, 5, 5);
     const b_dest_max = bufFromBytes(&dest_max, 3, 3, 3);
@@ -301,11 +301,11 @@ test "max (rectangular fast path) matches dilate with an equivalent all-zero ker
 }
 
 test "min (rectangular fast path) matches erode with an equivalent all-zero kernel" {
-    var src = [_]u8{50} ** 25;
+    var src: [25]u8 = @splat(50);
     src[1 * 5 + 3] = 10;
-    var dest_min = [_]u8{0} ** 9;
-    var dest_erode = [_]u8{0} ** 9;
-    var kernel = [_]u8{0} ** 9;
+    var dest_min: [9]u8 = @splat(0);
+    var dest_erode: [9]u8 = @splat(0);
+    var kernel: [9]u8 = @splat(0);
 
     const b_src1 = bufFromBytes(&src, 5, 5, 5);
     const b_dest_min = bufFromBytes(&dest_min, 3, 3, 3);
@@ -321,12 +321,12 @@ test "min (rectangular fast path) matches erode with an equivalent all-zero kern
 }
 
 test "max/min PlanarF rectangular fast path" {
-    var src_hi = [_]f32{1.0} ** 25;
+    var src_hi: [25]f32 = @splat(1.0);
     src_hi[1 * 5 + 3] = 9.0;
-    var src_lo = [_]f32{1.0} ** 25;
+    var src_lo: [25]f32 = @splat(1.0);
     src_lo[1 * 5 + 3] = -9.0;
-    var dest_max = [_]f32{0} ** 9;
-    var dest_min = [_]f32{0} ** 9;
+    var dest_max: [9]f32 = @splat(0);
+    var dest_min: [9]f32 = @splat(0);
     const rb_src = 5 * @sizeOf(f32);
     const rb_dest = 3 * @sizeOf(f32);
 

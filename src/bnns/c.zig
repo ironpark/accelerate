@@ -708,8 +708,8 @@ test "every declared BNNS symbol resolves and links" {
     // catch a wrong signature: those link cleanly and misbehave at runtime.
     const std = @import("std");
     var sink: usize = 0;
-    inline for (@typeInfo(@This()).@"struct".decls) |decl| {
-        const field = @field(@This(), decl.name);
+    inline for (@typeInfo(@This()).@"struct".decl_names) |decl_name| {
+        const field = @field(@This(), decl_name);
         const Info = @typeInfo(@TypeOf(field));
         if (Info == .@"fn") {
             sink +%= @intFromPtr(&field);

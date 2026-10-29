@@ -330,12 +330,12 @@ test "topK hangs on a null index descriptor, so the wrapper does not allow one" 
     // parameter is ever widened back to `?*NDArrayDescriptor`, this stops
     // compiling and the hazard gets re-read rather than silently reintroduced.
     const testing = std.testing;
-    const Param = @typeInfo(@TypeOf(topK)).@"fn".params[7].type.?;
+    const Param = @typeInfo(@TypeOf(topK)).@"fn".param_types[7].?;
     try testing.expectEqual(*NDArrayDescriptor, Param);
     try testing.expect(@typeInfo(Param) != .optional);
 
     // The extern still matches the header, so the raw call remains available
     // to anyone who wants to re-test the framework's behaviour.
-    const CParam = @typeInfo(@TypeOf(c.BNNSDirectApplyTopK)).@"fn".params[7].type.?;
+    const CParam = @typeInfo(@TypeOf(c.BNNSDirectApplyTopK)).@"fn".param_types[7].?;
     try testing.expectEqual(?*NDArrayDescriptor, CParam);
 }

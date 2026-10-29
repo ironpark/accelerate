@@ -359,7 +359,7 @@ test "flattenRGBA8888 reads alpha from the last channel, not the first" {
     // If this dispatched to the ARGB entry point the result would be different,
     // so this doubles as an argument-order check.
     var px = [_]u8{ 64, 32, 16, 128 };
-    var out = [_]u8{0} ** 4;
+    var out: [4]u8 = @splat(0);
     const b_src = bufFromBytes(&px, 1, 1, 4);
     const b_dst = bufFromBytes(&out, 1, 1, 4);
     const bg: Pixel_8888 = .{ 100, 200, 50, 255 };
@@ -638,8 +638,8 @@ test "chunkyToPlanarF / planarToChunkyF round-trip 3 float channels at a float4 
 }
 
 test "flatten rejects a destination larger than the source" {
-    var src = [_]u8{0} ** 4;
-    var dst = [_]u8{0} ** (4 * 4);
+    var src: [4]u8 = @splat(0);
+    var dst: [4 * 4]u8 = @splat(0);
     const b_src = bufFromBytes(&src, 1, 1, 4);
     const b_dst = bufFromBytes(&dst, 2, 2, 8);
     const bg: Pixel_8888 = .{ 255, 0, 0, 0 };

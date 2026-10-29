@@ -604,7 +604,7 @@ pub fn copyBuffer(src: *const vImage_Buffer, dest: *const vImage_Buffer, pixel_s
 fn PixelBuf(comptime T: type, comptime height: usize, comptime width: usize, comptime channels: usize, comptime pad_pixels: usize) type {
     const stride = (width + pad_pixels) * channels;
     return struct {
-        data: [height * stride]T = [_]T{0} ** (height * stride),
+        data: [height * stride]T = @splat(0),
 
         const Self = @This();
 

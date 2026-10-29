@@ -42,15 +42,15 @@ const disabled_module = struct {
 /// namespace cannot loop forever.
 fn refAllDeclsDeep(comptime T: type, comptime depth: usize) void {
     if (depth == 0) return;
-    inline for (comptime @import("std").meta.declarations(T)) |decl| {
-        const field = @field(T, decl.name);
+    inline for (comptime @import("std").meta.declarations(T)) |decl_name| {
+        const field = @field(T, decl_name);
         if (@TypeOf(field) == type) {
             switch (@typeInfo(field)) {
                 .@"struct", .@"union", .@"enum", .@"opaque" => refAllDeclsDeep(field, depth - 1),
                 else => {},
             }
         } else {
-            _ = &@field(T, decl.name);
+            _ = &@field(T, decl_name);
         }
     }
 }

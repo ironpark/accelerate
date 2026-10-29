@@ -255,7 +255,7 @@ test "multiplying by L then solving with L is the identity" {
 
     const original = [_]f64{ 1, -2, 3.5, 0.25 };
     var x = original;
-    var y = [_]f64{0} ** 4;
+    var y: [4]f64 = @splat(0);
 
     try l.multiply(testing.allocator, Dense64.fromSlice(&x), Dense64.fromSlice(&y));
     try l.solve(testing.allocator, Dense64.fromSlice(&y), Dense64.fromSlice(&x));
@@ -275,7 +275,7 @@ test "P is a permutation: applying it and undoing it round-trips" {
 
     const original = [_]f64{ 10, 20, 30, 40 };
     var x = original;
-    var y = [_]f64{0} ** 4;
+    var y: [4]f64 = @splat(0);
 
     try p.multiply(testing.allocator, Dense64.fromSlice(&x), Dense64.fromSlice(&y));
 
@@ -310,9 +310,9 @@ test "D of an LDL^T carries the inertia on its diagonal" {
     var negatives: u32 = 0;
     var positives: u32 = 0;
     for (0..4) |j| {
-        var e = [_]f64{0} ** 4;
+        var e: [4]f64 = @splat(0);
         e[j] = 1;
-        var col = [_]f64{0} ** 4;
+        var col: [4]f64 = @splat(0);
         try d.multiply(testing.allocator, Dense64.fromSlice(&e), Dense64.fromSlice(&col));
         if (col[j] > 0) positives += 1 else if (col[j] < 0) negatives += 1;
     }

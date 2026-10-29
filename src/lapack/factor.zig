@@ -2299,7 +2299,7 @@ test "gbtrf then gbtrs on a band matrix" {
     const kl = 1;
     const ku = 1;
     const ldab = 2 * kl + ku + 1;
-    var ab = [_]f64{0} ** (ldab * 3);
+    var ab: [ldab * 3]f64 = @splat(0);
     const full = [_]f64{ 2, 1, 0, 1, 2, 1, 0, 1, 2 };
     for (0..3) |j| {
         for (0..3) |i| {
@@ -2428,7 +2428,7 @@ test "the condition estimators write nothing past their workspaces" {
     // is a heap overflow rather than an error - so this checks the real gecon
     // path against a deliberately over-allocated buffer.
     const n = 4;
-    var a = [_]f64{0} ** (n * n);
+    var a: [n * n]f64 = @splat(0);
     for (0..n) |i| a[i + i * n] = @floatFromInt(i + 1);
     var nwork: [n]f64 = undefined;
     const anorm = norms.lange(f64, .one, n, n, &a, n, &nwork);
@@ -2436,8 +2436,8 @@ test "the condition estimators write nothing past their workspaces" {
     try getrf(f64, n, n, &a, n, &ipiv);
 
     // Mirror gecon's real branch by hand, with poison past the documented ends.
-    var work = [_]f64{-999} ** (4 * n + 4);
-    var iwork = [_]Int{-999} ** (n + 4);
+    var work: [4 * n + 4]f64 = @splat(-999);
+    var iwork: [n + 4]Int = @splat(-999);
     var rcond: f64 = 0;
     var info: Int = 0;
     const n_ = dim(n);
@@ -2458,15 +2458,15 @@ test "the complex condition estimators also stay inside their workspaces" {
     // check them without reading LAPACK's source.
     const Z = Complex(f64);
     const n = 4;
-    var a = [_]Z{Z.zero} ** (n * n);
+    var a: [n * n]Z = @splat(Z.zero);
     for (0..n) |i| a[i + i * n] = Z.init(@floatFromInt(i + 1), 0);
     var nwork: [n]f64 = undefined;
     const anorm = norms.lange(Z, .one, n, n, &a, n, &nwork);
     var ipiv: [n]Int = undefined;
     try getrf(Z, n, n, &a, n, &ipiv);
 
-    var work = [_]Z{Z.init(-999, -999)} ** (2 * n + 4);
-    var rwork = [_]f64{-999} ** (2 * n + 4);
+    var work: [2 * n + 4]Z = @splat(Z.init(-999, -999));
+    var rwork: [2 * n + 4]f64 = @splat(-999);
     var rcond: f64 = 0;
     var info: Int = 0;
     const n_ = dim(n);
@@ -2514,11 +2514,11 @@ test "gbcon agrees with a dense gecon on the same matrix" {
     const kl = 1;
     const ku = 1;
     const ldab = 2 * kl + ku + 1;
-    var ab = [_]f64{0} ** (ldab * 3);
+    var ab: [ldab * 3]f64 = @splat(0);
     packBandForFactor(&ab, ldab, kl, ku);
 
     // anorm comes from the *unfactored* band, in the narrower langb layout.
-    var narrow = [_]f64{0} ** ((kl + ku + 1) * 3);
+    var narrow: [(kl + ku + 1) * 3]f64 = @splat(0);
     for (0..3) |j| for (0..3) |i| {
         if (i + kl < j or j + ku < i) continue;
         narrow[ku + i - j + j * (kl + ku + 1)] = tri3[i + j * 3];
@@ -2640,7 +2640,7 @@ test "gbequ finds the same scaling as geequ on the same matrix" {
     const ku = 1;
     const ld = kl + ku + 1;
     const badly_scaled = [_]f64{ 1e6, 1, 0, 1e6, 1, 0, 0, 1, 1 };
-    var ab = [_]f64{0} ** (ld * 3);
+    var ab: [ld * 3]f64 = @splat(0);
     for (0..3) |j| for (0..3) |i| {
         if (i + kl < j or j + ku < i) continue;
         ab[ku + i - j + j * ld] = badly_scaled[i + j * 3];
@@ -2839,7 +2839,7 @@ test "gbequb rounds the band scale factors to powers of two" {
     const ku = 1;
     const ld = kl + ku + 1;
     const badly_scaled = [_]f64{ 3, 1, 0, 1, 7, 0, 0, 1, 100 };
-    var ab = [_]f64{0} ** (ld * 3);
+    var ab: [ld * 3]f64 = @splat(0);
     for (0..3) |j| for (0..3) |i| {
         if (i + kl < j or j + ku < i) continue;
         ab[ku + i - j + j * ld] = badly_scaled[i + j * 3];

@@ -213,8 +213,8 @@ test "every declared symbol resolves at link time" {
     // corrupts the stack, which is why the layouts in `cg_types.zig` are
     // measured against clang and the wrappers are value-tested.
     var sum: usize = 0;
-    inline for (@typeInfo(@This()).@"struct".decls) |decl| {
-        const field = @field(@This(), decl.name);
+    inline for (@typeInfo(@This()).@"struct".decl_names) |decl_name| {
+        const field = @field(@This(), decl_name);
         if (@typeInfo(@TypeOf(field)) == .@"fn") {
             sum +%= @intFromPtr(&field);
         }

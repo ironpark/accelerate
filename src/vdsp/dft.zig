@@ -352,8 +352,8 @@ test "DFT(f32) init/deinit/exec: impulse forward spectrum then unnormalized inve
     var fwd = try DFT(f32).init(n, .forward);
     defer fwd.deinit();
 
-    var ir = [_]f32{0} ** n;
-    var ii = [_]f32{0} ** n;
+    var ir: [n]f32 = @splat(0);
+    var ii: [n]f32 = @splat(0);
     ir[0] = 1.0;
     var or_out: [n]f32 = undefined;
     var oi_out: [n]f32 = undefined;
@@ -434,8 +434,8 @@ test "RealDFT(f32) init/deinit/exec: impulse spectrum matches C=2 forward / C=1 
     var fwd = try RealDFT(f32).init(n, .forward);
     defer fwd.deinit();
 
-    var ir = [_]f32{0} ** half;
-    var ii = [_]f32{0} ** half;
+    var ir: [half]f32 = @splat(0);
+    var ii: [half]f32 = @splat(0);
     ir[0] = 1.0;
     var or_out: [half]f32 = undefined;
     var oi_out: [half]f32 = undefined;
@@ -543,7 +543,7 @@ test "DCT(.dct_II) matches hand-computed cosine sums for an impulse input" {
     var dct = try DCT.init(n, .dct_II);
     defer dct.deinit();
 
-    var input = [_]f32{0} ** n;
+    var input: [n]f32 = @splat(0);
     input[0] = 1.0;
     var output: [n]f32 = undefined;
     dct.exec(&input, &output);
@@ -626,7 +626,7 @@ test "InterleavedDFT(f32) real-to-complex uses the same DC/Nyquist-in-slot-0 pac
     var fwd = try InterleavedDFT(f32).init(n, .forward, .real_to_complex);
     defer fwd.deinit();
 
-    var in_c: [n]Complex(f32) = [_]Complex(f32){.{ .real = 0, .imag = 0 }} ** n;
+    var in_c: [n]Complex(f32) = @splat(.{ .real = 0, .imag = 0 });
     in_c[0] = .{ .real = 1, .imag = 0 };
     var out_c: [n]Complex(f32) = undefined;
     fwd.exec(&in_c, &out_c);

@@ -1074,7 +1074,7 @@ test "geqrf then orgqr reconstructs the original matrix" {
     try geqrf(f64, testing.allocator, m, n, &a, m, &tau);
 
     // Copy R out before orgqr overwrites `a` with Q.
-    var r = [_]f64{0} ** (n * n);
+    var r: [n * n]f64 = @splat(0);
     for (0..n) |j| {
         for (0..j + 1) |i| r[i + j * n] = a[i + j * m];
     }
@@ -1112,7 +1112,7 @@ test "ormqr applies Q without forming it" {
     var a2 = original;
     var tau2: [3]f64 = undefined;
     try geqrf(f64, testing.allocator, m, n, &a2, m, &tau2);
-    var cm = [_]f64{0} ** (m * n);
+    var cm: [m * n]f64 = @splat(0);
     for (0..n) |i| cm[i + i * m] = 1;
     try ormqr(f64, testing.allocator, .left, .no_trans, m, n, n, &a2, m, &tau2, &cm, m);
 
@@ -1171,7 +1171,7 @@ test "gelqf then orglq reconstructs the original matrix" {
 
     try gelqf(f64, testing.allocator, m, n, &a, m, &tau);
 
-    var l = [_]f64{0} ** (m * m);
+    var l: [m * m]f64 = @splat(0);
     for (0..m) |j| {
         for (j..m) |i| l[i + j * m] = a[i + j * m];
     }
@@ -1399,7 +1399,7 @@ test "the workspace queries report sizes the routines then accept" {
     const size = try geqrfWorkspaceSize(f64, 64, 32, 64);
     try testing.expect(size >= 32); // documented minimum is n
 
-    var a = [_]f64{0} ** (64 * 32);
+    var a: [64 * 32]f64 = @splat(0);
     for (0..32) |j| a[j + j * 64] = 1;
     var tau: [32]f64 = undefined;
     const buf = try testing.allocator.alloc(f64, size);
@@ -1477,7 +1477,7 @@ test "ggglm with an identity B is ordinary least squares" {
     const d0 = [_]f64{ 1, 3, 5, 7 };
 
     var a = a0;
-    var b = [_]f64{0} ** (n * p);
+    var b: [n * p]f64 = @splat(0);
     for (0..n) |i| b[i + i * n] = 1;
     var d = d0;
     var x: [m]f64 = undefined;
@@ -1575,7 +1575,7 @@ test "orgrq builds the Q of a gerqf factorization" {
 
     // A = R Q, with R in the trailing m x m upper triangle of a and Q the
     // trailing m rows of an n x n orthogonal matrix. orgrq forms those rows.
-    var q = [_]f64{0} ** (m * n);
+    var q: [m * n]f64 = @splat(0);
     // The reflectors live in the first n - m columns plus the strict lower part
     // of the trailing block; orgrq reads them from a itself.
     @memcpy(&q, &a);
@@ -1610,11 +1610,11 @@ test "ormlq applies the same Q that orglq builds" {
 
     // Apply Q^T to the identity from the right: the result is Q itself,
     // transposed, so its first m rows match what orglq produces.
-    var applied = [_]f64{0} ** (n * n);
+    var applied: [n * n]f64 = @splat(0);
     for (0..n) |i| applied[i + i * n] = 1;
     try ormlq(f64, testing.allocator, .right, .transpose, n, n, m, &a, m, &tau, &applied, n);
 
-    var built = [_]f64{0} ** (m * n);
+    var built: [m * n]f64 = @splat(0);
     @memcpy(&built, &a);
     try orglq(f64, testing.allocator, m, n, m, &built, m, &tau);
 
@@ -1634,7 +1634,7 @@ test "ormql and ormrq apply their factorizations' Q" {
     var tauq: [3]f64 = undefined;
     try geqlf(f64, testing.allocator, m, n, &aq, m, &tauq);
 
-    var q = [_]f64{0} ** (m * m);
+    var q: [m * m]f64 = @splat(0);
     for (0..m) |i| q[i + i * m] = 1;
     try ormql(f64, testing.allocator, .left, .no_trans, m, m, n, &aq, m, &tauq, &q, m);
     for (0..m) |j| {
@@ -1648,7 +1648,7 @@ test "ormql and ormrq apply their factorizations' Q" {
     var taur: [3]f64 = undefined;
     try gerqf(f64, testing.allocator, n, m, &ar, n, &taur);
 
-    var z = [_]f64{0} ** (m * m);
+    var z: [m * m]f64 = @splat(0);
     for (0..m) |i| z[i + i * m] = 1;
     try ormrq(f64, testing.allocator, .left, .no_trans, m, m, n, &ar, n, &taur, &z, m);
     for (0..m) |j| {
@@ -1670,7 +1670,7 @@ test "unmlq is the complex spelling of ormlq" {
     var tau: [2]Z = undefined;
     try gelqf(Z, testing.allocator, m, n, &a, m, &tau);
 
-    var applied = [_]Z{Z.init(0, 0)} ** (n * n);
+    var applied: [n * n]Z = @splat(Z.init(0, 0));
     for (0..n) |i| applied[i + i * n] = Z.init(1, 0);
     try unmlq(Z, testing.allocator, .right, .transpose, n, n, m, &a, m, &tau, &applied, n);
 
@@ -1696,7 +1696,7 @@ test "unmql and unmrq are the complex spellings, and pick the C transpose" {
     var tau: [n]Z = undefined;
     try geqlf(Z, testing.allocator, m, n, &a, m, &tau);
 
-    var q = [_]Z{Z.init(0, 0)} ** (m * m);
+    var q: [m * m]Z = @splat(Z.init(0, 0));
     for (0..m) |i| q[i + i * m] = Z.init(1, 0);
     try unmql(Z, testing.allocator, .left, .no_trans, m, m, n, &a, m, &tau, &q, m);
 
@@ -1719,7 +1719,7 @@ test "unmql and unmrq are the complex spellings, and pick the C transpose" {
     var taur: [n]Z = undefined;
     try gerqf(Z, testing.allocator, n, m, &b, n, &taur);
 
-    var z = [_]Z{Z.init(0, 0)} ** (m * m);
+    var z: [m * m]Z = @splat(Z.init(0, 0));
     for (0..m) |i| z[i + i * m] = Z.init(1, 0);
     try unmrq(Z, testing.allocator, .left, .no_trans, m, m, n, &b, n, &taur, &z, m);
     for (0..m) |j| {

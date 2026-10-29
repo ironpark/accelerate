@@ -406,7 +406,7 @@ test "conjugate gradient solves the SPD test system" {
         const D = matrix.Dense(T);
 
         var b = TestMatrix.rhs(T);
-        var x = [_]T{0} ** 4;
+        var x: [4]T = @splat(0);
         const status = try Iterative(T).conjugateGradient(
             a,
             D.fromSlice(&b),
@@ -555,7 +555,7 @@ test "a matrix-free operator solves the same system as the stored matrix" {
     }.f;
 
     var b = TestMatrix.rhs(f64);
-    var x = [_]f64{0} ** 4;
+    var x: [4]f64 = @splat(0);
     const status = try It64.conjugateGradientOperator(
         *const Dense4,
         &dense,
@@ -603,7 +603,7 @@ test "the operator callback is invoked, and sees usable Dense views" {
     }.f;
 
     var b = [_]f64{ 2, 4, 6, 8 };
-    var x = [_]f64{0} ** 4;
+    var x: [4]f64 = @splat(0);
     _ = try It64.conjugateGradientOperator(*State, &state, apply, D64.fromSlice(&b), D64.fromSlice(&x), .{
         .rtol = 1e-14,
         .max_iterations = 50,
@@ -722,7 +722,7 @@ test "a user preconditioner's apply callback is invoked" {
     const pre = It64.Preconditioner.user(null, &Counter.apply);
 
     var b = TestMatrix.rhs(f64);
-    var x = [_]f64{0} ** 4;
+    var x: [4]f64 = @splat(0);
     _ = try It64.gmres(
         a,
         D64.fromSlice(&b),
@@ -803,7 +803,7 @@ test "multi-RHS iterative solve" {
 
     // Two right-hand sides: A*[1,2,3,4] and A*[1,0,0,0].
     var b = [_]f64{ 4, 10, 18, 23, 2, 1, 0, 0 };
-    var x = [_]f64{0} ** 8;
+    var x: [8]f64 = @splat(0);
     const status = try It64.conjugateGradient(
         a,
         D64.init(&b, 4, 2, 4),
@@ -835,7 +835,7 @@ test "conjugate gradient on a complex Hermitian system" {
     });
 
     var b = [_]Z{ Z.init(6, 2), Z.init(7, 5), Z.init(15, -4) };
-    var x = [_]Z{Z.init(0, 0)} ** 3;
+    var x: [3]Z = @splat(Z.init(0, 0));
 
     const status = try Iterative(Z).conjugateGradient(
         a,

@@ -1702,7 +1702,7 @@ test "syevr computes every eigenvalue when asked for all" {
 test "syevr computes only the requested index range" {
     // diag(1, 2, 3, 4, 5): asking for indices 2..3 must give exactly 2 and 3.
     const n = 5;
-    var a = [_]f64{0} ** (n * n);
+    var a: [n * n]f64 = @splat(0);
     for (0..n) |i| a[i + i * n] = @floatFromInt(i + 1);
     var w: [n]f64 = undefined;
     var z: [n * n]f64 = undefined;
@@ -1729,7 +1729,7 @@ test "syevr computes only the requested index range" {
 
 test "syevr computes only the requested value interval" {
     const n = 5;
-    var a = [_]f64{0} ** (n * n);
+    var a: [n * n]f64 = @splat(0);
     for (0..n) |i| a[i + i * n] = @floatFromInt(i + 1);
     var w: [n]f64 = undefined;
     var z: [n * n]f64 = undefined;
@@ -2016,7 +2016,7 @@ test "sbevd and sbevx agree with sbev in band storage" {
 test "sbevx writes its reduction factor into q" {
     const ab0 = [_]f64{ 0, 6, 1, 5, 1, 4, 1, 3 };
     var ab = ab0;
-    var q = [_]f64{-1} ** 16;
+    var q: [16]f64 = @splat(-1);
     var w: [4]f64 = undefined;
     var z: [16]f64 = undefined;
     var ifail: [4]Int = undefined;

@@ -756,7 +756,7 @@ test "convolvePlanar f32: kernel_height/kernel_width are not swapped" {
     const src_vals = [_]f32{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     var src = try makePlanarFBuffer(allocator, 3, 3, 2, &src_vals);
     defer allocator.free(src.mem);
-    var dest = try makePlanarFBuffer(allocator, 3, 3, 3, &[_]f32{0} ** 9);
+    var dest = try makePlanarFBuffer(allocator, 3, 3, 3, &@as([9]f32, @splat(0)));
     defer allocator.free(dest.mem);
 
     // 3x1 (height=3, width=1) kernel {0,0,1} selects pixel[y+1][x] = 8 for
@@ -1167,7 +1167,7 @@ test "sepConvolvePlanar f32: separable pair equals the outer-product 2D kernel" 
 
     var sep_src = try makePlanarFBuffer(allocator, h, w, 2, &src_vals);
     defer allocator.free(sep_src.mem);
-    var sep_dest = try makePlanarFBuffer(allocator, h, w, 3, &[_]f32{0} ** (w * h));
+    var sep_dest = try makePlanarFBuffer(allocator, h, w, 3, &@as([w * h]f32, @splat(0)));
     defer allocator.free(sep_dest.mem);
     _ = try sepConvolvePlanar(f32, &sep_src.buf, &sep_dest.buf, null, 0, 0, &kx, &ky, .{}, .{ .edge_extend = true });
 
@@ -1179,7 +1179,7 @@ test "sepConvolvePlanar f32: separable pair equals the outer-product 2D kernel" 
     }
     var full_src = try makePlanarFBuffer(allocator, h, w, 2, &src_vals);
     defer allocator.free(full_src.mem);
-    var full_dest = try makePlanarFBuffer(allocator, h, w, 3, &[_]f32{0} ** (w * h));
+    var full_dest = try makePlanarFBuffer(allocator, h, w, 3, &@as([w * h]f32, @splat(0)));
     defer allocator.free(full_dest.mem);
     _ = try convolvePlanar(f32, &full_src.buf, &full_dest.buf, null, 0, 0, kernel2d[0..].ptr, 3, 3, .{}, .{ .edge_extend = true });
 
@@ -1199,7 +1199,7 @@ test "sepConvolvePlanar u16: bias is added to the weighted sum" {
     const src_vals = [_]u16{ 100, 200, 300, 400, 500, 600, 700, 800, 900 };
     var src = try makePlanar16UBuffer(allocator, 3, 3, 2, &src_vals);
     defer allocator.free(src.mem);
-    var dest = try makePlanar16UBuffer(allocator, 3, 3, 3, &[_]u16{0} ** 9);
+    var dest = try makePlanar16UBuffer(allocator, 3, 3, 3, &@as([9]u16, @splat(0)));
     defer allocator.free(dest.mem);
 
     const identity = [_]f32{ 0, 1, 0 };
@@ -1212,7 +1212,7 @@ test "sepConvolvePlanar f16: half-precision pixels, single-precision weights" {
     const src_vals = [_]f16{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     var src = try makePlanar16FBuffer(allocator, 3, 3, 2, &src_vals);
     defer allocator.free(src.mem);
-    var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &[_]f16{0} ** 9);
+    var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &@as([9]f16, @splat(0)));
     defer allocator.free(dest.mem);
 
     const kx = [_]f32{ 0, 0, 1 };
@@ -1229,7 +1229,7 @@ test "sepConvolvePlanar8to16U: scale widens past what 8 bits could hold" {
     const src_vals = [_]u8{ 10, 20, 30, 40, 200, 60, 70, 80, 90 };
     var src = try makePlanar8Buffer(allocator, 3, 3, 2, &src_vals);
     defer allocator.free(src.mem);
-    var dest = try makePlanar16UBuffer(allocator, 3, 3, 3, &[_]u16{0} ** 9);
+    var dest = try makePlanar16UBuffer(allocator, 3, 3, 3, &@as([9]u16, @splat(0)));
     defer allocator.free(dest.mem);
 
     const identity = [_]f32{ 0, 1, 0 };
@@ -1298,7 +1298,7 @@ test "convolvePlanar / convolveWithBiasPlanar f16: the 16F prongs run" {
     {
         var src = try makePlanar16FBuffer(allocator, 3, 3, 2, &src_vals);
         defer allocator.free(src.mem);
-        var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &[_]f16{0} ** 9);
+        var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &@as([9]f16, @splat(0)));
         defer allocator.free(dest.mem);
         const kernel = [_]f32{ 0, 0, 1 }; // 1x3: one column right
         _ = try convolvePlanar(f16, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{}, .{ .edge_extend = true });
@@ -1307,7 +1307,7 @@ test "convolvePlanar / convolveWithBiasPlanar f16: the 16F prongs run" {
     {
         var src = try makePlanar16FBuffer(allocator, 3, 3, 2, &src_vals);
         defer allocator.free(src.mem);
-        var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &[_]f16{0} ** 9);
+        var dest = try makePlanar16FBuffer(allocator, 3, 3, 3, &@as([9]f16, @splat(0)));
         defer allocator.free(dest.mem);
         const kernel = [_]f32{ 0, 1, 0 };
         _ = try convolveWithBiasPlanar(f16, &src.buf, &dest.buf, null, 0, 0, kernel[0..].ptr, 1, 3, .{ .bias = 10 }, .{ .edge_extend = true });

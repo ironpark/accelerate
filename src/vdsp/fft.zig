@@ -1110,7 +1110,7 @@ test "zrip forward matches vDSP.h's documented 2x-of-equivalent-complex-FFT scal
     // forward is confirmed unnormalized (scale=1), so this gives X[k] with
     // no extra factor.
     var zre = x;
-    var zim = [_]f32{0} ** 8;
+    var zim: [8]f32 = @splat(0);
     const zio = SS(f32).init(&zre, &zim);
     fft.zip(zio, .forward);
 
@@ -1378,8 +1378,8 @@ test "zrip2d forward+inverse round trip confirms unnormalized-inverse pattern" {
     var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
-    var re = [_]f32{0} ** total;
-    var im = [_]f32{0} ** total;
+    var re: [total]f32 = @splat(0);
+    var im: [total]f32 = @splat(0);
     re[0] = 1.0; // impulse
     const io = SS(f32).init(&re, &im);
 
@@ -1405,7 +1405,7 @@ test "zript2d matches zrip2d (temp-buffer agrees with buffer-less)" {
     var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.5 - 3.0;
 
     var a_re = seed;
@@ -1439,7 +1439,7 @@ test "zrop2d matches zrip2d (out-of-place equals in-place)" {
     var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.5 - 3.0;
 
     var ip_re = seed;
@@ -1473,7 +1473,7 @@ test "zropt2d matches zrop2d (temp-buffer agrees with buffer-less)" {
     var fft = try FFT(f32).init(@max(log2n0, log2n1), .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.5 - 3.0;
     const input = SS(f32).init(&seed, &seed);
 
@@ -1511,8 +1511,8 @@ test "mzip matches per-signal zip (M independent batched transforms)" {
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var re = [_]f32{0} ** total;
-    var im_arr = [_]f32{0} ** total;
+    var re: [total]f32 = @splat(0);
+    var im_arr: [total]f32 = @splat(0);
     // Fill three distinct asymmetric signals.
     const signals_re = [_][4]f32{
         .{ 1.0, -2.0, 3.0, 0.5 },
@@ -1557,7 +1557,7 @@ test "mzipt matches mzip (temp-buffer agrees with buffer-less batched transform)
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.7 - 2.0;
 
     var a_re = seed;
@@ -1589,7 +1589,7 @@ test "mzop matches mzip (out-of-place equals in-place, batched)" {
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.7 - 2.0;
 
     var ip_re = seed;
@@ -1627,7 +1627,7 @@ test "mzopt matches mzop (temp-buffer agrees with buffer-less, batched out-of-pl
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.7 - 2.0;
     const input = SS(f32).init(&seed, &seed);
 
@@ -1664,8 +1664,8 @@ test "mzrip matches per-signal zrip (M independent batched real transforms)" {
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var re = [_]f32{0} ** total;
-    var im_arr = [_]f32{0} ** total;
+    var re: [total]f32 = @splat(0);
+    var im_arr: [total]f32 = @splat(0);
     const signals_re = [_][4]f32{
         .{ 1.0, -3.0, 4.0, 2.0 },
         .{ -2.0, 0.5, 3.0, -1.0 },
@@ -1707,7 +1707,7 @@ test "mzript matches mzrip (temp-buffer agrees with buffer-less batched real tra
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.6 - 2.5;
 
     var a_re = seed;
@@ -1739,7 +1739,7 @@ test "mzrop matches mzrip (out-of-place equals in-place, batched real)" {
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.6 - 2.5;
 
     var ip_re = seed;
@@ -1776,7 +1776,7 @@ test "mzropt matches mzrop (temp-buffer agrees with buffer-less, batched real ou
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var seed = [_]f32{0} ** total;
+    var seed: [total]f32 = @splat(0);
     for (0..total) |i| seed[i] = @as(f32, @floatFromInt(i)) * 0.6 - 2.5;
     const input = SS(f32).init(&seed, &seed);
 
@@ -1969,8 +1969,8 @@ test "zrip2d DC/Nyquist packing: which output slot each basis image lands in" {
     };
 
     for (cases) |case| {
-        var re = [_]f32{0} ** total;
-        var im = [_]f32{0} ** total;
+        var re: [total]f32 = @splat(0);
+        var im: [total]f32 = @splat(0);
         // Real 2D input packing (same as 1D zrip): even rows -> realp,
         // odd rows -> imagp.
         for (0..half_n0) |r| {
@@ -2014,8 +2014,8 @@ test "roundTripScale / realRoundTripScale match what the transforms actually do"
 
     // Complex round trip: an impulse comes back scaled by roundTripScale().
     {
-        var re = [_]f32{0} ** n;
-        var im = [_]f32{0} ** n;
+        var re: [n]f32 = @splat(0);
+        var im: [n]f32 = @splat(0);
         re[3] = 1.0;
         const io = SS(f32).init(&re, &im);
         fft.zip(io, .forward);
@@ -2027,8 +2027,8 @@ test "roundTripScale / realRoundTripScale match what the transforms actually do"
 
     // Real round trip: scaled by realRoundTripScale() = 2*N, not N.
     {
-        var re = [_]f32{0} ** (n / 2);
-        var im = [_]f32{0} ** (n / 2);
+        var re: [n / 2]f32 = @splat(0);
+        var im: [n / 2]f32 = @splat(0);
         re[1] = 1.0;
         const io = SS(f32).init(&re, &im);
         fft.zrip(io, .forward);
@@ -2098,10 +2098,10 @@ test "FFT setup is read-only during execution" {
     var fft = try FFT(f32).init(log2n, .radix2);
     defer fft.deinit();
 
-    var re = [_]f32{0} ** 256;
-    var im = [_]f32{0} ** 256;
-    var br = [_]f32{0} ** 256;
-    var bi = [_]f32{0} ** 256;
+    var re: [256]f32 = @splat(0);
+    var im: [256]f32 = @splat(0);
+    var br: [256]f32 = @splat(0);
+    var bi: [256]f32 = @splat(0);
     const io = SS(f32).init(re[0..n], im[0..n]);
     const buf = SS(f32).init(br[0..n], bi[0..n]);
 
@@ -2149,10 +2149,10 @@ test "one setup drives every smaller size, bit-identically" {
 
     for ([_]Length{ 2, 3, 5, 7, 10 }) |log2n| {
         const n = @as(usize, 1) << @intCast(log2n);
-        var a_re = [_]f32{0} ** 1024;
-        var a_im = [_]f32{0} ** 1024;
-        var b_re = [_]f32{0} ** 1024;
-        var b_im = [_]f32{0} ** 1024;
+        var a_re: [1024]f32 = @splat(0);
+        var a_im: [1024]f32 = @splat(0);
+        var b_re: [1024]f32 = @splat(0);
+        var b_im: [1024]f32 = @splat(0);
         for (0..n) |i| {
             const v: f32 = @floatFromInt(i % 7);
             a_re[i] = v * 1.5 - 2.0;
@@ -2288,8 +2288,8 @@ test "zop3 / zop5 round trips are unnormalized, scaling by N" {
         defer fft.deinit();
         try std.testing.expectEqual(@as(f32, 24.0), fft.roundTripScale3());
 
-        var re = [_]f32{0} ** n;
-        var im = [_]f32{0} ** n;
+        var re: [n]f32 = @splat(0);
+        var im: [n]f32 = @splat(0);
         re[0] = 1.0; // impulse: the flattest possible test of the scale
         var tmp_re: [n]f32 = undefined;
         var tmp_im: [n]f32 = undefined;
@@ -2305,8 +2305,8 @@ test "zop3 / zop5 round trips are unnormalized, scaling by N" {
         defer fft.deinit();
         try std.testing.expectEqual(@as(f32, 20.0), fft.roundTripScale5());
 
-        var re = [_]f32{0} ** n;
-        var im = [_]f32{0} ** n;
+        var re: [n]f32 = @splat(0);
+        var im: [n]f32 = @splat(0);
         re[0] = 1.0;
         var tmp_re: [n]f32 = undefined;
         var tmp_im: [n]f32 = undefined;

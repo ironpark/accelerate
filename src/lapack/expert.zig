@@ -1011,12 +1011,12 @@ test "gbsvx equilibrates a badly scaled band matrix" {
 
     // Row 0 is scaled up by 1e8, which is what equilibration is for.
     const scaled = [_]f64{ 4e8, 1, 0, 1e8, 4, 1, 0, 1, 4 };
-    var ab = [_]f64{0} ** (narrow_ld * 3);
+    var ab: [narrow_ld * 3]f64 = @splat(0);
     for (0..3) |j| for (0..3) |i| {
         if (i + kl < j or j + ku < i) continue;
         ab[ku + i - j + j * narrow_ld] = scaled[i + j * 3];
     };
-    var afb = [_]f64{0} ** (wide_ld * 3);
+    var afb: [wide_ld * 3]f64 = @splat(0);
 
     var b = [_]f64{ 1e8, 2, 3 };
     var ipiv: [3]Int = undefined;

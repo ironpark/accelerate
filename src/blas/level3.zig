@@ -395,10 +395,10 @@ test "gemm matches an independent naive product for a non-square case" {
     // 3x2 times 2x4.
     const a = [_]f64{ 1, 2, 3, 4, 5, 6 };
     const b = [_]f64{ 1, 0, 2, 1, 0, 1, 3, 2 };
-    var want = [_]f64{0} ** 12;
+    var want: [12]f64 = @splat(0);
     refGemm(f64, 3, 4, 2, &a, &b, &want);
 
-    var got = [_]f64{0} ** 12;
+    var got: [12]f64 = @splat(0);
     gemm(f64, .row_major, .no_trans, .no_trans, 3, 4, 2, 1, &a, 2, &b, 4, 0, &got, 4);
     for (want, got) |w, g| try testing.expectApproxEqAbs(w, g, 1e-12);
 }
@@ -409,10 +409,10 @@ test "transposing A gives the same result as pre-transposing the data" {
     const at = [_]f64{ 1, 4, 2, 5, 3, 6 };
     const b = [_]f64{ 1, 1, 1, 1, 1, 1 }; // 3x2
 
-    var direct = [_]f64{0} ** 4;
+    var direct: [4]f64 = @splat(0);
     gemm(f64, .row_major, .no_trans, .no_trans, 2, 2, 3, 1, &a, 3, &b, 2, 0, &direct, 2);
 
-    var transposed = [_]f64{0} ** 4;
+    var transposed: [4]f64 = @splat(0);
     gemm(f64, .row_major, .trans, .no_trans, 2, 2, 3, 1, &at, 2, &b, 2, 0, &transposed, 2);
 
     for (direct, transposed) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);
@@ -478,8 +478,8 @@ test "symm agrees with gemm on the expanded symmetric matrix" {
     const full_s = [_]f64{ 1, 2, 2, 3 };
     const b = [_]f64{ 1, 0, 0, 1 };
 
-    var from_symm = [_]f64{0} ** 4;
-    var from_gemm = [_]f64{0} ** 4;
+    var from_symm: [4]f64 = @splat(0);
+    var from_gemm: [4]f64 = @splat(0);
     symm(f64, .row_major, .left, .upper, 2, 2, 1, &packed_s, 2, &b, 2, 0, &from_symm, 2);
     gemm(f64, .row_major, .no_trans, .no_trans, 2, 2, 2, 1, &full_s, 2, &b, 2, 0, &from_gemm, 2);
 
@@ -492,8 +492,8 @@ test "hemm agrees with gemm on the expanded Hermitian matrix" {
     const full_h = [_]C64{ .init(2, 0), .init(1, 1), .init(1, -1), .init(3, 0) };
     const b = [_]C64{ C64.one, C64.zero, C64.zero, C64.one };
 
-    var from_hemm = [_]C64{C64.zero} ** 4;
-    var from_gemm = [_]C64{C64.zero} ** 4;
+    var from_hemm: [4]C64 = @splat(C64.zero);
+    var from_gemm: [4]C64 = @splat(C64.zero);
     hemm(C64, .row_major, .left, .upper, 2, 2, C64.one, &packed_h, 2, &b, 2, C64.zero, &from_hemm, 2);
     gemm(C64, .row_major, .no_trans, .no_trans, 2, 2, 2, C64.one, &full_h, 2, &b, 2, C64.zero, &from_gemm, 2);
 
@@ -505,8 +505,8 @@ test "side .right multiplies from the other side" {
     const s = [_]f64{ 1, 2, -999, 3 };
     const b = [_]f64{ 1, 1, 0, 1 };
 
-    var left = [_]f64{0} ** 4;
-    var right = [_]f64{0} ** 4;
+    var left: [4]f64 = @splat(0);
+    var right: [4]f64 = @splat(0);
     symm(f64, .row_major, .left, .upper, 2, 2, 1, &s, 2, &b, 2, 0, &left, 2);
     symm(f64, .row_major, .right, .upper, 2, 2, 1, &s, 2, &b, 2, 0, &right, 2);
 
@@ -546,11 +546,11 @@ test "syr2k matches the equivalent gemm combination" {
     const a = [_]f64{ 1, 2, 3, 4 };
     const b = [_]f64{ 0, 1, 1, 0 };
 
-    var from_syr2k = [_]f64{0} ** 4;
+    var from_syr2k: [4]f64 = @splat(0);
     syr2k(f64, .row_major, .upper, .no_trans, 2, 2, 1, &a, 2, &b, 2, 0, &from_syr2k, 2);
 
     // Build the same thing out of two gemms.
-    var want = [_]f64{0} ** 4;
+    var want: [4]f64 = @splat(0);
     gemm(f64, .row_major, .no_trans, .trans, 2, 2, 2, 1, &a, 2, &b, 2, 0, &want, 2);
     gemm(f64, .row_major, .no_trans, .trans, 2, 2, 2, 1, &b, 2, &a, 2, 1, &want, 2);
 
@@ -597,7 +597,7 @@ test "trsm solves a triangular system with alpha scaling" {
 test "geadd adds two matrices, with transposes" {
     const a = [_]f64{ 1, 2, 3, 4 };
     const b = [_]f64{ 10, 20, 30, 40 };
-    var cm = [_]f64{0} ** 4;
+    var cm: [4]f64 = @splat(0);
 
     geadd(f64, .row_major, .no_trans, .no_trans, 2, 2, 1, &a, 2, 1, &b, 2, &cm, 2);
     try testing.expectEqualSlices(f64, &.{ 11, 22, 33, 44 }, &cm);
@@ -611,7 +611,7 @@ test "geadd with a zero coefficient does not read that matrix" {
     // The header says a zero alpha or beta means the matrix is not accessed at
     // all, so an empty slice must be accepted.
     const b = [_]f64{ 1, 2, 3, 4 };
-    var cm = [_]f64{0} ** 4;
+    var cm: [4]f64 = @splat(0);
     geadd(f64, .row_major, .no_trans, .no_trans, 2, 2, 0, &.{}, 2, 3, &b, 2, &cm, 2);
     try testing.expectEqualSlices(f64, &.{ 3, 6, 9, 12 }, &cm);
 }

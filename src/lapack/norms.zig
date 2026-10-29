@@ -543,7 +543,7 @@ test "lange writes nothing past the workspace it was promised" {
     // larger, the poison below would be overwritten - which is the only way to
     // check a documented workspace size without reading LAPACK's source.
     const a = [_]f64{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-    var work = [_]f64{-999} ** 8;
+    var work: [8]f64 = @splat(-999);
     const needed = langeWorkspaceLen(.infinity, 3);
     try testing.expectEqual(@as(usize, 3), needed);
 
@@ -640,7 +640,7 @@ test "lacpy copies only the selected part" {
 }
 
 test "laset builds an identity from its two scalars" {
-    var a = [_]f64{-1} ** 9;
+    var a: [9]f64 = @splat(-1);
     laset(f64, .all, 3, 3, 0, 1, &a, 3);
 
     for (0..3) |i| {

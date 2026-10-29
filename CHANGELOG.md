@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.5.0
+
+Zig 0.17. Nothing is bound, renamed or retyped; this release is breaking only
+because it no longer builds on Zig 0.16.
+
+### Breaking
+
+- **Zig 0.17.0 is required** (`minimum_zig_version`). 0.17 removes the array
+  repetition operator, `Build.args`, `std.meta.declarations`' struct elements
+  and the old `@typeInfo` field layout, and refuses `@bitCast` between extern
+  structs; the package is ported to each.
+
+### Changed
+
+- **Accelerate, and the CoreGraphics family behind `-Dcoregraphics`, are
+  linked only for a Darwin target.** The bindings are plain `extern fn`
+  declarations with no headers behind them, so a non-Darwin target still
+  compiles the module, with the symbols left undefined. That lets a Linux host
+  build tools that only reflect over the bindings -- a generator for a Darwin
+  cross-build -- without a framework to link.
+
 ## 0.4.0
 
 An API consistency pass. Nothing new is bound; a lot is renamed or retyped, so

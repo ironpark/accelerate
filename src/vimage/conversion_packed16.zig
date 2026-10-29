@@ -523,7 +523,7 @@ test "argb8888ToARGB1555Dithered rejects DitherNone with kvImageInvalidParameter
 test "argb8888ToARGB1555Dithered stays within one 5-bit step of the undithered encoder" {
     const allocator = testing.allocator;
     const colour = [4]u8{ 255, 255, 0, 132 };
-    const src = try makeBuffer([4]u8, allocator, 2, 8, &([_][4]u8{colour} ** 16));
+    const src = try makeBuffer([4]u8, allocator, 2, 8, &@as([16][4]u8, @splat(colour)));
     defer src.free(allocator);
     const plain = try makeDest(u16, allocator, 2, 8);
     defer plain.free(allocator);
@@ -603,7 +603,7 @@ test "rgba8888ToRGBA5551Dithered rejects DitherNone with kvImageInvalidParameter
 test "rgba8888ToRGBA5551Dithered stays within one 5-bit step of the undithered encoder" {
     const allocator = testing.allocator;
     const colour = [4]u8{ 8, 200, 255, 255 };
-    const src = try makeBuffer([4]u8, allocator, 2, 8, &([_][4]u8{colour} ** 16));
+    const src = try makeBuffer([4]u8, allocator, 2, 8, &@as([16][4]u8, @splat(colour)));
     defer src.free(allocator);
     const plain = try makeDest(u16, allocator, 2, 8);
     defer plain.free(allocator);
@@ -761,13 +761,13 @@ test "RGB565 dithered encoders read their channels in the right order (within on
     // R=255 G=200 B=8 is deliberately asymmetric: an encoder that read the
     // source channels in the wrong order would put 1 in bits 15..11 instead
     // of 31, which no dither can excuse.
-    const rgb = try makeBuffer([3]u8, allocator, height, width, &([_][3]u8{.{ 255, 200, 8 }} ** n));
+    const rgb = try makeBuffer([3]u8, allocator, height, width, &@as([n][3]u8, @splat(.{ 255, 200, 8 })));
     defer rgb.free(allocator);
-    const argb = try makeBuffer([4]u8, allocator, height, width, &([_][4]u8{.{ 255, 255, 200, 8 }} ** n));
+    const argb = try makeBuffer([4]u8, allocator, height, width, &@as([n][4]u8, @splat(.{ 255, 255, 200, 8 })));
     defer argb.free(allocator);
-    const rgba = try makeBuffer([4]u8, allocator, height, width, &([_][4]u8{.{ 255, 200, 8, 255 }} ** n));
+    const rgba = try makeBuffer([4]u8, allocator, height, width, &@as([n][4]u8, @splat(.{ 255, 200, 8, 255 })));
     defer rgba.free(allocator);
-    const bgra = try makeBuffer([4]u8, allocator, height, width, &([_][4]u8{.{ 8, 200, 255, 255 }} ** n));
+    const bgra = try makeBuffer([4]u8, allocator, height, width, &@as([n][4]u8, @splat(.{ 8, 200, 255, 255 })));
     defer bgra.free(allocator);
 
     // Reference: the plain (round to nearest) ARGB8888 encoder.

@@ -794,7 +794,7 @@ test "porfs refines a Cholesky solve" {
 
     // lacpy is the reason this works: potrf would otherwise destroy the matrix
     // porfs needs.
-    var af = [_]f64{0} ** (n * n);
+    var af: [n * n]f64 = @splat(0);
     norms.lacpy(f64, .all, n, n, &original, n, &af, n);
     try factor.potrf(f64, .upper, n, &af, n);
 
@@ -917,8 +917,8 @@ test "gbrfs takes the original in the narrow band layout and the factor in the w
     const narrow_ld = kl + ku + 1;
     const wide_ld = 2 * kl + ku + 1;
 
-    var narrow = [_]f64{0} ** (narrow_ld * 3);
-    var wide = [_]f64{0} ** (wide_ld * 3);
+    var narrow: [narrow_ld * 3]f64 = @splat(0);
+    var wide: [wide_ld * 3]f64 = @splat(0);
     for (0..3) |j| for (0..3) |i| {
         if (i + kl < j or j + ku < i) continue;
         narrow[ku + i - j + j * narrow_ld] = tri3[i + j * 3];

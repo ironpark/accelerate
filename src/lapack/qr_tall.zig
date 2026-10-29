@@ -856,7 +856,7 @@ test "geqr's Q applied to R reconstructs the original" {
 
     // Build Q explicitly by applying it to the identity - the only way, since
     // there is no orgqr for this factor.
-    var q = [_]f64{0} ** (m * m);
+    var q: [m * m]f64 = @splat(0);
     for (0..m) |i| q[i + i * m] = 1;
     try gemqr(f64, testing.allocator, .left, .no_trans, m, m, n, &a, m, f, &q, m);
 
@@ -905,7 +905,7 @@ test "gelq and gemlq are the LQ counterparts" {
     defer f.deinit();
 
     // L is the lower triangle of the leading m x m block.
-    var q = [_]f64{0} ** (n * n);
+    var q: [n * n]f64 = @splat(0);
     for (0..n) |i| q[i + i * n] = 1;
     try gemlq(f64, testing.allocator, .left, .no_trans, n, n, m, &a, m, f, &q, n);
 
@@ -928,7 +928,7 @@ test "geqrt and gemqrt agree with geqr" {
     var t: [2 * 2]f64 = undefined;
     try geqrt(f64, testing.allocator, m, n, 2, &a, m, &t, 2);
 
-    var q = [_]f64{0} ** (m * m);
+    var q: [m * m]f64 = @splat(0);
     for (0..m) |i| q[i + i * m] = 1;
     try gemqrt(f64, testing.allocator, .left, .no_trans, m, m, n, 2, &a, m, &t, 2, &q, m);
 
@@ -955,7 +955,7 @@ test "tpqrt appends rows to an existing factorization" {
     try qr.geqrf(f64, testing.allocator, 4, n, &top, 4, &tau_top);
 
     // R so far, as an n x n upper triangle.
-    var r = [_]f64{0} ** (n * n);
+    var r: [n * n]f64 = @splat(0);
     for (0..n) |j| for (0..j + 1) |i| {
         r[i + j * n] = top[i + j * 4];
     };
@@ -1122,7 +1122,7 @@ test "tzrzf makes a wide matrix triangular, and ormrz applies the Z" {
     try testing.expectApproxEqAbs(@as(f64, 0), a[1], 1e-12);
 
     // Applying Z to the identity gives Z itself, and [R 0] Z reconstructs A.
-    var z = [_]f64{0} ** (n * n);
+    var z: [n * n]f64 = @splat(0);
     for (0..n) |i| z[i + i * n] = 1;
     try ormrz(f64, testing.allocator, .right, .no_trans, n, n, m, n - m, &a, m, &tau, &z, n);
 
@@ -1149,7 +1149,7 @@ test "the complex tall-skinny path picks the C transpose" {
     var f = try geqr(Z, testing.allocator, m, n, &a, m);
     defer f.deinit();
 
-    var q = [_]Z{Z.init(0, 0)} ** (m * m);
+    var q: [m * m]Z = @splat(Z.init(0, 0));
     for (0..m) |i| q[i + i * m] = Z.init(1, 0);
     // .transpose means the adjoint for complex, which is the only sense in
     // which Q^H Q = I.
@@ -1184,7 +1184,7 @@ test "gelqt and gemlqt are the LQ counterparts of geqrt and gemqrt" {
     var t: [2 * 2]f64 = undefined;
     try gelqt(f64, testing.allocator, m, n, 2, &a, m, &t, 2);
 
-    var q = [_]f64{0} ** (n * n);
+    var q: [n * n]f64 = @splat(0);
     for (0..n) |i| q[i + i * n] = 1;
     try gemlqt(f64, testing.allocator, .left, .no_trans, n, n, m, 2, &a, m, &t, 2, &q, n);
 

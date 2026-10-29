@@ -227,7 +227,7 @@ fn Trampoline(comptime T: type) type {
         }
         fn complex(z: [*]T) callconv(.c) Bool {
             const f: SelectFn(T) = @ptrCast(@alignCast(select_hook.?));
-            return if (f(@bitCast(z[0]))) 1 else 0;
+            return if (f(z[0])) 1 else 0;
         }
     };
 }
@@ -1473,7 +1473,7 @@ test "gees without sorting produces the Schur form" {
 test "gees sorts the eigenvalues a predicate selects" {
     // diag(-2, 1, -5, 3): two have negative real part.
     const n = 4;
-    var a = [_]f64{0} ** (n * n);
+    var a: [n * n]f64 = @splat(0);
     const diag = [_]f64{ -2, 1, -5, 3 };
     for (0..n) |i| a[i + i * n] = diag[i];
     var w: [n]Complex(f64) = undefined;
@@ -1502,7 +1502,7 @@ test "the gees predicate receives one complex number for either precision" {
     // the trampoline is for.
     const Z = Complex(f64);
     const n = 3;
-    var a = [_]Z{Z.zero} ** (n * n);
+    var a: [n * n]Z = @splat(Z.zero);
     const diag = [_]Z{ Z.init(-1, 0), Z.init(2, 0), Z.init(-3, 0) };
     for (0..n) |i| a[i + i * n] = diag[i];
     var w: [n]Z = undefined;
@@ -1679,7 +1679,7 @@ test "geevx with sense = .none skips the condition estimates" {
     _ = try geevx(f64, testing.allocator, .none, .values_only, .values_only, .none, n, &a, n, &w, &vl, 1, &vr, 1, &scale, &none, &none);
 
     // Upper triangular: the eigenvalues are the diagonal.
-    var found = [_]bool{false} ** 3;
+    var found: [3]bool = @splat(false);
     for (w) |v| {
         for ([_]f64{ 1, 3, 6 }, 0..) |expected, i| {
             if (@abs(v.re - expected) < 1e-12 and @abs(v.im) < 1e-12) found[i] = true;
@@ -1823,7 +1823,7 @@ test "trevc3 back-transforms Schur vectors into eigenvectors" {
     // vr starts as the Schur vectors and comes back as eigenvectors of the
     // original matrix - that is what .backtransform means.
     var vr = z;
-    var select = [_]bool{false} ** n;
+    var select: [n]bool = @splat(false);
     var dummy: [1]f64 = undefined;
     const m = try trevc3(f64, testing.allocator, .right, .backtransform, &select, n, &h, n, &dummy, 1, &vr, n, n);
     try testing.expectEqual(@as(usize, n), m);
@@ -1857,7 +1857,7 @@ test "trevc agrees with trevc3" {
     var z: [1]f64 = undefined;
     try hseqr(f64, testing.allocator, .schur_form, .none, n, 1, n, &h, n, &w, &z, 1);
 
-    var select = [_]bool{false} ** n;
+    var select: [n]bool = @splat(false);
     var dummy: [1]f64 = undefined;
 
     var v3: [n * n]f64 = undefined;
@@ -1887,7 +1887,7 @@ test "trevc3 selecting one half of a conjugate pair writes back the other" {
 
     // Select the *second* member of the pair. LAPACK's convention is that a
     // pair is requested through its first entry, so the routine moves the flag.
-    var select = [_]bool{false} ** n;
+    var select: [n]bool = @splat(false);
     select[pair.? + 1] = true;
     var v: [n * n]f64 = undefined;
     var dummy: [1]f64 = undefined;
@@ -1913,7 +1913,7 @@ test "trexc moves a block and reports where it landed" {
         6, 7, 3, 0,
         8, 9, 1, 4,
     };
-    var q = [_]f64{0} ** (n * n);
+    var q: [n * n]f64 = @splat(0);
     for (0..n) |i| q[i + i * n] = 1;
 
     const res = try trexc(f64, testing.allocator, .accumulate, n, &t, n, &q, n, 4, 1);
@@ -1955,7 +1955,7 @@ test "trsen reorders a cluster and conditions it" {
         0,  0,  3, 0,
         0,  0,  0, 4,
     };
-    var q = [_]f64{0} ** (n * n);
+    var q: [n * n]f64 = @splat(0);
     for (0..n) |i| q[i + i * n] = 1;
     var w: [n]Eigenvalue(f64) = undefined;
 
@@ -1977,7 +1977,7 @@ test "trsen moves a scattered selection to the front" {
         0, 0, 3, 0,
         0, 0, 0, 4,
     };
-    var q = [_]f64{0} ** (n * n);
+    var q: [n * n]f64 = @splat(0);
     for (0..n) |i| q[i + i * n] = 1;
     var w: [n]Eigenvalue(f64) = undefined;
 
@@ -2041,7 +2041,7 @@ test "hsein computes selected eigenvectors straight from the Hessenberg form" {
     }
     try testing.expect(idx != null);
 
-    var select = [_]bool{false} ** n;
+    var select: [n]bool = @splat(false);
     select[idx.?] = true;
     var h_in = hess;
     var vr: [n * n]f64 = undefined;
@@ -2084,7 +2084,7 @@ test "the complex Schur toolkit takes no iwork where the real one does" {
         Z.init(2, 0), Z.init(5, 0), Z.init(0, 0),
         Z.init(3, 0), Z.init(4, 0), Z.init(9, 0),
     };
-    var q = [_]Z{Z.init(0, 0)} ** (n * n);
+    var q: [n * n]Z = @splat(Z.init(0, 0));
     for (0..n) |i| q[i + i * n] = Z.init(1, 0);
     var w: [n]Eigenvalue(Z) = undefined;
 

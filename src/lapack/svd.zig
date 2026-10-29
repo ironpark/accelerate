@@ -1310,15 +1310,15 @@ test "gejsv rejects a workspace query, unlike every other queryable routine" {
     // querying, and that choice is only justified while this holds.
     const m: Int = 4;
     const n: Int = 3;
-    var a = [_]f64{0} ** 12;
+    var a: [12]f64 = @splat(0);
     const lda: Int = 4;
     const ldu: Int = 4;
     const ldv: Int = 3;
-    var sva = [_]f64{0} ** 3;
-    var u = [_]f64{0} ** 12;
-    var v = [_]f64{0} ** 9;
-    var iwork = [_]Int{0} ** 16;
-    var wq = [_]f64{0} ** 1;
+    var sva: [3]f64 = @splat(0);
+    var u: [12]f64 = @splat(0);
+    var v: [9]f64 = @splat(0);
+    var iwork: [16]Int = @splat(0);
+    var wq: [1]f64 = @splat(0);
     const neg = work_mod.query;
     var info: Int = 0;
     const Chars = enum(u8) { n = 'N', c = 'C', u = 'U', v = 'V' };

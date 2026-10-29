@@ -80,11 +80,11 @@ test "single-threaded BLAS computes the same answer as multi-threaded" {
         b[i] = 2.0 - f * 0.25;
     }
 
-    var multi = [_]f64{0} ** (n * n);
+    var multi: [n * n]f64 = @splat(0);
     try setThreading(.multi_threaded);
     level3.gemm(f64, .row_major, .no_trans, .no_trans, n, n, n, 1, &a, n, &b, n, 0, &multi, n);
 
-    var single = [_]f64{0} ** (n * n);
+    var single: [n * n]f64 = @splat(0);
     try setThreading(.single_threaded);
     level3.gemm(f64, .row_major, .no_trans, .no_trans, n, n, n, 1, &a, n, &b, n, 0, &single, n);
 

@@ -122,7 +122,7 @@ fn Alphas(comptime T: type) type {
 
         fn gather(self: Self, n: usize, w: []GeneralizedEigenvalue(T)) void {
             if (comptime complexElement(T)) {
-                for (0..n) |i| w[i] = .{ .alpha = @bitCast(self.ar[i]), .beta = @bitCast(self.b[i]) };
+                for (0..n) |i| w[i] = .{ .alpha = self.ar[i], .beta = self.b[i] };
             } else {
                 for (0..n) |i| w[i] = .{
                     .alpha = .{ .re = self.ar[i], .im = self.ai[i] },
@@ -159,7 +159,7 @@ fn Trampoline(comptime T: type) type {
         }
         fn complex(a: [*]T, b: [*]T) callconv(.c) Bool {
             const f: SelectFn(T) = @ptrCast(@alignCast(select_hook.?));
-            return if (f(.{ .alpha = @bitCast(a[0]), .beta = @bitCast(b[0]) })) 1 else 0;
+            return if (f(.{ .alpha = a[0], .beta = b[0] })) 1 else 0;
         }
     };
 }
@@ -1487,8 +1487,8 @@ test "gghd3 then hgeqz reproduces what ggev computes in one call" {
     // general that costs a QR of B with Q applied to A.
     var a = pa;
     var b = pb;
-    var q = [_]f64{0} ** (n * n);
-    var z = [_]f64{0} ** (n * n);
+    var q: [n * n]f64 = @splat(0);
+    var z: [n * n]f64 = @splat(0);
     try gghd3(f64, testing.allocator, .identity, .identity, n, 1, n, &a, n, &b, n, &q, n, &z, n);
 
     var w: [n]GeneralizedEigenvalue(f64) = undefined;
@@ -1509,14 +1509,14 @@ test "gghrd agrees with gghd3" {
     const n = 3;
     var a3 = pa;
     var b3 = pb;
-    var q3 = [_]f64{0} ** (n * n);
-    var z3 = [_]f64{0} ** (n * n);
+    var q3: [n * n]f64 = @splat(0);
+    var z3: [n * n]f64 = @splat(0);
     try gghd3(f64, testing.allocator, .identity, .identity, n, 1, n, &a3, n, &b3, n, &q3, n, &z3, n);
 
     var a1 = pa;
     var b1 = pb;
-    var q1 = [_]f64{0} ** (n * n);
-    var z1 = [_]f64{0} ** (n * n);
+    var q1: [n * n]f64 = @splat(0);
+    var z1: [n * n]f64 = @splat(0);
     try gghrd(f64, .identity, .identity, n, 1, n, &a1, n, &b1, n, &q1, n, &z1, n);
 
     for (a3, a1) |x, y| try testing.expectApproxEqAbs(x, y, 1e-12);

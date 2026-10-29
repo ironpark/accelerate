@@ -467,7 +467,7 @@ test "multiply handles several right-hand sides at once" {
 
     // Columns: [1,2,3,4] and the unit vector e0.
     var x = [_]f64{ 1, 2, 3, 4, 1, 0, 0, 0 };
-    var y = [_]f64{0} ** 8;
+    var y: [8]f64 = @splat(0);
     try a.multiply(1, Dense(f64).init(&x, 4, 2, 4), Dense(f64).init(&y, 4, 2, 4), false);
 
     try testing.expectEqualSlices(f64, &TestMatrix.rhs(f64), y[0..4]);
@@ -504,7 +504,7 @@ test "fromCoordinate sums duplicates and drops out-of-range entries" {
     // The (1,1) duplicates must have summed to 3, and the out-of-range entry
     // must be gone - verified through the product rather than the raw storage.
     var x = TestMatrix.solution(f64);
-    var y = [_]f64{0} ** 4;
+    var y: [4]f64 = @splat(0);
     try a.multiply(1, Dense(f64).fromSlice(&x), Dense(f64).fromSlice(&y), false);
     for (TestMatrix.rhs(f64), y) |want, got| {
         try testing.expectApproxEqAbs(want, got, 1e-12);

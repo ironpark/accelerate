@@ -975,7 +975,7 @@ test "ormtr applies the same Q that orgtr builds" {
     try sytrd(f64, testing.allocator, .upper, n, &a, n, &d, &e, &tau);
 
     // Apply Q to the identity - which is exactly what orgtr computes.
-    var applied = [_]f64{0} ** (n * n);
+    var applied: [n * n]f64 = @splat(0);
     for (0..n) |i| applied[i + i * n] = 1;
     try ormtr(f64, testing.allocator, .left, .upper, .no_trans, n, n, &a, n, &tau, &applied, n);
 
@@ -997,7 +997,7 @@ test "opmtr applies the packed Q" {
     var tau: [n - 1]f64 = undefined;
     try sptrd(f64, .upper, n, &ap, &d, &e, &tau);
 
-    var applied = [_]f64{0} ** (n * n);
+    var applied: [n * n]f64 = @splat(0);
     for (0..n) |i| applied[i + i * n] = 1;
     try opmtr(f64, testing.allocator, .left, .upper, .no_trans, n, n, &ap, &tau, &applied, n);
 
@@ -1076,7 +1076,7 @@ test "ormhr applies the same Q that orghr builds" {
     var tau: [n - 1]f64 = undefined;
     try gehrd(f64, testing.allocator, n, 1, n, &a, n, &tau);
 
-    var applied = [_]f64{0} ** (n * n);
+    var applied: [n * n]f64 = @splat(0);
     for (0..n) |i| applied[i + i * n] = 1;
     try ormhr(f64, testing.allocator, .left, .no_trans, n, n, 1, n, &a, n, &tau, &applied, n);
 
@@ -1107,7 +1107,7 @@ test "gebrd with orgbr reconstructs the original matrix" {
     try orgbr(f64, testing.allocator, .p, n, n, n, &pt, n, &taup);
 
     // B is upper bidiagonal here because rows >= cols.
-    var b = [_]f64{0} ** (n * n);
+    var b: [n * n]f64 = @splat(0);
     for (0..n) |i| b[i + i * n] = d[i];
     for (0..n - 1) |i| b[i + (i + 1) * n] = e[i];
 
@@ -1146,7 +1146,7 @@ test "ormbr applies Q where orgbr builds it" {
     var taup: [n]f64 = undefined;
     try gebrd(f64, testing.allocator, n, n, &a, n, &d, &e, &tauq, &taup);
 
-    var applied = [_]f64{0} ** (n * n);
+    var applied: [n * n]f64 = @splat(0);
     for (0..n) |i| applied[i + i * n] = 1;
     try ormbr(f64, testing.allocator, .q, .left, .no_trans, n, n, n, &a, n, &tauq, &applied, n);
 
@@ -1166,7 +1166,7 @@ test "gbbrd bidiagonalizes a band matrix and forms both factors" {
         0, 3, 6, 1,
         0, 0, 4, 7,
     };
-    var ab = [_]f64{0} ** (ldab * n);
+    var ab: [ldab * n]f64 = @splat(0);
     for (0..n) |j| for (0..n) |i| {
         if (i + kl < j or j + ku < i) continue;
         ab[ku + i - j + j * ldab] = full[i + j * n];
@@ -1179,7 +1179,7 @@ test "gbbrd bidiagonalizes a band matrix and forms both factors" {
     var dummy: [1]f64 = undefined;
     try gbbrd(f64, testing.allocator, .both, n, n, 0, kl, ku, &ab, ldab, &d, &e, &q, n, &pt, n, &dummy, 1);
 
-    var b = [_]f64{0} ** (n * n);
+    var b: [n * n]f64 = @splat(0);
     for (0..n) |i| b[i + i * n] = d[i];
     for (0..n - 1) |i| b[i + (i + 1) * n] = e[i];
 
