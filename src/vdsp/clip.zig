@@ -281,8 +281,8 @@ test "intention-revealing aliases are the same functions, and the names are the 
     // maxMagnitude / minMagnitude: signed inputs whose magnitude ordering
     // differs from their signed ordering, so a "returns the signed value"
     // misreading fails here.
-    var mx = [_]f32{0} ** 4;
-    var mn = [_]f32{0} ** 4;
+    var mx: [4]f32 = @splat(0);
+    var mn: [4]f32 = @splat(0);
     maxMagnitude(f32, &a, &b, &mx);
     minMagnitude(f32, &a, &b, &mn);
     try std.testing.expectEqualSlices(f32, &[_]f32{ 10.0, 5.0, 6.0, 8.0 }, &mx);
@@ -291,7 +291,7 @@ test "intention-revealing aliases are the same functions, and the names are the 
     // inverseClip: 3.0 and -2.0 are inside [-5, 5] and get pushed OUT to the
     // nearer bound; -10.0 and 8.0 are outside and pass through untouched.
     // A normal clip would have done exactly the opposite to every element.
-    var ic = [_]f32{0} ** 4;
+    var ic: [4]f32 = @splat(0);
     inverseClip(f32, &a, -5.0, 5.0, &ic);
     try std.testing.expectEqualSlices(f32, &[_]f32{ -10.0, 5.0, -5.0, 8.0 }, &ic);
 }

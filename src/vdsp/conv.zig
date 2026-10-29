@@ -312,13 +312,13 @@ test "f5x5 picks the documented [P/2][Q/2]-relative neighbor" {
             image[r * cols + col] = @floatFromInt(100 * r + col);
         }
     }
-    var kernel = [_]f32{0} ** 25;
+    var kernel: [25]f32 = @splat(0);
     kernel[0 * 5 + 3] = 1; // F[0][3]
 
     var out: [35]f32 = undefined;
     f5x5(f32, &image, rows, cols, &kernel, &out);
 
-    var expected = [_]f32{0} ** 35;
+    var expected: [35]f32 = @splat(0);
     expected[2 * cols + 2] = 3; // A[0][3]
     expected[2 * cols + 3] = 4; // A[0][4]
     expected[2 * cols + 4] = 5; // A[0][5]

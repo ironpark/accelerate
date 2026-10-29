@@ -401,7 +401,12 @@ test "Biquadm setCoefficientsDouble: section-major partial update layout" {
     // (start_sec=1, start_chn=0, nsec=1, nchn=2) with a 2-block array giving
     // channel 0 and channel 1 DIFFERENT poles, confirming the partial-update
     // array is section-major: [sec1_ch0, sec1_ch1], matching `init`'s layout.
-    const identity = [_]f64{1.0, 0.0, 0.0, 0.0, 0.0} ** 4;
+    const identity = [_]f64{
+        1.0, 0.0, 0.0, 0.0, 0.0,
+        1.0, 0.0, 0.0, 0.0, 0.0,
+        1.0, 0.0, 0.0, 0.0, 0.0,
+        1.0, 0.0, 0.0, 0.0, 0.0,
+    };
     var filter = try Biquadm(f64).init(&identity, 2, 2);
     defer filter.deinit();
 
@@ -596,7 +601,10 @@ test "Biquadm setActiveFilters: passthrough, no observed effect on apply output"
     // only pins down that the call itself is a correct passthrough (does not
     // crash, does not alter unrelated channels) -- it intentionally does not
     // assert any muting/bypass semantics, since none were observed.
-    const coeffs = [_]f64{ 1.0, 0.0, 0.0, -0.5, 0.0 } ** 2;
+    const coeffs = [_]f64{
+        1.0, 0.0, 0.0, -0.5, 0.0,
+        1.0, 0.0, 0.0, -0.5, 0.0,
+    };
     var filter = try Biquadm(f64).init(&coeffs, 1, 2);
     defer filter.deinit();
 

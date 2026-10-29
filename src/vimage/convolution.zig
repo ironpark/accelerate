@@ -534,7 +534,7 @@ test "convolvePlanar f32: kernel_height/kernel_width are not swapped" {
     const src_vals = [_]f32{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     var src = try makePlanarFBuffer(allocator, 3, 3, 2, &src_vals);
     defer allocator.free(src.mem);
-    var dest = try makePlanarFBuffer(allocator, 3, 3, 3, &[_]f32{0} ** 9);
+    var dest = try makePlanarFBuffer(allocator, 3, 3, 3, &@as([9]f32, @splat(0)));
     defer allocator.free(dest.mem);
 
     // 3x1 (height=3, width=1) kernel {0,0,1} selects pixel[y+1][x] = 8 for

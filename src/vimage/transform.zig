@@ -772,7 +772,7 @@ test "lookupTable_Planar8toPlanar16: dest[i] = table[src[i]] (direct indexed loo
     @memset(dest_mem, 0);
     const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = (1 + 2) * @sizeOf(u16) };
 
-    var table: [256]u16 = [_]u16{0} ** 256;
+    var table: [256]u16 = @splat(0);
     table[5] = 1234;
     const err = lookupTable_Planar8toPlanar16(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     try std.testing.expectEqual(@as(usize, 0), try err);
@@ -786,7 +786,7 @@ test "lookupTable_PlanarFtoPlanar8: smoke test, error == 0 and produces a plausi
     var dest = try makePlanar8Buffer(allocator, 1, 1, 2, &[_]u8{0});
     defer allocator.free(dest.mem);
 
-    var table: [4096]u8 = [_]u8{0} ** 4096;
+    var table: [4096]u8 = @splat(0);
     table[2048] = 200; // roughly the middle entry, corresponding to input ~0.5
     const err = lookupTable_PlanarFtoPlanar8(&src.buf, &dest.buf, &table, Flags.kvImageNoFlags);
     try std.testing.expectEqual(@as(usize, 0), try err);
@@ -800,7 +800,7 @@ test "lookupTable_8to64U: dest[i] = table[src[i]]" {
     const dest_mem = try allocator.alloc(u64, 1);
     defer allocator.free(dest_mem);
     const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = @sizeOf(u64) };
-    var table: [256]u64 = [_]u64{0} ** 256;
+    var table: [256]u64 = @splat(0);
     table[9] = 0xDEADBEEF;
     const err = lookupTable_8to64U(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     try std.testing.expectEqual(@as(usize, 0), try err);
@@ -832,21 +832,21 @@ test "lookupTable_Planar8toPlanar24/48/96/128/PlanarF: smoke tests, error == 0" 
     defer allocator.free(src.mem);
 
     {
-        var table: [256]u32 = [_]u32{0} ** 256;
+        var table: [256]u32 = @splat(0);
         const dest_mem = try allocator.alloc(u32, 1);
         defer allocator.free(dest_mem);
         const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = @sizeOf(u32) };
         _ = try lookupTable_Planar8toPlanar24(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     }
     {
-        var table: [256]u64 = [_]u64{0} ** 256;
+        var table: [256]u64 = @splat(0);
         const dest_mem = try allocator.alloc(u64, 1);
         defer allocator.free(dest_mem);
         const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = @sizeOf(u64) };
         _ = try lookupTable_Planar8toPlanar48(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     }
     {
-        var table: [256]Pixel_FFFF = [_]Pixel_FFFF{.{ 0, 0, 0, 0 }} ** 256;
+        var table: [256]Pixel_FFFF = @splat(.{ 0, 0, 0, 0 });
         const dest_mem = try allocator.alloc(f32, 4);
         defer allocator.free(dest_mem);
         const dest_buf = vImage_Buffer{ .data = dest_mem.ptr, .height = 1, .width = 1, .rowBytes = 4 * @sizeOf(f32) };
@@ -854,7 +854,7 @@ test "lookupTable_Planar8toPlanar24/48/96/128/PlanarF: smoke tests, error == 0" 
         _ = try lookupTable_Planar8toPlanar128(&src.buf, &dest_buf, &table, Flags.kvImageNoFlags);
     }
     {
-        var table: [256]f32 = [_]f32{0} ** 256;
+        var table: [256]f32 = @splat(0);
         table[0] = 0.75;
         var dest = try makePlanarFBuffer(allocator, 1, 1, 1, &[_]f32{0});
         defer allocator.free(dest.mem);
@@ -918,7 +918,7 @@ test "multidimensionalTableCreate/Retain/Release: retain count keeps the table v
 test "floodFill_Planar8: fills the connected component containing the seed, does not cross a differently-valued boundary" {
     const allocator = std.testing.allocator;
     // 5x5 image: a 3x3 block of value 10 in the middle surrounded by 0.
-    var img = try makePlanar8Buffer(allocator, 5, 5, 2, &([_]u8{0} ** 25));
+    var img = try makePlanar8Buffer(allocator, 5, 5, 2, &@as([25]u8, @splat(0)));
     defer allocator.free(img.mem);
     for (1..4) |y| for (1..4) |x| setPlanar8Local(img.buf, y, x, 10);
 

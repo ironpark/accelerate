@@ -394,9 +394,9 @@ test "a real vImage failure surfaces as a Zig error, not a dropped return value"
     // an error union, this code was silently legal - the caller could ignore
     // the return value entirely and go on to read a dest buffer vImage never
     // touched.
-    var top = [_]u8{0} ** 4;
-    var bottom = [_]u8{0} ** 16;
-    var dest = [_]u8{0} ** 16;
+    var top: [4]u8 = @splat(0);
+    var bottom: [16]u8 = @splat(0);
+    var dest: [16]u8 = @splat(0);
     const b_top = vImage_Buffer{ .data = &top, .height = 1, .width = 1, .rowBytes = 4 };
     const b_bottom = vImage_Buffer{ .data = &bottom, .height = 2, .width = 2, .rowBytes = 8 };
     const b_dest = vImage_Buffer{ .data = &dest, .height = 2, .width = 2, .rowBytes = 8 };

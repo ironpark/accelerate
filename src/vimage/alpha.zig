@@ -342,13 +342,13 @@ test "alphaBlendPlanar PlanarF matches Alpha.h formula (argument-order check)" {
     // pair would change the result.
     const h = 2;
     const w = 3;
-    var top_color = [_]f32{100} ** (h * w);
-    var top_alpha = [_]f32{0.25} ** (h * w);
-    var bottom_color = [_]f32{20} ** (h * w);
-    var bottom_alpha = [_]f32{0.6} ** (h * w);
+    var top_color: [h * w]f32 = @splat(100);
+    var top_alpha: [h * w]f32 = @splat(0.25);
+    var bottom_color: [h * w]f32 = @splat(20);
+    var bottom_alpha: [h * w]f32 = @splat(0.6);
     const alpha_val: f32 = 0.25 + (1 - 0.25) * 0.6; // 0.7
-    var alpha_buf = [_]f32{alpha_val} ** (h * w);
-    var dest = [_]f32{0} ** (h * w);
+    var alpha_buf: [h * w]f32 = @splat(alpha_val);
+    var dest: [h * w]f32 = @splat(0);
 
     const row_bytes = w * @sizeOf(f32);
     const b_top = bufFromBytes(std.mem.sliceAsBytes(&top_color), h, w, row_bytes);
@@ -376,7 +376,7 @@ test "alphaBlendARGB u8 alpha-first channel order, padded rowBytes" {
     const row_bytes = 12;
     var top: [h * row_bytes]u8 = undefined;
     var bottom: [h * row_bytes]u8 = undefined;
-    var dest: [h * row_bytes]u8 = [_]u8{0xAA} ** (h * row_bytes);
+    var dest: [h * row_bytes]u8 = @splat(0xAA);
 
     // Every pixel: top A=64 R=200 G=10 B=30 ; bottom A=180 R=5 G=90 B=250.
     for (0..h) |y| {
@@ -422,10 +422,10 @@ test "premultipliedAlphaBlendPlanar exact u8/f32 formulas" {
     const h = 2;
     const w = 3;
 
-    var top_u8 = [_]u8{200} ** (h * w);
-    var top_alpha_u8 = [_]u8{60} ** (h * w);
-    var bottom_u8 = [_]u8{40} ** (h * w);
-    var dest_u8 = [_]u8{0} ** (h * w);
+    var top_u8: [h * w]u8 = @splat(200);
+    var top_alpha_u8: [h * w]u8 = @splat(60);
+    var bottom_u8: [h * w]u8 = @splat(40);
+    var dest_u8: [h * w]u8 = @splat(0);
     const row_bytes_u8 = w;
     const b_top_u8 = bufFromBytes(&top_u8, h, w, row_bytes_u8);
     const b_top_a_u8 = bufFromBytes(&top_alpha_u8, h, w, row_bytes_u8);
@@ -437,10 +437,10 @@ test "premultipliedAlphaBlendPlanar exact u8/f32 formulas" {
     const expected_u8: u8 = 200 + @as(u8, @intCast((@as(u32, 255 - 60) * 40 + 127) / 255));
     for (dest_u8) |v| try std.testing.expectEqual(expected_u8, v);
 
-    var top_f = [_]f32{200} ** (h * w);
-    var top_alpha_f = [_]f32{0.25} ** (h * w);
-    var bottom_f = [_]f32{40} ** (h * w);
-    var dest_f = [_]f32{0} ** (h * w);
+    var top_f: [h * w]f32 = @splat(200);
+    var top_alpha_f: [h * w]f32 = @splat(0.25);
+    var bottom_f: [h * w]f32 = @splat(40);
+    var dest_f: [h * w]f32 = @splat(0);
     const row_bytes_f = w * @sizeOf(f32);
     const b_top_f = bufFromBytes(std.mem.sliceAsBytes(&top_f), h, w, row_bytes_f);
     const b_top_a_f = bufFromBytes(std.mem.sliceAsBytes(&top_alpha_f), h, w, row_bytes_f);
@@ -464,7 +464,7 @@ test "premultipliedAlphaBlendARGB (alpha-first) vs premultipliedAlphaBlendBGRA (
 
     var argb_top = [_]u8{ 64, 200, 10, 30 }; // A R G B
     var argb_bottom = [_]u8{ 180, 5, 90, 250 };
-    var argb_dest = [_]u8{0} ** 4;
+    var argb_dest: [4]u8 = @splat(0);
     const b_argb_top = bufFromBytes(&argb_top, h, w, row_bytes);
     const b_argb_bottom = bufFromBytes(&argb_bottom, h, w, row_bytes);
     const b_argb_dest = bufFromBytes(&argb_dest, h, w, row_bytes);
@@ -476,7 +476,7 @@ test "premultipliedAlphaBlendARGB (alpha-first) vs premultipliedAlphaBlendBGRA (
 
     var bgra_top = [_]u8{ 200, 10, 30, 64 }; // R G B A (same pixel, alpha last)
     var bgra_bottom = [_]u8{ 5, 90, 250, 180 };
-    var bgra_dest = [_]u8{0} ** 4;
+    var bgra_dest: [4]u8 = @splat(0);
     const b_bgra_top = bufFromBytes(&bgra_top, h, w, row_bytes);
     const b_bgra_bottom = bufFromBytes(&bgra_bottom, h, w, row_bytes);
     const b_bgra_dest = bufFromBytes(&bgra_dest, h, w, row_bytes);
@@ -495,7 +495,7 @@ test "premultipliedAlphaBlendWithPermuteARGB reorders top channels before blendi
     const row_bytes = 4;
     var top = [_]u8{ 10, 20, 30, 40 }; // stored as [c0,c1,c2,c3]
     var bottom = [_]u8{ 0, 0, 0, 0 }; // fully transparent black bottom
-    var dest = [_]u8{0} ** 4;
+    var dest: [4]u8 = @splat(0);
     const b_top = bufFromBytes(&top, h, w, row_bytes);
     const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
@@ -513,7 +513,7 @@ test "premultipliedAlphaBlendWithPermuteRGBA reorders top channels before blendi
     const row_bytes = 4;
     var top = [_]u8{ 10, 20, 30, 40 };
     var bottom = [_]u8{ 0, 0, 0, 0 };
-    var dest = [_]u8{0} ** 4;
+    var dest: [4]u8 = @splat(0);
     const b_top = bufFromBytes(&top, h, w, row_bytes);
     const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
@@ -539,7 +539,7 @@ test "premultipliedAlphaBlendRGBA dispatches distinct blend modes" {
     var results: [5][4]u8 = undefined;
     const modes = [_]BlendMode{ .normal, .multiply, .screen, .darken, .lighten };
     for (modes, 0..) |mode, i| {
-        var dest = [_]u8{0} ** 4;
+        var dest: [4]u8 = @splat(0);
         const b_top = bufFromBytes(&top, h, w, row_bytes);
         const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
         const b_dest = bufFromBytes(&dest, h, w, row_bytes);
@@ -589,7 +589,7 @@ test "premultipliedConstAlphaBlendARGB succeeds and blends distinct pixels" {
     const row_bytes = 4;
     var top = [_]u8{ 200, 10, 20, 30 }; // A R G B
     var bottom = [_]u8{ 50, 90, 100, 110 };
-    var dest = [_]u8{0} ** 4;
+    var dest: [4]u8 = @splat(0);
     const b_top = bufFromBytes(&top, h, w, row_bytes);
     const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
@@ -631,7 +631,7 @@ test "alphaBlendNonpremultipliedToPremultipliedARGB succeeds, alpha-first" {
     const row_bytes = 4;
     var top = [_]u8{ 100, 200, 150, 50 }; // A R G B, non-premultiplied top
     var bottom = [_]u8{ 30, 10, 10, 10 }; // premultiplied bottom
-    var dest = [_]u8{0} ** 4;
+    var dest: [4]u8 = @splat(0);
     const b_top = bufFromBytes(&top, h, w, row_bytes);
     const b_bottom = bufFromBytes(&bottom, h, w, row_bytes);
     const b_dest = bufFromBytes(&dest, h, w, row_bytes);
@@ -693,8 +693,8 @@ test "premultiplyDataARGB / unpremultiplyDataARGB round trip, alpha-first" {
     const w = 1;
     const row_bytes = 4;
     var pixel = [_]u8{ 150, 10, 200, 90 }; // A R G B, non-edge alpha
-    var premult = [_]u8{0} ** 4;
-    var recovered = [_]u8{0} ** 4;
+    var premult: [4]u8 = @splat(0);
+    var recovered: [4]u8 = @splat(0);
     {
         const b_src = bufFromBytes(&pixel, h, w, row_bytes);
         const b_dest = bufFromBytes(&premult, h, w, row_bytes);
@@ -718,8 +718,8 @@ test "premultiplyDataRGBA / unpremultiplyDataRGBA round trip, alpha-last" {
     const w = 1;
     const row_bytes = 4;
     var pixel = [_]u8{ 10, 200, 90, 150 }; // R G B A, non-edge alpha
-    var premult = [_]u8{0} ** 4;
-    var recovered = [_]u8{0} ** 4;
+    var premult: [4]u8 = @splat(0);
+    var recovered: [4]u8 = @splat(0);
     {
         const b_src = bufFromBytes(&pixel, h, w, row_bytes);
         const b_dest = bufFromBytes(&premult, h, w, row_bytes);
@@ -861,8 +861,8 @@ test "premultiplyDataRGBA16F / unpremultiplyDataRGBA16F round trip" {
     };
 
     var pixel = [4]u16{ half.fromF32(0.2), half.fromF32(0.6), half.fromF32(0.9), half.fromF32(0.5) }; // R G B A
-    var premult = [_]u16{0} ** 4;
-    var recovered = [_]u16{0} ** 4;
+    var premult: [4]u16 = @splat(0);
+    var recovered: [4]u16 = @splat(0);
     {
         const b_src = bufFromBytes(std.mem.sliceAsBytes(&pixel), h, w, rb);
         const b_dest = bufFromBytes(std.mem.sliceAsBytes(&premult), h, w, rb);
@@ -898,7 +898,7 @@ test "clipToAlphaPlanar/ARGB/RGBA clamp color to alpha (dest = min(src, alpha))"
 
     const row_bytes = 4;
     var src_argb = [_]u8{ 90, 200, 50, 30 }; // A R G B: R (200) exceeds alpha (90)
-    var dest_argb = [_]u8{0} ** 4;
+    var dest_argb: [4]u8 = @splat(0);
     const b_src_argb = bufFromBytes(&src_argb, h, w, row_bytes);
     const b_dest_argb = bufFromBytes(&dest_argb, h, w, row_bytes);
     const err_argb = clipToAlphaARGB(u8, &b_src_argb, &b_dest_argb, 0);
@@ -909,7 +909,7 @@ test "clipToAlphaPlanar/ARGB/RGBA clamp color to alpha (dest = min(src, alpha))"
     try std.testing.expectEqual(@as(u8, 30), dest_argb[3]); // B untouched
 
     var src_rgba = [_]u8{ 200, 50, 30, 90 }; // R G B A: alpha last
-    var dest_rgba = [_]u8{0} ** 4;
+    var dest_rgba: [4]u8 = @splat(0);
     const b_src_rgba = bufFromBytes(&src_rgba, h, w, row_bytes);
     const b_dest_rgba = bufFromBytes(&dest_rgba, h, w, row_bytes);
     const err_rgba = clipToAlphaRGBA(u8, &b_src_rgba, &b_dest_rgba, 0);
